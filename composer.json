@@ -1,0 +1,76 @@
+{
+  "name": "raneomik/nette-mercure",
+  "description": "🚀 Nette Mercure Extension: nette wrapper around https://github.com/symfony/mercure",
+  "keywords": [
+    "nette-extension",
+    "mercure",
+    "sse",
+    "push",
+    "updates",
+    "broadcasting"
+  ],
+  "homepage": "https://github.com/raneomik/nette-mercure",
+  "license": "MIT",
+  "require": {
+    "ext-tokenizer": "*",
+    "php": ">=8.4",
+    "lcobucci/jwt": "^5.6.0",
+    "nette/http": "^2.0|^3.3",
+    "symfony/mercure": "^0.7.2"
+  },
+  "require-dev": {
+    "latte/latte": "^2.0|^3.0",
+    "nette/application": "^4.0@dev",
+    "nette/di": "^3.0",
+    "nette/security": "^3.0",
+    "nette/tester": "^2.5@dev",
+    "phpro/grumphp": "v2.x-dev",
+    "phpstan/phpstan-nette": "^2.0@stable",
+    "rector/rector": "^2.3.4",
+    "symplify/easy-coding-standard": "^13.0",
+    "tracy/tracy": "^2.8"
+  },
+  "autoload": {
+    "psr-4": {
+      "Nette\\Mercure\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\": "tests/"
+    }
+  },
+  "minimum-stability": "dev",
+  "extra": {
+    "nette": {
+      "di-extensions": {
+        "mercure": {
+          "args": [
+            "%debugMode%"
+          ],
+          "class": "Nette\\Mercure\\Bridge\\DI\\MercureExtension"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "ci": [
+      "@rector",
+      "@ecs",
+      "@phpstan",
+      "@test"
+    ],
+    "rector": "vendor/bin/rector src tests",
+    "ecs": "vendor/bin/ecs check src tests --fix",
+    "phpstan": "vendor/bin/phpstan analyse src tests",
+    "test": "vendor/bin/tester tests -s",
+    "test-coverage": "vendor/bin/tester -s --coverage tests/reports/coverage.xml --coverage-src src -o junit:tests/reports/junit.xml tests",
+    "test-cleanup": "rm -rf $(find tests -type d -name output)"
+  },
+  "config": {
+    "sort-packages": true,
+    "allow-plugins": {
+      "phpro/grumphp": true
+    }
+  }
+}

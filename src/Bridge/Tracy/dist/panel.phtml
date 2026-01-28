@@ -1,0 +1,134 @@
+<?php
+
+declare(strict_types=1);
+
+$formatFLoat = fn(float $number, string $unit = ''): string => sprintf('%.2f %s', $number, $unit);
+
+?>
+<style class="tracy-debug">
+	.mercure-panel {
+		min-width: 375px;
+	}
+
+	.mercure-panel p,
+	.mercure-panel dt {
+		font-weight: bold;
+	}
+
+	.mercure-panel dl,
+	.mercure-panel dd {
+		font-size: 0.9rem;
+	}
+
+	.mercure-panel dd {
+		margin-bottom: 1em;
+		margin-left: 2em;
+	}
+
+	.mercure-panel details summary {
+		margin-bottom: 1rem;
+		cursor: pointer;
+		position: relative;
+		anchor-name: --summary;
+
+		&::marker {
+			content: "";
+		}
+
+		&::before,
+		&::after {
+			content: "";
+			border-block-start: 3px solid #575753;
+			height: 0;
+			width: 1rem;
+
+			inset-block-start: 50%;
+			inset-inline-end: 0;
+
+			position: absolute;
+			position-anchor: --summary;
+			position-area: top start;
+		}
+
+		&::after {
+			transform: rotate(90deg);
+			transform-origin: 50%;
+		}
+	}
+
+	.mercure-panel details[open] summary::after {
+		transform: rotate(0deg);
+	}
+</style>
+
+<h1 style="display: flex; align-items: center; gap: 1rem;">
+	<span style="width: 32px;"><?= $icon ?></span>
+	<span>Mercure</span>
+</h1>
+<div class="tracy-inner mercure-panel">
+	<?php foreach ($hubData as $hubDatum): ?>
+		<details>
+			<summary>
+				<h2>Hub <?= Tracy\Helpers::escapeHtml($hubDatum->hubName) ?></h2>
+			</summary>
+			<div style="margin-top: 1rem;">
+				<dl>
+					<dt>url</dt>
+					<dd><?= Tracy\Helpers::escapeHtml($hubDatum->hubUrl) ?></dd>
+					<dt>Sent Messages</dt>
+					<dd>
+						<table>
+							<colgroup>
+								<col style="width:20%">
+								<col style="width:60%">
+								<col style="width:20%">
+							</colgroup>
+							<thead>
+								<tr>
+									<th style="text-align: center;">Topics</th>
+									<th style="text-align: center;">Content</th>
+									<th style="text-align: center;">Template</th>
+								</tr>
+							</thead>
+
+							<tbody>
+								<?php foreach ($hubDatum->broadcastData as $message): ?>
+									<tr>
+										<td><?= Tracy\Helpers::escapeHtml(implode(', ', $message->getTopics())) ?></td>
+										<td><?= Tracy\Helpers::escapeHtml($message->getData()) ?></td>
+										<td><?= Tracy\Helpers::escapeHtml($message->getTemplate()) ?></td>
+									</tr>
+								<?php endforeach ?>
+							</tbody>
+
+							<tfoot>
+								<tr>
+									<th scope="row" colspan="2" style="text-align: right;">Total</th>
+									<td style="text-align: center;"><?= Tracy\Helpers::escapeHtml($hubDatum->messageCount()) ?></td>
+								</tr>
+							</tfoot>
+						</table>
+					</dd>
+
+					<dt>Duration</dt>
+					<dd><?= Tracy\Helpers::escapeHtml($formatFLoat($hubDatum->duration * 1000, 'ms')) ?></dd>
+
+					<dt>Memory</dt>
+					<dd><?= Tracy\Helpers::escapeHtml($formatFLoat($hubDatum->memory / 1024, 'kB')) ?></dd>
+				</dl>
+			</div>
+		</details>
+	<?php endforeach ?>
+
+	<div>
+		<div style="text-align: right;">
+			<dl>
+				<dt>Total Duration</dt>
+				<dd><?= Tracy\Helpers::escapeHtml($formatFLoat($hubData->totalDuration * 1000, 'ms')) ?></dd>
+
+				<dt>Total Memory</dt>
+				<dd><?= Tracy\Helpers::escapeHtml($formatFLoat($hubData->totalMemory / 1024, 'kB')) ?></dd>
+			</dl>
+		</div>
+	</div>
+</div>

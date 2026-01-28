@@ -1,0 +1,13 @@
+includes:
+	- vendor/phpstan/phpstan-nette/extension.neon
+
+parameters:
+	level: 8
+
+	paths:
+		- src
+		- tests
+
+	ignoreErrors:
+		- identifier: property.uninitializedReadonly
+		- identifier: property.readOnlyAssignNotInConstructor

@@ -1,0 +1,6 @@
+grumphp:
+    tasks:
+        rector:
+        phpstan:
+        tester:
+        ecs:
