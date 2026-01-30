@@ -11,10 +11,10 @@
 
 declare(strict_types=1);
 
-namespace Nette\Mercure\Core;
+namespace Raneomik\NetteMercure\Core;
 
-use Nette\Mercure\BroadcasterInterface;
-use Nette\Mercure\Exception\BroadcastException;
+use Raneomik\NetteMercure\BroadcasterInterface;
+use Raneomik\NetteMercure\Exception\BroadcastException;
 
 /**
  * @implements \IteratorAggregate<string, BroadcasterInterface>
@@ -31,27 +31,17 @@ final class Broadcasters implements BroadcasterInterface, \IteratorAggregate, \A
 	 * @param iterable<string, BroadcasterInterface> $broadcasters
 	 */
 	public function __construct(
-		iterable $broadcasters,
-		private false|string $currentHub = false,
+	    iterable $broadcasters,
+	    private false|string $currentHub = false,
 	) {
 		/** @phpstan-ignore-next-line */
 		$this->broadcasters = new \ArrayIterator($broadcasters);
 	}
 
-	private function getHub(string $name): BroadcasterInterface
-	{
-		if (false === ($this[$name] ?? false)) {
-			throw new BroadcastException(sprintf('The hub "%s" is not defined.', $name));
-		}
-
-		$this->currentHub = $name;
-		return $this[$name];
-	}
-
 	#[\Override]
 	public function broadcasterUrl(?string $hub = null): string
 	{
-		if (null !== $hub) {
+		if ($hub !== null) {
 			return $this->getHub($hub)->broadcasterUrl();
 		}
 
@@ -61,7 +51,7 @@ final class Broadcasters implements BroadcasterInterface, \IteratorAggregate, \A
 	#[\Override]
 	public function broadcastOptions(?string $hub = null): array
 	{
-		if (null !== $hub) {
+		if ($hub !== null) {
 			return $this->getHub($hub)->broadcastOptions();
 		}
 
@@ -70,11 +60,11 @@ final class Broadcasters implements BroadcasterInterface, \IteratorAggregate, \A
 
 	#[\Override]
 	public function broadcast(
-		array|string $topics,
-		object|array|string $data,
-		array $options = [],
-		?string $template = null,
-		bool $toAll = false,
+	    array|string $topics,
+	    object|array|string $data,
+	    array $options = [],
+	    ?string $template = null,
+	    bool $toAll = false,
 	): string {
 		$hub = $options['hub'] ?? false;
 
@@ -82,7 +72,7 @@ final class Broadcasters implements BroadcasterInterface, \IteratorAggregate, \A
 			return $this->getHub($hub)->broadcast($topics, $data, $options, $template);
 		}
 
-		if (false === $toAll) {
+		if ($toAll === false) {
 			return $this->first()->broadcast($topics, $data, $options, $template);
 		}
 
@@ -135,5 +125,15 @@ final class Broadcasters implements BroadcasterInterface, \IteratorAggregate, \A
 	public function offsetUnset(mixed $offset): void
 	{
 		throw new \LogicException('Cannot modify readonly collection.');
+	}
+
+	private function getHub(string $name): BroadcasterInterface
+	{
+		if (false === ($this[$name] ?? false)) {
+			throw new BroadcastException(sprintf('The hub "%s" is not defined.', $name));
+		}
+
+		$this->currentHub = $name;
+		return $this[$name];
 	}
 }

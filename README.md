@@ -24,7 +24,7 @@ _JWT options to set. Secret, publish & subscribe can be configured at [jwt.io](h
 mercure:
 	url: '%baseUrl%/.well-known/mercure'
 	jwt:
-		secret: n3tt3-m3rcµr3-fr4nk3nphP-jwT-s3cr3t-k3y
+		secret: n3tt3-m3rcµr3-fr4nk3nphP-jwT-s3cr3t-k3y # Must be at least 32 characters long
 		publish: ['test-topic'] # Optional, default is ['*']. Allow topics for which this JWT can be used to publish updates.
 		subscribe: ['test-topic'] # Optional, default is ['*']. Allow topics for which this JWT can be used to subscribe to updates.
 		algorithm: HS256 # Optional, default is HS256. @see Symfony\Component\Mercure\Jwt\LcobucciFactory::SIGN_ALGORITHMS
@@ -48,6 +48,9 @@ mercure:
 
 ### Sending messages
 ```php
+
+use Raneomik\NetteMercure\BroadcasterInterface;
+use Raneomik\NetteMercure\Latte\TurboStream\Action;
 
 final class SomeService
 {
@@ -82,7 +85,7 @@ final class SomeService
 			topics: ['test-topic'],
 			template: 'test.stream.latte',
 			options: [
-				'action' => Nette\Mercure\Latte\TurboStream\Action::Update  // for turbo streams or block organisation in same template. Template must have Action blocks
+				'action' => Action::Update  // for turbo streams or block organisation in same template. Template must have Action blocks
 			],
 			toAll: true,
 		);
@@ -98,7 +101,7 @@ Setup your JavaScript client to listen to Mercure updates and render them in sel
 
 ```js
 // assets/main.js - import a Mercure client sample
-import './../vendor/nette/mercure/assets/js/mercure-client.js';
+import './../vendor/raneomik/nette-mercure/assets/js/mercure-client.js';
 // or implement your own Mercure client - here's a minimalistic template/example:
 
 const eventSource = new EventSource(/*mercureUrl*/);
@@ -130,3 +133,13 @@ Resources
 * [Mercure](https://mercure.rocks)
 * [Documentation](https://symfony.com/doc/current/mercure.html)
 * wrapped [symfony/mercure](https://github.com/symfony/mercure)
+
+
+Known issues
+------------
+
+"anonymous" option for mercure in Caddy configuration seems to work only with Symfony\Mercure\FrankenPhpHub and the FrankenPHP built-in `mercure_publish` function.
+
+HttpClient shows errors such as "405 Method Not Allowed" in this case.
+
+Authentication cookie for mercure should be implemented soon.

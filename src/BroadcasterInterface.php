@@ -11,9 +11,9 @@
 
 declare(strict_types=1);
 
-namespace Nette\Mercure;
+namespace Raneomik\NetteMercure;
 
-use Nette\Mercure\Latte\TurboStream\Action;
+use Raneomik\NetteMercure\Latte\TurboStream\Action;
 
 interface BroadcasterInterface
 {
@@ -56,10 +56,10 @@ interface BroadcasterInterface
 	 * } $options
 	 */
 	public function broadcast(
-		array|string $topics,
-		object|array|string $data,
-		array $options = [],
-		?string $template = null,
-		/** bool $toAll = false, */
+	    array|string $topics,
+	    object|array|string $data,
+	    array $options = [],
+	    ?string $template = null,
+	/** bool $toAll = false, */
 	): string;
 }

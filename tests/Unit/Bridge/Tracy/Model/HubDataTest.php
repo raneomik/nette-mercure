@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Tracy\Model;
+namespace Tests\Unit\Raneomik\NetteMercure\Tracy\Model;
 
 require dirname(__DIR__, 4) . '/bootstrap.php';
 
-use Nette\Mercure\Bridge\Tracy\Model\HubData;
-use Nette\Mercure\Core\Broadcasters;
-use Nette\Mercure\Core\PlainBroadcaster;
+use Raneomik\NetteMercure\Bridge\Tracy\Model\HubData;
+use Raneomik\NetteMercure\Core\Broadcasters;
+use Raneomik\NetteMercure\Core\PlainBroadcaster;
 use Symfony\Component\Mercure\Jwt\StaticTokenProvider;
 use Symfony\Component\Mercure\MockHub;
 use Symfony\Component\Mercure\Update;
@@ -21,13 +21,13 @@ class HubDataTest extends TestCase
 	{
 		$publishcallback = fn(Update $update): string => $update->getData();
 		$broadcasters = new Broadcasters([
-			'test' => new PlainBroadcaster(
-				new MockHub(
-					'test',
-					new StaticTokenProvider('!ChangeMe1!'),
-					$publishcallback,
-				),
-			)
+		    'test' => new PlainBroadcaster(
+		        new MockHub(
+		            'test',
+		            new StaticTokenProvider('!ChangeMe1!'),
+		            $publishcallback,
+		        ),
+		    ),
 		]);
 
 		$hubData = new HubData($broadcasters);
@@ -36,5 +36,4 @@ class HubDataTest extends TestCase
 	}
 }
 
-
-(new HubDataTest)->run();
+(new HubDataTest())->run();

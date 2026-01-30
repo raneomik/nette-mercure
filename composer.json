@@ -19,7 +19,7 @@
     "symfony/mercure": "^0.7.2"
   },
   "require-dev": {
-    "latte/latte": "^2.0|^3.0",
+    "latte/latte": "^3.1@dev",
     "nette/application": "^4.0@dev",
     "nette/di": "^3.0",
     "nette/security": "^3.0",
@@ -32,12 +32,15 @@
   },
   "autoload": {
     "psr-4": {
-      "Nette\\Mercure\\": "src/"
+      "Raneomik\\NetteMercure\\": "src/"
     }
   },
   "autoload-dev": {
     "psr-4": {
-      "Tests\\": "tests/"
+      "Tests\\Unit\\Raneomik\\NetteMercure\\": "tests/Unit",
+      "Tests\\Integration\\Raneomik\\NetteMercure\\": "tests/Integration",
+      "Tests\\Functional\\Raneomik\\NetteMercure\\": "tests/Functional",
+      "Tests\\Fixtures\\Dummies\\": "tests/fixtures/Dummies"
     }
   },
   "minimum-stability": "dev",
@@ -48,7 +51,7 @@
           "args": [
             "%debugMode%"
           ],
-          "class": "Nette\\Mercure\\Bridge\\DI\\MercureExtension"
+          "class": "Raneomik\\NetteMercure\\Bridge\\DI\\MercureExtension"
         }
       }
     }

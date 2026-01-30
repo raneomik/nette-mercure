@@ -11,11 +11,10 @@
 
 declare(strict_types=1);
 
-namespace Nette\Mercure\Tracy;
+namespace Raneomik\NetteMercure\Tracy;
 
-use Nette\Mercure\BroadcasterInterface;
-use Nette\Mercure\Latte\TemplatePathResolver;
-use Nette\Mercure\Tracy\Model\BroadcastData;
+use Raneomik\NetteMercure\BroadcasterInterface;
+use Raneomik\NetteMercure\Tracy\Model\BroadcastData;
 
 final class TraceableBroadcaster implements BroadcasterInterface
 {
@@ -30,9 +29,8 @@ final class TraceableBroadcaster implements BroadcasterInterface
 	private array $messages = [];
 
 	public function __construct(
-		private readonly BroadcasterInterface $broadcaster,
-		private readonly TemplatePathResolver $pathResolver,
-		private readonly Metrics $metrics = new Metrics(),
+	    private readonly BroadcasterInterface $broadcaster,
+	    private readonly Metrics $metrics = new Metrics(),
 	) {}
 
 	public function broadcasterUrl(): string
@@ -47,10 +45,10 @@ final class TraceableBroadcaster implements BroadcasterInterface
 
 	#[\Override]
 	public function broadcast(
-		array|string $topics,
-		object|array|string $data,
-		array $options = [],
-		?string $template = null,
+	    array|string $topics,
+	    object|array|string $data,
+	    array $options = [],
+	    ?string $template = null,
 	): string {
 		$this->metrics->start(self::class);
 		$messageId = $this->broadcaster->broadcast($topics, $data, $options, $template);
@@ -59,16 +57,16 @@ final class TraceableBroadcaster implements BroadcasterInterface
 		$options = $this->broadcastOptions();
 
 		$options['template'] ??= $template ?? 'n/a';
-		$options['template'] .= sprintf('%s (from %s)', PHP_EOL, $this->pathResolver->resolvedDir());
+		$options['action'] ??= 'n/a';
 
 		$this->messages[] = [
-			'data' => new BroadcastData(
-				(array) ($options['topics'] ?? $topics),
-				$options['rendered_data'] ?? '',
-				$options,
-			),
-			'duration' => $this->metrics->getDuration(self::class),
-			'memory' => $this->metrics->getMemory(self::class),
+		    'data' => new BroadcastData(
+		        (array) ($options['topics'] ?? $topics),
+		        $options['rendered_data'] ?? '',
+		        $options,
+		    ),
+		    'duration' => $this->metrics->getDuration(self::class),
+		    'memory' => $this->metrics->getMemory(self::class),
 		];
 
 		return $messageId;

@@ -7,15 +7,15 @@
 
 declare(strict_types=1);
 
-namespace Nette\Mercure\Bridge\DI\Dependency;
+namespace Raneomik\NetteMercure\Bridge\DI\Dependency;
 
 use Nette\DI\ContainerBuilder;
 use Nette\DI\Definitions\Definition;
 use Nette\DI\Definitions\Statement;
-use Nette\Mercure\Bridge\DI\MercureExtension;
+use Raneomik\NetteMercure\Bridge\DI\MercureExtension;
+use Symfony\Component\Mercure\FrankenPhpHub;
 use Symfony\Component\Mercure\Hub;
 use Symfony\Component\Mercure\HubInterface;
-use Symfony\Component\Mercure\FrankenPhpHub;
 use Symfony\Component\Mercure\HubRegistry;
 use Symfony\Component\Mercure\Jwt\FactoryTokenProvider;
 use Symfony\Component\Mercure\Jwt\LcobucciFactory;
@@ -30,7 +30,7 @@ final readonly class MercureHubsDefiner
 	private bool $debugMode;
 
 	public function __construct(
-		private MercureExtension $extension,
+	    private MercureExtension $extension,
 	) {
 		$this->builder = $extension->getContainerBuilder();
 		$this->debugMode = $extension->getDebugMode();
@@ -42,60 +42,60 @@ final readonly class MercureHubsDefiner
 	public function postLoad(array $broadcasterDefinitions): void
 	{
 		$this->builder->addDefinition($this->extension->prefix('symfony.hub.registry'))
-			->setType(HubRegistry::class)
-			->setFactory(HubRegistry::class, [
-				array_first($broadcasterDefinitions),
-				$broadcasterDefinitions,
-			])
-			->setAutowired(false);
+		    ->setType(HubRegistry::class)
+		    ->setFactory(HubRegistry::class, [
+		        array_first($broadcasterDefinitions),
+		        $broadcasterDefinitions,
+		    ])
+		    ->setAutowired(false);
 
 		$this->builder->addDefinition($this->extension->prefix('symfony.links.headerSerializer'))
-			->setType(HttpHeaderSerializer::class)
-			->setFactory(HttpHeaderSerializer::class, [])
-			->setAutowired(false);
+		    ->setType(HttpHeaderSerializer::class)
+		    ->setFactory(HttpHeaderSerializer::class, [])
+		    ->setAutowired(false);
 	}
 
 	public function hubDefinition(\stdClass $config, string $name): Definition
 	{
 		$factoryArguments = $config->jwt->factory === LcobucciFactory::class ? [
-			$config->jwt->secret,
-			$config->jwt->algorithm,
+		    $config->jwt->secret,
+		    $config->jwt->algorithm,
 		] : [
-			$config->jwt->secret,
+		    $config->jwt->secret,
 		];
 
 		$tokenFactoryDefinition = $this->builder->addDefinition($this->extension->prefix('factory.token.' . $name))
-			->setType(TokenFactoryInterface::class)
-			->setFactory(new Statement($config->jwt->factory, $factoryArguments))
-			->setAutowired(false);
+		    ->setType(TokenFactoryInterface::class)
+		    ->setFactory(new Statement($config->jwt->factory, $factoryArguments))
+		    ->setAutowired(false);
 
 		$hubAlias = $this->extension->prefix('sf.hub.' . $name);
 		if (getenv('FRANKENPHP_CONFIG') ?: false) {
 			return $this->builder->addDefinition($hubAlias)
-				->setType($this->debugMode ? FrankenPhpHub::class : HubInterface::class)
-				->setFactory(FrankenPhpHub::class, [
-					$config->url,
-					$tokenFactoryDefinition,
-				])
-				->setAutowired(false);
+			    ->setType($this->debugMode ? FrankenPhpHub::class : HubInterface::class)
+			    ->setFactory(FrankenPhpHub::class, [
+			        $config->url,
+			        $tokenFactoryDefinition,
+			    ])
+			    ->setAutowired(false);
 		}
 
 		$factoryProviderDefinition = $this->builder->addDefinition($this->extension->prefix('token.provider.' . $name))
-			->setType(TokenProviderInterface::class)
-			->setFactory(new Statement(FactoryTokenProvider::class, [
-				$tokenFactoryDefinition,
-				$config->jwt->subscribe,
-				$config->jwt->publish,
-			]))
-			->setAutowired(false);
+		    ->setType(TokenProviderInterface::class)
+		    ->setFactory(new Statement(FactoryTokenProvider::class, [
+		        $tokenFactoryDefinition,
+		        $config->jwt->subscribe,
+		        $config->jwt->publish,
+		    ]))
+		    ->setAutowired(false);
 
 		return $this->builder->addDefinition($hubAlias)
-			->setType($this->debugMode ? Hub::class : HubInterface::class)
-			->setFactory(new Statement(Hub::class, [
-				$config->url,
-				$factoryProviderDefinition,
-				$tokenFactoryDefinition,
-			]))
-			->setAutowired(false);
+		    ->setType($this->debugMode ? Hub::class : HubInterface::class)
+		    ->setFactory(new Statement(Hub::class, [
+		        $config->url,
+		        $factoryProviderDefinition,
+		        $tokenFactoryDefinition,
+		    ]))
+		    ->setAutowired(false);
 	}
 }

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Nette\Mercure\Bridge\Tracy\Model;
+namespace Raneomik\NetteMercure\Bridge\Tracy\Model;
 
-use Nette\Mercure\Core\Broadcasters;
-use Nette\Mercure\Tracy\TraceableBroadcaster;
+use Raneomik\NetteMercure\Core\Broadcasters;
+use Raneomik\NetteMercure\Tracy\TraceableBroadcaster;
 
 /**
  * @template-extends \ArrayIterator<int, HubDatum>
@@ -17,11 +17,11 @@ final class HubData extends \ArrayIterator
 	public float $totalMemory = 0;
 
 	public function __construct(
-		Broadcasters $broadcasters
+	    Broadcasters $broadcasters
 	) {
 		$data = [];
 		foreach ($broadcasters as $name => $broadcaster) {
-			if (false === $broadcaster instanceof TraceableBroadcaster) {
+			if ($broadcaster instanceof TraceableBroadcaster === false) {
 				continue;
 			}
 
@@ -29,11 +29,11 @@ final class HubData extends \ArrayIterator
 			$this->totalMemory += $memory = $broadcaster->getMemory();
 
 			$data[] = new HubDatum(
-				$name,
-				$broadcaster->broadcasterUrl(),
-				$broadcaster->getMessageData(),
-				$duration,
-				$memory,
+			    $name,
+			    $broadcaster->broadcasterUrl(),
+			    $broadcaster->getMessageData(),
+			    $duration,
+			    $memory,
 			);
 		}
 

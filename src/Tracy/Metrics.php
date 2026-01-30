@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace Nette\Mercure\Tracy;
+namespace Raneomik\NetteMercure\Tracy;
 
 use Tracy\Debugger;
 
@@ -26,7 +26,7 @@ final class Metrics
 	 * @param array<string, array<string, float>> $pool
 	 */
 	public function __construct(
-		private array $pool = [],
+	    private array $pool = [],
 	) {}
 
 	public function start(string $key): void

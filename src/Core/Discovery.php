@@ -11,13 +11,13 @@
 
 declare(strict_types=1);
 
-namespace Nette\Mercure\Core;
+namespace Raneomik\NetteMercure\Core;
 
 use Nette\Http\Request;
 use Nette\Http\Response;
 use Symfony\Component\Mercure\HubRegistry;
-use Symfony\Component\WebLink\Link;
 use Symfony\Component\WebLink\HttpHeaderSerializer;
+use Symfony\Component\WebLink\Link;
 
 /**
  * Discovery service is a helper to add `Link` header to the response.
@@ -25,10 +25,10 @@ use Symfony\Component\WebLink\HttpHeaderSerializer;
 final readonly class Discovery
 {
 	public function __construct(
-		private HubRegistry $registry,
-		private HttpHeaderSerializer $header,
-		private Request $request,
-		private Response $response,
+	    private HubRegistry $registry,
+	    private HttpHeaderSerializer $header,
+	    private Request $request,
+	    private Response $response,
 	) {}
 
 	/**
@@ -44,13 +44,13 @@ final readonly class Discovery
 
 		// @phpstan-ignore-next-line
 		$this->response->setHeader('Link', $this->header->serialize([
-			new Link('mercure', $hubInstance->getPublicUrl()),
+		    new Link('mercure', $hubInstance->getPublicUrl()),
 		]));
 	}
 
 	private function isPreflightRequest(Request $request): bool
 	{
 		return $request->isMethod('OPTIONS')
-			&& null !== $request->getHeader('Access-Control-Request-Method');
+			&& $request->getHeader('Access-Control-Request-Method') !== null;
 	}
 }

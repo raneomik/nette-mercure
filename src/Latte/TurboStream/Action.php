@@ -2,8 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Nette\Mercure\Latte\TurboStream;
-
+namespace Raneomik\NetteMercure\Latte\TurboStream;
 
 enum Action: string
 {

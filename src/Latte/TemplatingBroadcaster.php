@@ -11,12 +11,12 @@
 
 declare(strict_types=1);
 
-namespace Nette\Mercure\Latte;
+namespace Raneomik\NetteMercure\Latte;
 
 use Latte\Engine;
-use Nette\Mercure\BroadcasterInterface;
-use Nette\Mercure\Core\PlainBroadcaster;
-use Nette\Mercure\Latte\TurboStream\Action;
+use Raneomik\NetteMercure\BroadcasterInterface;
+use Raneomik\NetteMercure\Core\PlainBroadcaster;
+use Raneomik\NetteMercure\Latte\TurboStream\Action;
 
 final readonly class TemplatingBroadcaster implements BroadcasterInterface
 {
@@ -24,9 +24,9 @@ final readonly class TemplatingBroadcaster implements BroadcasterInterface
 	 * @param PlainBroadcaster $decorated
 	 */
 	public function __construct(
-		private BroadcasterInterface $decorated,
-		private TemplatePathResolver $templatePathResolver,
-		private Engine $latte,
+	    private BroadcasterInterface $decorated,
+	    private TemplatePathResolver $templatePathResolver,
+	    private Engine $latte,
 	) {}
 
 	#[\Override]
@@ -43,33 +43,35 @@ final readonly class TemplatingBroadcaster implements BroadcasterInterface
 
 	#[\Override]
 	public function broadcast(
-		array|string $topics,
-		object|array|string $data,
-		array $options = [],
-		?string $template = null,
+	    array|string $topics,
+	    object|array|string $data,
+	    array $options = [],
+	    ?string $template = null,
 	): string {
 		$template = $options['template'] ?? $template;
 
-		if (null === $template) {
+		if ($template === null) {
 			return $this->decorated->broadcast($topics, $data, $options);
 		}
 
 		$data = is_string($data)
-			? ['data' => $data]
+			? [
+			    'data' => $data,
+			]
 			: (array) $data;
 
 		$options['rendered_data'] = $renderedData = $this->latte->renderToString(
-			$options['template'] = $this->templatePathResolver->resolve($template),
-			$data + [
-				'contentType' => $this->resolveContentType($template),
-			],
-			$this->resolveAction($options['action'] ?? null),
+		    $options['template'] = $this->templatePathResolver->resolve($template),
+		    $data + [
+		        'contentType' => $this->resolveContentType($template),
+		    ],
+		    $this->resolveAction($options['action'] ?? null),
 		);
 
 		return $this->decorated->broadcast(
-			$topics,
-			$renderedData,
-			$options,
+		    $topics,
+		    $renderedData,
+		    $options,
 		);
 	}
 

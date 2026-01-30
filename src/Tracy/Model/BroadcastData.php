@@ -2,21 +2,22 @@
 
 declare(strict_types=1);
 
-namespace Nette\Mercure\Tracy\Model;
+namespace Raneomik\NetteMercure\Tracy\Model;
 
+use Raneomik\NetteMercure\Latte\TurboStream\Action;
 
 final readonly class BroadcastData
 {
 	/**
-     * Undocumented function
-     *
-     * @param string[] $topics
-     * @param array<string,mixed> $options
-     */
-    public function __construct(
-		private array $topics,
-		private string $data,
-		private array $options = [],
+	 * Undocumented function
+	 *
+	 * @param string[] $topics
+	 * @param array<string,mixed> $options
+	 */
+	public function __construct(
+	    private array $topics,
+	    private string $data,
+	    private array $options = [],
 	) {}
 
 	/**
@@ -27,14 +28,14 @@ final readonly class BroadcastData
 		return $this->topics;
 	}
 
-	public function getType(): ?string
-	{
-		return $this->options['type'] ?? null;
-	}
-
 	public function getData(): string
 	{
 		return $this->data;
+	}
+
+	public function getAction(): null|string|Action
+	{
+		return $this->options['action'] ?? null;
 	}
 
 	public function getTemplate(): ?string
@@ -48,10 +49,10 @@ final readonly class BroadcastData
 	public function getOptions(): array
 	{
 		return array_diff_key($this->options, array_flip([
-			'type',
-			'template',
-			'topics',
-			'rendered_data',
+		    'action',
+		    'template',
+		    'topics',
+		    'rendered_data',
 		]));
 	}
 }

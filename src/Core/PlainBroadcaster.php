@@ -11,11 +11,11 @@
 
 declare(strict_types=1);
 
-namespace Nette\Mercure\Core;
+namespace Raneomik\NetteMercure\Core;
 
-use Nette\Mercure\BroadcasterInterface;
-use Nette\Mercure\Latte\TurboStream\Action;
 use Nette\Utils\Json;
+use Raneomik\NetteMercure\BroadcasterInterface;
+use Raneomik\NetteMercure\Latte\TurboStream\Action;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
 
@@ -38,7 +38,7 @@ final class PlainBroadcaster implements BroadcasterInterface
 	private array $resolvedOptions;
 
 	public function __construct(
-		protected readonly HubInterface $hub,
+	    private readonly HubInterface $hub,
 	) {}
 
 	#[\Override]
@@ -55,26 +55,26 @@ final class PlainBroadcaster implements BroadcasterInterface
 
 	#[\Override]
 	public function broadcast(
-		array|string $topics,
-		object|array|string $data,
-		array $options = [],
-		?string $template = null,
+	    array|string $topics,
+	    object|array|string $data,
+	    array $options = [],
+	    ?string $template = null,
 	): string {
 		$data = is_string($data)
 			? $data
 			: Json::encode($data);
 
 		$update = new Update(
-			$topics,
-			$data,
-			(bool) ($options['private'] ?? false),
-			$options['sse_id'] ?? null,
-			$options['sse_type'] ?? null,
-			$options['sse_retry'] ?? null,
+		    $topics,
+		    $data,
+		    (bool) ($options['private'] ?? false),
+		    $options['sse_id'] ?? null,
+		    $options['sse_type'] ?? null,
+		    $options['sse_retry'] ?? null,
 		);
 
 		$this->resolvedOptions = $options + [
-			'rendered_data' => $options['rendered_data'] ?? $data,
+		    'rendered_data' => $options['rendered_data'] ?? $data,
 		];
 
 		return $this->hub->publish($update);

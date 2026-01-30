@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Nette\Mercure\Exception;
+namespace Raneomik\NetteMercure\Exception;
 
-final class BroadcastException extends \RuntimeException {}
+final class BroadcastException extends \RuntimeException
+{}

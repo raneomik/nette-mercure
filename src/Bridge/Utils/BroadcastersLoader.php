@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Nette\Mercure\Bridge\Utils;
+namespace Raneomik\NetteMercure\Bridge\Utils;
 
-use Nette\Mercure\Core\Broadcasters;
+use Raneomik\NetteMercure\Core\Broadcasters;
 
 final readonly class BroadcastersLoader
 {
 	private object $broadcastersLoader;
 
 	public function __construct(
-		callable $broadcastersLoader,
+	    callable $broadcastersLoader,
 	) {
 		// @phpstan-ignore-next-line
 		$this->broadcastersLoader = $broadcastersLoader;

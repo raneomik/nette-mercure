@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Nette\Mercure\Bridge\Latte;
+namespace Raneomik\NetteMercure\Bridge\Latte;
 
 use Latte\Extension;
-use Nette\Mercure\Bridge\Utils\BroadcastersLoader;
-use Nette\Mercure\Core\Broadcasters;
+use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
+use Raneomik\NetteMercure\Core\Broadcasters;
 
 final class MercureExtension extends Extension
 {
 	private readonly Broadcasters $broadcasters;
 
 	public function __construct(
-		private readonly BroadcastersLoader $broadcastersLoader,
+	    private readonly BroadcastersLoader $broadcastersLoader,
 	) {}
 
 	public function broadcasters(): Broadcasters
@@ -24,7 +24,7 @@ final class MercureExtension extends Extension
 	public function getFunctions(): array
 	{
 		return [
-			'mercure' => $this->mercure(...),
+		    'mercure' => $this->mercure(...),
 		];
 	}
 
@@ -37,12 +37,12 @@ final class MercureExtension extends Extension
 	private function mercure(string|array|null $topics = null, ?string $hub = null, array $options = []): string
 	{
 		$url = $this->broadcasters()->broadcasterUrl($hub);
-		if (null !== $topics) {
+		if ($topics !== null) {
 			// We cannot use http_build_query() because this method doesn't support generating multiple query parameters with the same name without the [] suffix
 			$separator = '?';
 			foreach ((array) $topics as $topic) {
 				$url .= $separator . 'topic=' . rawurlencode($topic);
-				if ('?' === $separator) {
+				if ($separator === '?') {
 					$separator = '&';
 				}
 			}
