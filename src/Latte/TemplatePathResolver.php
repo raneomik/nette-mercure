@@ -17,7 +17,7 @@ final class TemplatePathResolver
 	public function resolve(string $templatePath): string
 	{
 		$fromConfiguredPath = $this->fromConfiguredPath($templatePath);
-		if ($fromConfiguredPath !== null) {
+		if (null !== $fromConfiguredPath) {
 			$this->resolvedDir = $this->basePath;
 			return $fromConfiguredPath;
 		}
@@ -67,7 +67,7 @@ final class TemplatePathResolver
 
 	private function fromConfiguredPath(string $templatePath): ?string
 	{
-		if ($this->basePath === __DIR__) {
+		if (__DIR__ === $this->basePath) {
 			return null;
 		}
 

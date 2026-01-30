@@ -50,7 +50,7 @@ final readonly class TemplatingBroadcaster implements BroadcasterInterface
 	): string {
 		$template = $options['template'] ?? $template;
 
-		if ($template === null) {
+		if (null === $template) {
 			return $this->decorated->broadcast($topics, $data, $options);
 		}
 

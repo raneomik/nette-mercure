@@ -37,12 +37,12 @@ final class MercureExtension extends Extension
 	private function mercure(string|array|null $topics = null, ?string $hub = null, array $options = []): string
 	{
 		$url = $this->broadcasters()->broadcasterUrl($hub);
-		if ($topics !== null) {
+		if (null !== $topics) {
 			// We cannot use http_build_query() because this method doesn't support generating multiple query parameters with the same name without the [] suffix
 			$separator = '?';
 			foreach ((array) $topics as $topic) {
 				$url .= $separator . 'topic=' . rawurlencode($topic);
-				if ($separator === '?') {
+				if ('?' === $separator) {
 					$separator = '&';
 				}
 			}

@@ -28,12 +28,12 @@ class MercureExtensionTest extends TestCase
 	{
 		$loader = new Loader();
 		$config = $loader->load(FileMock::create('
-		mercure:
-			url: /.well-known/mercure
-			jwt:
-				secret: jwt-secret
+        mercure:
+            url: /.well-known/mercure
+            jwt:
+                secret: jwt-secret
 
-		', 'neon'));
+        ', 'neon'));
 
 		$compiler = new Compiler();
 		$compiler->addExtension('mercure', new MercureExtension(false));
@@ -65,17 +65,17 @@ class MercureExtensionTest extends TestCase
 	{
 		$loader = new Loader();
 		$config = $loader->load(FileMock::create('
-		mercure:
-			hub1:
-				url: /.well-known/mercure/hub1
-				jwt:
-					secret: jwt-secret
-			hub2:
-				url: /.well-known/mercure/hub2
-				jwt:
-					secret: jwt-secret
+        mercure:
+            hub1:
+                url: /.well-known/mercure/hub1
+                jwt:
+                    secret: jwt-secret
+            hub2:
+                url: /.well-known/mercure/hub2
+                jwt:
+                    secret: jwt-secret
 
-		', 'neon'));
+        ', 'neon'));
 
 		$compiler = new Compiler();
 		$compiler->addExtension('mercure', new MercureExtension(true));
@@ -111,11 +111,11 @@ class MercureExtensionTest extends TestCase
 		$loader = new Loader();
 
 		$config = $loader->load(FileMock::create('
-		mercure:
-			url: /.well-known/mercure
-			jwt:
-				secret: jwt-secret
-		', 'neon'));
+        mercure:
+            url: /.well-known/mercure
+            jwt:
+                secret: jwt-secret
+        ', 'neon'));
 
 		$compiler = new Compiler();
 		$compiler->addExtension('mercure', new MercureExtension(true));
@@ -144,12 +144,12 @@ class MercureExtensionTest extends TestCase
 
 		$loader = new Loader();
 		$config = $loader->load(FileMock::create("
-		mercure:
-			url: /.well-known/mercure
-			jwt:
-				secret: jwt-secret
-				factory: {$dummyClass}
-		", 'neon'));
+        mercure:
+            url: /.well-known/mercure
+            jwt:
+                secret: jwt-secret
+                factory: {$dummyClass}
+        ", 'neon'));
 
 		$compiler = new Compiler();
 		$compiler->addExtension('mercure', new MercureExtension(false));

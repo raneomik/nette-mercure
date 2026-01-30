@@ -70,12 +70,12 @@ jobs:
           filename: "tests/reports/coverage.xml"
 
       - name: Generate the badge SVG image
-        uses: emibcn/badge-action@v1
+        uses: emibcn/badge-action@v2.0.2
         id: badge
         with:
-          label: "Coverage"
+          label: "Test Coverage"
           status: ${{ steps.coverage.outputs.coverage }}
-          path: ./badges/test-coverage.svg
+          path: .github/badges/coverage.svg
           color: ${{
             steps.coverage.outputs.coverage > 90 && 'green'         ||
             steps.coverage.outputs.coverage > 80 && 'yellow,green'  ||

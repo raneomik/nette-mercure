@@ -41,7 +41,7 @@ final class Broadcasters implements BroadcasterInterface, \IteratorAggregate, \A
 	#[\Override]
 	public function broadcasterUrl(?string $hub = null): string
 	{
-		if ($hub !== null) {
+		if (null !== $hub) {
 			return $this->getHub($hub)->broadcasterUrl();
 		}
 
@@ -51,7 +51,7 @@ final class Broadcasters implements BroadcasterInterface, \IteratorAggregate, \A
 	#[\Override]
 	public function broadcastOptions(?string $hub = null): array
 	{
-		if ($hub !== null) {
+		if (null !== $hub) {
 			return $this->getHub($hub)->broadcastOptions();
 		}
 
@@ -72,7 +72,7 @@ final class Broadcasters implements BroadcasterInterface, \IteratorAggregate, \A
 			return $this->getHub($hub)->broadcast($topics, $data, $options, $template);
 		}
 
-		if ($toAll === false) {
+		if (false === $toAll) {
 			return $this->first()->broadcast($topics, $data, $options, $template);
 		}
 

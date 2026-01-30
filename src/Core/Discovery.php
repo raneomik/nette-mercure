@@ -51,6 +51,6 @@ final readonly class Discovery
 	private function isPreflightRequest(Request $request): bool
 	{
 		return $request->isMethod('OPTIONS')
-			&& $request->getHeader('Access-Control-Request-Method') !== null;
+			&& null !== $request->getHeader('Access-Control-Request-Method');
 	}
 }

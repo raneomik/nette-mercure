@@ -41,7 +41,7 @@ final class MercureExtension extends Nette\DI\CompilerExtension
 		        // 'debugger' => Expect::bool('%debugMode%'),
 		        // 'autowired' => Expect::bool(),
 		    ]),
-		)->before(fn($val): mixed => is_array(reset($val)) || reset($val) === null
+		)->before(fn($val): mixed => is_array(reset($val)) || null === reset($val)
 			? $val
 			: [
 			    'default' => $val,
@@ -80,7 +80,7 @@ final class MercureExtension extends Nette\DI\CompilerExtension
 
 		$broadcastersLoader->postLoad($broadcasterDefinitions);
 
-		if ($latteDefinition !== false) {
+		if (false !== $latteDefinition) {
 			$latteDefinition
 			    ->addSetup('addExtension', [
 			        new Statement(LatteMercureExtension::class, [

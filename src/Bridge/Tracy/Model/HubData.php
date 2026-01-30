@@ -21,7 +21,7 @@ final class HubData extends \ArrayIterator
 	) {
 		$data = [];
 		foreach ($broadcasters as $name => $broadcaster) {
-			if ($broadcaster instanceof TraceableBroadcaster === false) {
+			if (false === $broadcaster instanceof TraceableBroadcaster) {
 				continue;
 			}
 

@@ -25,9 +25,11 @@
     "nette/security": "^3.0",
     "nette/tester": "^2.5@dev",
     "phpro/grumphp": "v2.x-dev",
+    "phpstan/extension-installer": "1.4.x-dev",
     "phpstan/phpstan-nette": "^2.0@stable",
     "rector/rector": "^2.3.4",
     "symplify/easy-coding-standard": "^13.0",
+    "tomasvotruba/type-coverage": "dev-main",
     "tracy/tracy": "^2.8"
   },
   "autoload": {
@@ -73,7 +75,8 @@
   "config": {
     "sort-packages": true,
     "allow-plugins": {
-      "phpro/grumphp": true
+      "phpro/grumphp": true,
+      "phpstan/extension-installer": true
     }
   }
 }
