@@ -1,83 +1,65 @@
 on:
-  pull_request:
-  push:
-    branches:
-      - "*"
-      - "!badges"
-
+    pull_request:
+    push:
 permissions:
-  contents: read
-  actions: read
-  checks: write
+    contents: read
+    actions: read
+    checks: write
 
 env:
-  tools: "composer:v2"
-  cache-version: "1"
+    tools: "composer:v2"
+    cache-version: "1"
 
 jobs:
-  php-workflow:
-    name: "CI - PHP 8.5"
-    runs-on: "ubuntu-latest"
+    ci:
+        name: "CI"
 
-    steps:
-      - name: "Checkout"
-        uses: "actions/checkout@v6"
+        runs-on: ${{ matrix.os }}
 
-      - name: "Install PHP"
-        uses: "shivammathur/setup-php@v2"
-        with:
-          php-version: 8.5"
-          extensions: "pcov"
-          tools: "${{ env.tools }}"
+        strategy:
+            matrix:
+                os:
+                    - "ubuntu-latest"
+                php-version:
+                    - "8.3"
+                    - "8.4"
+                    - "8.5"
 
-      - name: "Setup problem matchers for PHP"
-        run: 'echo "::add-matcher::${{ runner.tool_cache }}/php.json"'
+        steps:
+        -   name: "Checkout"
+            uses: "actions/checkout@v6"
 
-      - name: "Get Composer cache directory"
-        id: "composercache"
-        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+        -   name: "Install PHP"
+            uses: "shivammathur/setup-php@v2"
+            with:
+                php-version: ${{ matrix.php-version }}
+                tools: "${{ env.tools }}"
 
-      - name: "Cache PHP dependencies"
-        uses: "actions/cache@v4"
-        with:
-          path: "${{ steps.composercache.outputs.dir }}"
-          key: "${{ runner.os }}-composer-${{ hashFiles('**/composer.json') }}"
-          restore-keys: "${{ runner.os }}-composer-"
+        -   name: "Setup problem matchers for PHP"
+            run: 'echo "::add-matcher::${{ runner.tool_cache }}/php.json"'
 
-      - name: "Install dependencies"
-        run: "composer install --prefer-dist --no-progress --no-suggest --optimize-autoloader"
+        -   name: "Get Composer cache directory"
+            id: "composercache"
+            run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
 
-      - name: "Run Rector"
-        run: "composer rector -- --output-format=github --no-progress-bar"
-      - name: "Run PHPStan"
-        run: "composer phpstan -- --error-format=github --no-progress"
-      - name: "Run ECS"
-        run: "composer ecs -- --no-progress-bar"
+        -   name: "Cache PHP dependencies"
+            uses: "actions/cache@v4"
+            with:
+                path: "${{ steps.composercache.outputs.dir }}"
+                key: "${{ runner.os }}-php${{ matrix.php-version }}-composer-${{ hashFiles('**/composer.json') }}"
+                restore-keys: "${{ runner.os }}-php${{ matrix.php-version }}-composer-"
 
-      - name: "Run Tests with coverage"
-        run: "composer test-coverage"
+        -   name: "Install dependencies"
+            run: "composer install --prefer-dist --no-progress --no-suggest --optimize-autoloader"
 
-      - name: Test Report
-        uses: dorny/test-reporter@v2
-        if: ${{ !cancelled() }}
-        with:
-          name: TESTER Tests
-          path: tests/reports/junit.xml
-          reporter: tester-junit
+        -   name: "Validate Composer dependencies"
+            run: "composer validate --strict"
+        -   name: "Composer dependencies audit"
+            run: "composer audit"
+        -   name: "Run Rector"
+            run: "composer rector -- --output-format=github --no-progress-bar"
+        -   name: "Run PHPStan"
+            run: "composer phpstan -- --error-format=github --no-progress"
+        -   name: "Run ECS"
+            run: "composer ecs -- --no-progress-bar"
 
-      - name: Upload test results report to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: tests/reports/junit.xml
-          fail_ci_if_error: true
-          report_type: test_results          
-
-      - name: Upload tests coverage report to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: tests/reports/coverage.xml
-          fail_ci_if_error: true
-          report_type: coverage
-          
