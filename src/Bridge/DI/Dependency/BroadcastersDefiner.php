@@ -16,10 +16,15 @@ use Nette\DI\Definitions\Statement;
 use Nette\Http\Request;
 use Nette\Http\Response;
 use Raneomik\NetteMercure\Bridge\DI\MercureExtension;
+use Raneomik\NetteMercure\Bridge\Utils\DefaultData;
 use Raneomik\NetteMercure\BroadcasterInterface;
-use Raneomik\NetteMercure\Core\AddLinkHeaderHandler;
 use Raneomik\NetteMercure\Core\Broadcasters;
+use Raneomik\NetteMercure\Core\JWTProvider;
 use Raneomik\NetteMercure\Core\PlainBroadcaster;
+use Raneomik\NetteMercure\Core\Response\Authorization;
+use Raneomik\NetteMercure\Core\Response\BroadcastContext;
+use Raneomik\NetteMercure\Core\Response\BroadcastContextInterface;
+use Raneomik\NetteMercure\Core\Response\Discovery;
 use Raneomik\NetteMercure\Latte\TemplatePathResolver;
 use Raneomik\NetteMercure\Latte\TemplatingBroadcaster;
 use Raneomik\NetteMercure\Tracy\TraceableBroadcaster;
@@ -27,7 +32,7 @@ use Raneomik\NetteMercure\Tracy\TraceableBroadcaster;
 final class BroadcastersDefiner
 {
     /**
-     * @var array<string, Definition|false>
+     * @var array<string, Definition|Definition[]|false>
      */
     private array $definitionsCache = [];
 
@@ -42,15 +47,108 @@ final class BroadcastersDefiner
         $this->debugMode = $extension->getDebugMode();
     }
 
-    public function broadcasterDefinition(string $hubName, false|ServiceDefinition $latteDefinition): Definition
+    public function loadResponseListeners(): void
     {
+        /** @var false|ServiceDefinition $appDef */
+        $appDef = $this->definitionsCache['app'] ??= (
+            $this->builder->hasDefinition('application.application')
+            ? $this->builder->getDefinition('application.application')
+            : false
+        );
+
+        if (false === $appDef) {
+            return;
+        }
+
+        $hubRegistryDef = $this->definitionsCache['symfony.hub.registry']
+            ??= $this->builder->getDefinition($this->extension->prefix('symfony.hub.registry'));
+        $headerSerializerDef = $this->definitionsCache['symfony.links.headerSerializer']
+            ??= $this->builder->getDefinition($this->extension->prefix('symfony.links.headerSerializer'));
+        $requestDef = $this->definitionsCache['request']
+            ??= $this->builder->getDefinitionByType(Request::class);
+        $responseDef = $this->definitionsCache['response']
+            ??= $this->builder->getDefinitionByType(Response::class);
+
+        $discoveryDef = $this->definitionsCache['discovery']
+            ??= $this->builder->addDefinition($this->extension->prefix('discovery'))
+                ->setType(Discovery::class)
+                ->setFactory(Discovery::class)
+                ->setArguments([
+                    $headerSerializerDef,
+                    $requestDef,
+                    $responseDef,
+                ])
+                ->setAutowired(false);
+        $jwtProviderDef = $this->definitionsCache['jwtProvider']
+            ??= $this->builder->addDefinition($this->extension->prefix('jwtProvider'))
+                ->setType(JWTProvider::class)
+                ->setFactory(JWTProvider::class)
+                ->setArguments([
+                    $hubRegistryDef,
+                ])
+                ->setAutowired(false);
+
+        $authorizationDef = $this->definitionsCache[$this->extension->prefix('authorization')]
+            ??= $this->builder->addDefinition($this->extension->prefix('authorization'))
+                ->setType(Authorization::class)
+                ->setFactory(Authorization::class)
+                ->setArguments([
+                    $jwtProviderDef,
+                    $requestDef,
+                    $responseDef,
+                ])
+                ->setAutowired(false);
+
+        $broadcastContextDef = $this->builder->addDefinition($this->extension->prefix('broadcastContext'))
+            ->setType(BroadcastContextInterface::class)
+            ->setFactory(BroadcastContext::class)
+            ->setArguments([
+                $authorizationDef,
+                $discoveryDef,
+            ]);
+
+        $appDef->addSetup('?->onResponse[] = function() {
+            ?->createCookies();
+            ?->addResponseLinks();
+        }', [
+            '@self',
+            $broadcastContextDef,
+            $broadcastContextDef,
+        ]);
+    }
+
+    public function broadcasterDefinition(\stdClass $hubConfig, string $hubName, false|ServiceDefinition $latteDefinition): Definition
+    {
+        $defaultsDef = $this->builder->addDefinition(
+            $this->extension->prefix($this->extension->prefix(sprintf('defaults.%s', $hubName)))
+        )
+            ->setType(DefaultData::class)
+            ->setFactory(DefaultData::class, [
+                $hubConfig->url ?? null,
+                $hubConfig->jwt->subscribe,
+                $hubConfig->jwt->publish,
+                $hubConfig->jwt->additionalClaims ?? [],
+            ])
+            ->setAutowired(false);
+
         $plainBroadcasterDef = $this->builder->addDefinition($this->extension->prefix(sprintf('broadcaster.%s.plain', $hubName)))
             ->setType(
                 false !== $latteDefinition && $this->debugMode
                     ? PlainBroadcaster::class
                     : BroadcasterInterface::class
             )
-            ->setFactory(PlainBroadcaster::class, [$this->builder->getDefinition($this->extension->prefix('sf.hub.' . $hubName))])
+            ->setFactory(PlainBroadcaster::class, [
+                $this->builder->getDefinition($this->extension->prefix('sf.hub.' . $hubName)),
+                $this->builder->hasDefinition($this->extension->prefix('broadcastContext'))
+                    /** @phpstan-ignore-next-line  */
+                    ? $this->builder->getDefinition($this->extension->prefix('broadcastContext'))
+                        ->addSetup('?->addDefaultData(?, ?)', [
+                            '@self',
+                            $hubName,
+                            $defaultsDef,
+                        ])
+                    : null,
+            ])
             ->setAutowired(false);
 
         $latteBroadcasterDef = null;
@@ -67,8 +165,10 @@ final class BroadcastersDefiner
         }
 
         $broadcasterDefinition = null;
-        if ($this->debugMode) {
-            $broadcasterDefinition = $this->builder->addDefinition($this->extension->prefix(sprintf('broadcaster.%s.traceable', $hubName)))
+        if ($this->debugMode && $hubConfig->debugger) {
+            $broadcasterDefinition = $this->builder->addDefinition(
+                $this->extension->prefix(sprintf('broadcaster.%s.traceable', $hubName))
+            )
                 ->setType(TraceableBroadcaster::class)
                 ->setFactory(TraceableBroadcaster::class, [
                     $latteBroadcasterDef ?? $plainBroadcasterDef,
@@ -94,44 +194,6 @@ final class BroadcastersDefiner
             ->setFactory(Broadcasters::class, [
                 $broadcasterDefinitions,
             ])
-            ->setAutowired(true);
-    }
-
-    public function loadLinkHeaderHandler(string $hubName): void
-    {
-        /** @var false|ServiceDefinition $appDef */
-        $appDef = $this->definitionsCache['app'] ??= (
-            $this->builder->hasDefinition('application.application')
-            ? $this->builder->getDefinition('application.application')
-            : false
-        );
-
-        if (false === $appDef) {
-            return;
-        }
-
-        $hubRegistryDef = $this->definitionsCache['symfony.hub.registry']
-            ??= $this->builder->getDefinition($this->extension->prefix('symfony.hub.registry'));
-        $headerSerializerDef = $this->definitionsCache['symfony.links.headerSerializer']
-            ??= $this->builder->getDefinition($this->extension->prefix('symfony.links.headerSerializer'));
-        $requestDef = $this->definitionsCache['request'] ??= $this->builder->getDefinitionByType(Request::class);
-        $responseDef = $this->definitionsCache['response'] ??= $this->builder->getDefinitionByType(Response::class);
-
-        $linkAdditionDef = $this->builder->addDefinition($this->extension->prefix('preflight.' . $hubName))
-            ->setType(AddLinkHeaderHandler::class)
-            ->setFactory(AddLinkHeaderHandler::class)
-            ->setArguments([
-                $hubRegistryDef,
-                $headerSerializerDef,
-                $requestDef,
-                $responseDef,
-                $hubName,
-            ])
-            ->setAutowired(false);
-
-        $appDef->addSetup('?->onRequest[] = ?', [
-            '@self',
-            $linkAdditionDef,
-        ]);
+            ->setAutowired();
     }
 }

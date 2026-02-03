@@ -21,6 +21,7 @@
   "require-dev": {
     "latte/latte": "^3.1@dev",
     "nette/application": "^4.0@dev",
+    "nette/bootstrap": "^3.3@dev",
     "nette/di": "^3.0",
     "nette/security": "^3.0",
     "nette/tester": "^2.5@dev",
@@ -70,7 +71,7 @@
     "phpstan": "vendor/bin/phpstan analyse src tests",
     "test": "vendor/bin/tester tests -s",
     "test-coverage": "vendor/bin/tester -s --coverage tests/reports/coverage.xml --coverage-src src -o junit:tests/reports/junit.xml tests",
-    "test-cleanup": "rm -rf $(find tests -type d -name output)"
+    "test-cleanup": "rm -rf $(find tests -type d -name output) var"
   },
   "config": {
     "sort-packages": true,

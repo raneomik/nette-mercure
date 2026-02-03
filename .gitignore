@@ -5,3 +5,6 @@
 # Tester
 /tests/**/output/
 /var
+
+# Others
+/src/Bridge/Tracy/dist/hotReload.js

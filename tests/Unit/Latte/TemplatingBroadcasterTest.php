@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Raneomik\NetteMercure\Core;
+namespace Tests\Unit\Raneomik\NetteMercure\Latte;
 
 require __DIR__ . '/../../bootstrap.php';
 
@@ -19,6 +19,7 @@ use Symfony\Component\Mercure\MockHub;
 use Symfony\Component\Mercure\Update;
 use Tester\Assert;
 use Tester\TestCase;
+use Tests\Fixtures\Dummies\DummyBroadcastContext;
 
 class TemplatingBroadcasterTest extends TestCase
 {
@@ -40,12 +41,16 @@ class TemplatingBroadcasterTest extends TestCase
 		            new StaticTokenProvider('!ChangeMe!'),
 		            $publishCallback,
 		        ),
+		        new DummyBroadcastContext(),
 		    ),
 		    $this->templatePathResolver = new TemplatePathResolver(dirname(__DIR__, 2) . '/fixtures/templates'),
 		    new Engine(),
 		);
 	}
 
+	/**
+	 * @testCase
+	 */
 	public function testException(): void
 	{
 		Assert::exception(
@@ -57,6 +62,9 @@ class TemplatingBroadcasterTest extends TestCase
 		);
 	}
 
+	/**
+	 * @testCase
+	 */
 	public function testMinimalisticBroadcast(): void
 	{
 		Assert::same(
@@ -95,6 +103,9 @@ class TemplatingBroadcasterTest extends TestCase
 		], $this->broadcaster->broadcastOptions());
 	}
 
+	/**
+	 * @testCase
+	 */
 	public function testJsonBroadcast(): void
 	{
 		Assert::same(
@@ -116,6 +127,9 @@ class TemplatingBroadcasterTest extends TestCase
 		);
 	}
 
+	/**
+	 * @testCase
+	 */
 	public function testStreamBroadcast(): void
 	{
 		Assert::same(

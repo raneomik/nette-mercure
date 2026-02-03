@@ -38,6 +38,11 @@ final class Broadcasters implements BroadcasterInterface, \IteratorAggregate, \A
 		$this->broadcasters = new \ArrayIterator($broadcasters);
 	}
 
+	public function broadcasterName(): false|string
+	{
+        return $this->currentHub;
+    }
+
 	#[\Override]
 	public function broadcasterUrl(?string $hub = null): string
 	{

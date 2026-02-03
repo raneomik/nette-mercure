@@ -13,6 +13,7 @@ use Symfony\Component\Mercure\MockHub;
 use Symfony\Component\Mercure\Update;
 use Tester\Assert;
 use Tester\TestCase;
+use Tests\Fixtures\Dummies\DummyBroadcastContext;
 
 class PlainBroadcasterTest extends TestCase
 {
@@ -24,16 +25,19 @@ class PlainBroadcasterTest extends TestCase
 		    'data' => $update->getData(),
 		    'topics' => $update->getTopics(),
 		]);
-
 		$this->broadcaster = new PlainBroadcaster(
 		    new MockHub(
 		        'http://example.com/hub',
 		        new StaticTokenProvider('!ChangeMe!'),
 		        $publishCallback,
 		    ),
+		    new DummyBroadcastContext(),
 		);
 	}
 
+	/**
+	 * @testCase
+	 */
 	public function testMinimalisticBroadcast(): void
 	{
 		Assert::same(
@@ -69,6 +73,9 @@ class PlainBroadcasterTest extends TestCase
 		], $this->broadcaster->broadcastOptions());
 	}
 
+	/**
+	 * @testCase
+	 */
 	public function testJsonBroadcast(): void
 	{
 		Assert::same(

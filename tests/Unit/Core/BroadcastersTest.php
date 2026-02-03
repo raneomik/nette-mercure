@@ -15,6 +15,7 @@ use Symfony\Component\Mercure\MockHub;
 use Symfony\Component\Mercure\Update;
 use Tester\Assert;
 use Tester\TestCase;
+use Tests\Fixtures\Dummies\DummyBroadcastContext;
 
 class BroadcastersTest extends TestCase
 {
@@ -27,6 +28,8 @@ class BroadcastersTest extends TestCase
 		    'topics' => $update->getTopics(),
 		]);
 
+        $context = new DummyBroadcastContext();
+
 		$this->broadcasters = new Broadcasters(
 		    [
 		        'hub1' => new PlainBroadcaster(
@@ -34,26 +37,32 @@ class BroadcastersTest extends TestCase
 		                'http://hub1.example.com',
 		                new StaticTokenProvider('!ChangeMe1!'),
 		                $publishCallback,
-		            ])
+		            ]),
+		            $context,
 		        ),
 		        'hub2' => new PlainBroadcaster(
 		            new MockHub(...[
 		                'http://hub2.example.com',
 		                new StaticTokenProvider('!ChangeMe2!'),
 		                $publishCallback,
-		            ])
+		            ]),
+		            $context,
 		        ),
 		        'hub3' => new PlainBroadcaster(
 		            new MockHub(...[
 		                'http://hub3.example.com',
 		                new StaticTokenProvider('!ChangeMe3!'),
 		                $publishCallback,
-		            ])
+		            ]),
+		            $context,
 		        ),
 		    ]
 		);
 	}
 
+	/**
+	 * @testCase
+	 */
 	public function testMinimalisticBroadcast(): void
 	{
 		Assert::same(
@@ -68,6 +77,9 @@ class BroadcastersTest extends TestCase
 		);
 	}
 
+	/**
+	 * @testCase
+	 */
 	public function testMovingHubsBroadcast(): void
 	{
 		Assert::same(
@@ -84,6 +96,7 @@ class BroadcastersTest extends TestCase
 		    ),
 		);
 
+		Assert::same('hub2', $this->broadcasters->broadcasterName());
 		Assert::same('http://hub2.example.com', $this->broadcasters->broadcasterUrl());
 
 		Assert::same(
@@ -97,6 +110,7 @@ class BroadcastersTest extends TestCase
 		    ),
 		);
 
+        Assert::same('hub1', $this->broadcasters->broadcasterName());
 		Assert::same('http://hub1.example.com', $this->broadcasters->broadcasterUrl());
 
 		Assert::same(
@@ -113,9 +127,13 @@ class BroadcastersTest extends TestCase
 		    ),
 		);
 
+        Assert::same('hub3', $this->broadcasters->broadcasterName());
 		Assert::same('http://hub3.example.com', $this->broadcasters->broadcasterUrl());
 	}
 
+	/**
+	 * @testCase
+	 */
 	public function testBroadcastToAll(): void
 	{
 		$output = Json::encode([
@@ -141,7 +159,10 @@ class BroadcastersTest extends TestCase
 		);
 	}
 
-	public function testInexistentHub(): void
+	/**
+	 * @testCase
+	 */
+	public function testNotExistentHub(): void
 	{
 		Assert::exception(
 		    fn(): string => $this->broadcasters->broadcast(
@@ -168,6 +189,9 @@ class BroadcastersTest extends TestCase
 		);
 	}
 
+	/**
+	 * @testCase
+	 */
 	public function testEmptyBroadcasters(): void
 	{
 		$broadcasters = new Broadcasters([]);

@@ -1,0 +1,5 @@
+application:
+    errorPresenter: Error
+
+http:
+    frames: null

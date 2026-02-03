@@ -12,7 +12,10 @@ use Tester\TestCase;
 
 class MetricsTest extends TestCase
 {
-	public function testMinmalistOptions(): void
+	/**
+	 * @testCase
+	 */
+	public function testMinimalistOptions(): void
 	{
 		$metrics = new Metrics();
 

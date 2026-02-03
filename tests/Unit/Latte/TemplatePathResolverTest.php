@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Raneomik\NetteMercure\Core;
+namespace Tests\Unit\Raneomik\NetteMercure\Latte;
 
 require __DIR__ . '/../../bootstrap.php';
 
@@ -13,6 +13,9 @@ use Tester\TestCase;
 
 class TemplatePathResolverTest extends TestCase
 {
+	/**
+	 * @testCase
+	 */
 	public function testConfigured(): void
 	{
 		$resolver = new TemplatePathResolver(dirname(__DIR__, 2) . '/fixtures/templates');
@@ -29,6 +32,9 @@ class TemplatePathResolverTest extends TestCase
 		);
 	}
 
+	/**
+	 * @testCase
+	 */
 	public function testResolution(): void
 	{
 		$resolver = new TemplatePathResolver();

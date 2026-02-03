@@ -17,6 +17,7 @@ use Symfony\Component\Mercure\MockHub;
 use Symfony\Component\Mercure\Update;
 use Tester\Assert;
 use Tester\TestCase;
+use Tests\Fixtures\Dummies\DummyBroadcastContext;
 
 class TraceableBroadcasterTest extends TestCase
 {
@@ -38,11 +39,15 @@ class TraceableBroadcasterTest extends TestCase
 		            new StaticTokenProvider('!ChangeMe!'),
 		            $publishCallback,
 		        ),
+		        new DummyBroadcastContext(),
 		    ),
 		    $this->metrics = new Metrics(),
 		);
 	}
 
+	/**
+	 * @testCase
+	 */
 	public function testBroadcastTracing(): void
 	{
 		Assert::same(

@@ -13,7 +13,10 @@ use Tester\TestCase;
 
 class BroadcastDataTest extends TestCase
 {
-	public function testMinmalistOptions(): void
+	/**
+	 * @testCase
+	 */
+	public function testMinimalistOptions(): void
 	{
 		$bdata = new BroadcastData(
 		    topics: (array) 'topic',

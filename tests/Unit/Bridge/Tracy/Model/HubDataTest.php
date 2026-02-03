@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Raneomik\NetteMercure\Tracy\Model;
+namespace Tests\Unit\Raneomik\NetteMercure\Bridge\Tracy\Model;
 
 require dirname(__DIR__, 4) . '/bootstrap.php';
 
@@ -14,21 +14,27 @@ use Symfony\Component\Mercure\MockHub;
 use Symfony\Component\Mercure\Update;
 use Tester\Assert;
 use Tester\TestCase;
+use Tests\Fixtures\Dummies\DummyBroadcastContext;
 
 class HubDataTest extends TestCase
 {
-	public function testMinmalistOptions(): void
+    /**
+     * @testCase
+     */
+    public function testMinimalistOptions(): void
 	{
 		$publishcallback = fn(Update $update): string => $update->getData();
-		$broadcasters = new Broadcasters([
-		    'test' => new PlainBroadcaster(
-		        new MockHub(
-		            'test',
-		            new StaticTokenProvider('!ChangeMe1!'),
-		            $publishcallback,
-		        ),
-		    ),
-		]);
+
+        $broadcasters = new Broadcasters([
+            'test' => new PlainBroadcaster(
+                new MockHub(
+                    'test',
+                    new StaticTokenProvider('!ChangeMe1!'),
+                    $publishcallback,
+                ),
+                new DummyBroadcastContext(),
+            ),
+        ]);
 
 		$hubData = new HubData($broadcasters);
 
@@ -36,4 +42,5 @@ class HubDataTest extends TestCase
 	}
 }
 
-(new HubDataTest())->run();
+new HubDataTest()->run();
+

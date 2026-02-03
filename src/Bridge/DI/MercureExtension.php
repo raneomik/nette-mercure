@@ -22,101 +22,106 @@ use Symfony\Component\Mercure\Jwt\LcobucciFactory;
 
 final class MercureExtension extends Nette\DI\CompilerExtension
 {
-	public function __construct(
-	    private readonly bool $debugMode = false,
-	) {}
+    public function __construct(
+        private readonly bool $debugMode = false,
+        private ?string $hotReloadUrl = null,
+    ) {
+        $this->hotReloadUrl ??= ($_SERVER['FRANKENPHP_HOT_RELOAD'] ?? null);
+    }
 
-	public function getConfigSchema(): Nette\Schema\Schema
-	{
-		return Expect::arrayOf(
-		    Expect::structure([
-		        'url' => Expect::string()->default('%baseUrl%/.well-known/mercure')->required()->dynamic(),
-		        'jwt' => Expect::structure([
-		            'secret' => Expect::string(getenv('MERCURE_JWT_SECRET_KEY') ?: '!m3rcur3C00ki3!')->dynamic(),
-		            'publish' => Expect::arrayOf('string')->default(['*'])->dynamic(),
-		            'subscribe' => Expect::arrayOf('string')->default(['*'])->dynamic(),
-		            'algorithm' => Expect::string('hmac.sha256'),
-		            'factory' => Expect::string(LcobucciFactory::class),
-		        ])->required(),
-		        // 'debugger' => Expect::bool('%debugMode%'),
-		        // 'autowired' => Expect::bool(),
-		    ]),
-		)->before(fn($val): mixed => is_array(reset($val)) || null === reset($val)
-			? $val
-			: [
-			    'default' => $val,
-			]);
-	}
+    public function getConfigSchema(): Nette\Schema\Schema
+    {
+        return Expect::arrayOf(
+            Expect::structure([
+                'url' => Expect::string()->default('%baseUrl%/.well-known/mercure')->required()->dynamic(),
+                'jwt' => Expect::structure([
+                    'secret' => Expect::string(getenv('MERCURE_JWT_SECRET_KEY') ?: '!m3rcur3C00ki3!')->dynamic(),
+                    'publish' => Expect::arrayOf('string')->default(['*'])->dynamic(),
+                    'subscribe' => Expect::arrayOf('string')->default(['*'])->dynamic(),
+                    'algorithm' => Expect::string('hmac.sha256'),
+                    'factory' => Expect::string(LcobucciFactory::class),
+                ])->required(),
+                'debugger' => Expect::bool('%debugMode%'),
+                //                'autowired' => Expect::bool(),
+            ]),
+        )->before(fn($val): mixed => is_array(reset($val)) || null === reset($val)
+            ? $val
+            : [
+                'default' => $val,
+            ]);
+    }
 
-	public function loadConfiguration(): void
-	{
-		$mercureHubsLoader = new MercureHubsDefiner($this);
+    public function loadConfiguration(): void
+    {
+        $mercureHubsLoader = new MercureHubsDefiner($this);
 
-		$hubDefinitions = [];
-		foreach (((array) $this->getConfig()) as $name => $config) {
-			$hubDefinitions[$name] = $mercureHubsLoader->hubDefinition($config, $name);
-		}
+        $hubDefinitions = [];
+        foreach (((array) $this->getConfig()) as $name => $config) {
+            $hubDefinitions[$name] = $mercureHubsLoader->hubDefinition($config, $name);
+        }
 
-		$mercureHubsLoader->postLoad($hubDefinitions);
-	}
+        $mercureHubsLoader->postLoad($hubDefinitions);
+    }
 
-	public function beforeCompile(): void
-	{
-		$broadcastersLoader = new BroadcastersDefiner($this);
+    public function beforeCompile(): void
+    {
+        $broadcastersLoader = new BroadcastersDefiner($this);
 
-		$builder = $this->getContainerBuilder();
+        $builder = $this->getContainerBuilder();
 
-		/** @var false|ServiceDefinition $latteDefinition */
-		$latteDefinition = $builder->hasDefinition('latte.latteFactory')
-			// @phpstan-ignore-next-line
-			? $builder->getDefinition('latte.latteFactory')->getResultDefinition()
-			: false;
+        /** @var false|ServiceDefinition $latteDefinition */
+        $latteDefinition = $builder->hasDefinition('latte.latteFactory')
+            // @phpstan-ignore-next-line
+            ? $builder->getDefinition('latte.latteFactory')->getResultDefinition()
+            : false;
 
-		$broadcasterDefinitions = [];
-		foreach ((array_keys((array) $this->getConfig())) as $name) {
-			$broadcasterDefinitions[$name] = $broadcastersLoader->broadcasterDefinition($name, $latteDefinition);
-			$broadcastersLoader->loadLinkHeaderHandler($name);
-		}
+        $broadcastersLoader->loadResponseListeners();
+        $broadcasterDefinitions = [];
+        foreach ((array) $this->getConfig() as $name => $config) {
+            $broadcasterDefinitions[$name] = $broadcastersLoader->broadcasterDefinition($config, $name, $latteDefinition);
+        }
 
-		$broadcastersLoader->postLoad($broadcasterDefinitions);
+        $broadcastersLoader->postLoad($broadcasterDefinitions);
 
-		if (false !== $latteDefinition) {
-			$latteDefinition
-			    ->addSetup('addExtension', [
-			        new Statement(LatteMercureExtension::class, [
-			            new Statement(BroadcastersLoader::class, [
-			                $builder::literal('fn() => $this->getService(?)', [
-			                    $this->prefix('broadcasters'),
-			                ]),
-			            ]),
-			        ]),
-			    ]);
-		}
+        if (false !== $latteDefinition) {
 
-		if ($builder->hasDefinition('tracy.bar')) {
-			$panelDef = $builder->addDefinition($this->prefix('tracy.panel'))
-			    ->setFactory(MercurePanel::class, [
-			        new Statement(BroadcastersLoader::class, [
-			            $builder::literal('fn() => $this->getService(?)', [
-			                $this->prefix('broadcasters'),
-			            ]),
-			        ]),
-			        '%hotReloadUrl%',
-			    ])
-			    ->setAutowired(false);
+            $latteDefinition
+                ->addSetup('addExtension', [
+                    new Statement(LatteMercureExtension::class, [
+                        '@' . $this->prefix('jwtProvider'),
+                        new Statement(BroadcastersLoader::class, [
+                            $builder::literal('fn() => $this->getService(?)', [
+                                $this->prefix('broadcasters'),
+                            ]),
+                        ]),
+                    ]),
+                ]);
+        }
 
-			/** @phpstan-ignore-next-line */
-			$builder->getDefinition('tracy.bar')
-			    ->addSetup('?->addPanel(?, ?)', [
-			        '@self',
-			        $panelDef,
-			        'mercure',
-			    ]);
-		}
-	}
+        if ($builder->hasDefinition('tracy.bar')) {
+            $panelDef = $builder->addDefinition($this->prefix('tracy.panel'))
+                ->setFactory(MercurePanel::class, [
+                    new Statement(BroadcastersLoader::class, [
+                        $builder::literal('fn() => $this->getService(?)', [
+                            $this->prefix('broadcasters'),
+                        ]),
+                    ]),
+                    $this->hotReloadUrl,
+                ])
+                ->setAutowired(false);
 
-	public function getDebugMode(): bool
-	{
-		return $this->debugMode;
-	}
+            /** @phpstan-ignore-next-line */
+            $builder->getDefinition('tracy.bar')
+                ->addSetup('?->addPanel(?, ?)', [
+                    '@self',
+                    $panelDef,
+                    'mercure',
+                ]);
+        }
+    }
+
+    public function getDebugMode(): bool
+    {
+        return $this->debugMode;
+    }
 }

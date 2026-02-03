@@ -15,6 +15,7 @@ namespace Raneomik\NetteMercure\Core;
 
 use Nette\Utils\Json;
 use Raneomik\NetteMercure\BroadcasterInterface;
+use Raneomik\NetteMercure\Core\Response\BroadcastContextInterface;
 use Raneomik\NetteMercure\Latte\TurboStream\Action;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
@@ -39,6 +40,7 @@ final class PlainBroadcaster implements BroadcasterInterface
 
 	public function __construct(
 	    private readonly HubInterface $hub,
+	    private readonly ?BroadcastContextInterface $context = null,
 	) {}
 
 	#[\Override]
@@ -76,6 +78,11 @@ final class PlainBroadcaster implements BroadcasterInterface
 		$this->resolvedOptions = $options + [
 		    'rendered_data' => $options['rendered_data'] ?? $data,
 		];
+
+        $this->context?->setHubContextData(
+            $this->broadcasterUrl(),
+            $options['hub'] ?? null,
+        );
 
 		return $this->hub->publish($update);
 	}

@@ -4,58 +4,65 @@ declare(strict_types=1);
 
 namespace Raneomik\NetteMercure\Bridge\Tracy;
 
-use Nette\Utils\Helpers;
 use Raneomik\NetteMercure\Bridge\Tracy\Model\HubData;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Raneomik\NetteMercure\Core\Broadcasters;
 use Tracy;
+use Tracy\Helpers;
 
 final readonly class MercurePanel implements Tracy\IBarPanel
 {
-	private Broadcasters $broadcasters;
+    private Broadcasters $broadcasters;
 
-	private string $icon;
+    private string $icon;
 
-	public function __construct(
-	    private BroadcastersLoader $broadcastersLoader,
-	    private string $hotReloadUrl = '',
-	) {
-		$this->icon = file_get_contents(__DIR__ . '/dist/mercure.svg') ?: '';
-		Tracy\Debugger::$customJsFiles[] = $this->hotReloadScript();
-	}
+    public function __construct(
+        private BroadcastersLoader $broadcastersLoader,
+        private ?string $hotReloadUrl = null,
+    ) {
+        $this->icon = file_get_contents(__DIR__ . '/dist/mercure.svg') ?: '';
 
-	public function broadcasters(): Broadcasters
-	{
-		return $this->broadcasters ??= ($this->broadcastersLoader)();
-	}
+        if (null !== $hotReloadUrl) {
+            Tracy\Debugger::$customJsFiles[] = $this->hotReloadScript();
+        }
+    }
 
-	public function getTab(): string
-	{
-		return Helpers::capture(function (): void {
-			$name = 'Mercure';
-			$icon = $this->icon;
-			$count = $this->broadcasters()->count();
+    public function broadcasters(): Broadcasters
+    {
+        return $this->broadcasters ??= ($this->broadcastersLoader)();
+    }
 
-			require_once __DIR__ . '/dist/tab.phtml';
-		});
-	}
+    public function getTab(): string
+    {
+        return Helpers::capture(function (): void {
+            $name = 'Mercure';
+            $icon = $this->icon;
+            $count = $this->broadcasters()->count();
 
-	public function getPanel(): string
-	{
-		return Helpers::capture(function (): void {
-			$hubData = new HubData($this->broadcasters());
-			$icon = $this->icon;
+            require_once __DIR__ . '/dist/tab.phtml';
+        });
+    }
 
-			require __DIR__ . '/dist/panel.phtml';
-		});
-	}
+    public function getPanel(): string
+    {
+        return Helpers::capture(function (): void {
+            $hubData = new HubData($this->broadcasters());
+            $icon = $this->icon;
 
-	private function hotReloadScript(): string
-	{
-		return Helpers::capture(function (): void {
-			$hotReloadUrl = $this->hotReloadUrl;
+            require __DIR__ . '/dist/panel.phtml';
+        });
+    }
 
-			require_once __DIR__ . '/dist/hotReload.js.phtml';
-		});
-	}
+    private function hotReloadScript(): string
+    {
+        $file = __DIR__ . '/dist/hotReload.js';
+
+        file_put_contents($file, Helpers::capture(function (): void {
+            $hotReloadUrl = $this->hotReloadUrl;
+
+            require_once __DIR__ . '/dist/hotReload.js.phtml';
+        }));
+
+        return $file;
+    }
 }
