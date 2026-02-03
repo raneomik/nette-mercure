@@ -114,7 +114,7 @@ Generate mercure url to listen to in Latte templates :
 
 Setup your JavaScript client to listen to Mercure updates and render them in selected containers.
 
-_When working with WJT token authorisation, you may need a [polyfill](https://github.com/Yaffle/EventSource)._
+_When working with JWT token authorisation, you may need a [polyfill](https://github.com/Yaffle/EventSource)._
 
 ```js
 // assets/main.js - import a Mercure client sample
