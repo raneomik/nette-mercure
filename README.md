@@ -98,17 +98,15 @@ final class SomeService
 ```
 
 Generate mercure url to listen to in Latte templates :
-
-```
-
-```latte
+```html
 <!-- ... -->
 <!-- use mercure(array|string|null $topics, ?string $hub = null) function to render mercure URL -->
 <div data-mercure-url="{mercure('test-topic', hub: hubName, [addJwt => true])}" data-mercure="test-topic">Waiting for updates...</div>
 <!-- "addJwt => true" options appends the JWT token in mercure url when not using eventsource polyfill -->
 <!-- ... -->
-...
 ```
+
+
 
 ### Listen to updates and render them dynamicaly with a js client implementation
 
@@ -129,7 +127,7 @@ eventSource.onmessage = event => {
 		container.textContent = event.data;
 	}
 }
-...
+```
 
 
 
