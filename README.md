@@ -1,5 +1,7 @@
-Mercure Extension
+Nette Mercure Extension
 =================
+
+[![codecov](https://codecov.io/gh/raneomik/nette-mercure/graph/badge.svg?token=Bc23JJTFL0)](https://codecov.io/gh/raneomik/nette-mercure)
 
 🚀 Nette Mercure Extension: wrapper for [symfony/mercure](https://github.com/symfony/mercure) to use Mercure in Nette framework
 
@@ -25,8 +27,8 @@ mercure:
 	url: '%baseUrl%/.well-known/mercure'
 	jwt:
 		secret: n3tt3-m3rcµr3-fr4nk3nphP-jwT-s3cr3t-k3y # Must be at least 32 characters long
-		publish: ['test-topic'] # Optional, default is ['*']. Allow topics for which this JWT can be used to publish updates.
-		subscribe: ['test-topic'] # Optional, default is ['*']. Allow topics for which this JWT can be used to subscribe to updates.
+		publish: ['test-topic'] # Optional, default is ['*']. Topics to narrow in JWT validation.
+		subscribe: ['test-topic'] # Optional, default is ['*']. Topics to narrow in JWT validation.
 		algorithm: HS256 # Optional, default is HS256. @see Symfony\Component\Mercure\Jwt\LcobucciFactory::SIGN_ALGORITHMS
 		# You can implement your own Symfony\Component\Mercure\Jwt\TokenFactoryInterface
 		factory:  # Optional, default is Symfony\Component\Mercure\Jwt\LcobucciFactory
@@ -46,7 +48,7 @@ mercure:
 	# ...
 ```
 
-### Sending messages
+### Dispatch messages
 ```php
 
 use Raneomik\NetteMercure\BroadcasterInterface;
@@ -66,7 +68,7 @@ final class SomeService
 		// minimalist broadcast to default hub
 		$this->broadcaster->broadcast(
 			data: 'Hello Nette from Mercure!', // ['message' => 'message'] / new Class('message')
-			topics: 'test-topic' // ['test-topic'],
+			topics: 'test-topic' // ['test-topic']),
 		);
 
 		// broadcast to specific hub
@@ -95,9 +97,24 @@ final class SomeService
 }
 ```
 
-### Listening to updates
+Generate mercure url to listen to in Latte templates :
+
+```
+
+```latte
+<!-- ... -->
+<!-- use mercure(array|string|null $topics, ?string $hub = null) function to render mercure URL -->
+<div data-mercure-url="{mercure('test-topic', hub: hubName, [addJwt => true])}" data-mercure="test-topic">Waiting for updates...</div>
+<!-- "addJwt => true" options appends the JWT token in mercure url when not using eventsource polyfill -->
+<!-- ... -->
+...
+```
+
+### Listen to updates and render them dynamicaly with a js client implementation
 
 Setup your JavaScript client to listen to Mercure updates and render them in selected containers.
+
+_When working with WJT token authorisation, you may need a [polyfill](https://github.com/Yaffle/EventSource)._
 
 ```js
 // assets/main.js - import a Mercure client sample
@@ -114,17 +131,6 @@ eventSource.onmessage = event => {
 }
 ...
 
-```
-
-Use it in Latte templates:
-
-```latte
-<!-- ... -->
-<!-- use mercure(array|string|null $topics, ?string $hub = null) function to render mercure URL -->
-<div data-mercure-url="{mercure('test-topic')}" data-mercure="test-topic">Waiting for updates...</div>
-<!-- ... -->
-...
-```
 
 
 Resources
@@ -132,7 +138,7 @@ Resources
 
 * [Mercure](https://mercure.rocks)
 * [Documentation](https://symfony.com/doc/current/mercure.html)
-* wrapped [symfony/mercure](https://github.com/symfony/mercure)
+* Based on [symfony/mercure](https://github.com/symfony/mercure)
 
 
 Known issues
@@ -141,5 +147,3 @@ Known issues
 "anonymous" option for mercure in Caddy configuration seems to work only with Symfony\Mercure\FrankenPhpHub and the FrankenPHP built-in `mercure_publish` function.
 
 HttpClient shows errors such as "405 Method Not Allowed" in this case.
-
-Authentication cookie for mercure should be implemented soon.
