@@ -1,65 +1,70 @@
 on:
     pull_request:
     push:
+
 permissions:
     contents: read
     actions: read
     checks: write
 
 env:
-    tools: "composer:v2"
-    cache-version: "1"
+    tools: composer:v2
+    cache-version: 1
 
 jobs:
     ci:
-        name: "CI"
+        name: CI
 
         runs-on: ${{ matrix.os }}
 
         strategy:
             matrix:
                 os:
-                    - "ubuntu-latest"
+                    - ubuntu-latest
                 php-version:
-                    - "8.3"
-                    - "8.4"
-                    - "8.5"
+                    - 8.3
+                    - 8.4
+                    - 8.5
 
         steps:
-        -   name: "Checkout"
-            uses: "actions/checkout@v6"
+            -   name: Checkout
+                uses: actions/checkout@v6
 
-        -   name: "Install PHP"
-            uses: "shivammathur/setup-php@v2"
-            with:
-                php-version: ${{ matrix.php-version }}
-                tools: "${{ env.tools }}"
+            -   name: Install PHP
+                uses: shivammathur/setup-php@v2
+                with:
+                    php-version: ${{ matrix.php-version }}
+                    tools: ${{ env.tools }}
 
-        -   name: "Setup problem matchers for PHP"
-            run: 'echo "::add-matcher::${{ runner.tool_cache }}/php.json"'
+            -   name: Setup problem matchers for PHP
+                run: 'echo ::add-matcher::${{ runner.tool_cache }}/php.json'
 
-        -   name: "Get Composer cache directory"
-            id: "composercache"
-            run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+            -   name: Get Composer cache directory
+                id: composercache
+                run: echo dir=$(composer config cache-files-dir) >> $GITHUB_OUTPUT
 
-        -   name: "Cache PHP dependencies"
-            uses: "actions/cache@v4"
-            with:
-                path: "${{ steps.composercache.outputs.dir }}"
-                key: "${{ runner.os }}-php${{ matrix.php-version }}-composer-${{ hashFiles('**/composer.json') }}"
-                restore-keys: "${{ runner.os }}-php${{ matrix.php-version }}-composer-"
+            -   name: Cache PHP dependencies
+                uses: actions/cache@v4
+                with:
+                    path: ${{ steps.composercache.outputs.dir }}
+                    key: ${{ runner.os }}-php${{ matrix.php-version }}-composer-${{ hashFiles('**/composer.json') }}
+                    restore-keys: ${{ runner.os }}-php${{ matrix.php-version }}-composer-
 
-        -   name: "Install dependencies"
-            run: "composer install --prefer-dist --no-progress --no-suggest --optimize-autoloader"
+            -   name: Install dependencies
+                run: composer install --prefer-dist --no-progress --no-suggest --optimize-autoloader
 
-        -   name: "Validate Composer dependencies"
-            run: "composer validate --strict"
-        -   name: "Composer dependencies audit"
-            run: "composer audit"
-        -   name: "Run Rector"
-            run: "composer rector -- --output-format=github --no-progress-bar"
-        -   name: "Run PHPStan"
-            run: "composer phpstan -- --error-format=github --no-progress"
-        -   name: "Run ECS"
-            run: "composer ecs -- --no-progress-bar"
+            -   name: Validate Composer dependencies
+                run: composer validate --strict
+
+            -   name: Composer dependencies audit
+                run: composer audit
+
+            -   name: Rector
+                run: composer rector -- --output-format=github --no-progress-bar
+
+            -   name: PHPStan
+                run: composer phpstan -- --error-format=github --no-progress
+
+            -   name: Easy Coding Standards
+                run: composer ecs -- --no-progress-bar
 

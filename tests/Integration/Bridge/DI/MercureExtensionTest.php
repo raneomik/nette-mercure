@@ -33,7 +33,7 @@ class MercureExtensionTest extends TestCase
     {
         mkdir(dirname(__DIR__, 4) . '/var/log.test', recursive: true);
 
-        $this->configurator = new Configurator()
+        $this->configurator = (new Configurator())
             ->setTempDirectory(dirname(__DIR__, 4) . '/var/temp.test')
             ->addConfig(dirname(__DIR__, 3) . '/fixtures/config/test.neon');
     }

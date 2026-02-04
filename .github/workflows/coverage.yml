@@ -1,62 +1,64 @@
 on:
-  pull_request:
-  push:
+    pull_request:
+    push:
 
 permissions:
-  contents: read
-  actions: read
-  checks: write
+    contents: read
+    actions: read
+    checks: write
 
 env:
-  tools: "composer:v2"
-  cache-version: "1"
+    tools: composer:v2
+    cache-version: 1
 
 jobs:
-  coverage:
-    name: "Test Coverage - PHP 8.5"
-    runs-on: "ubuntu-latest"
+    coverage:
+        name: Test Coverage - PHP 8.5
+        runs-on: ubuntu-latest
 
-    steps:
-      - name: "Checkout"
-        uses: "actions/checkout@v6"
+        steps:
+            -   name: Checkout
+                uses: actions/checkout@v6
 
-      - name: "Install PHP"
-        uses: "shivammathur/setup-php@v2"
-        with:
-          php-version: 8.5"
-          extensions: "pcov"
-          tools: "${{ env.tools }}"
+            -   name: Install PHP
+                uses: shivammathur/setup-php@v2
+                with:
+                    php-version: 8.5
+                    extensions: pcov
+                    tools: ${{ env.tools }}
 
-      - name: "Setup problem matchers for PHP"
-        run: 'echo "::add-matcher::${{ runner.tool_cache }}/php.json"'
+            -   name: Setup problem matchers for PHP
+                run: 'echo ::add-matcher::${{ runner.tool_cache }}/php.json'
 
-      - name: "Get Composer cache directory"
-        id: "composercache"
-        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+            -   name: Get Composer cache directory
+                id: composercache
+                run: echo dir=$(composer config cache-files-dir) >> $GITHUB_OUTPUT
 
-      - name: "Cache PHP dependencies"
-        uses: "actions/cache@v4"
-        with:
-          path: "${{ steps.composercache.outputs.dir }}"
-          key: "${{ runner.os }}-php${{ matrix.php-version }}-composer-${{ hashFiles('**/composer.json') }}"
-          restore-keys: "${{ runner.os }}-php${{ matrix.php-version }}-composer-"
+            -   name: Cache PHP dependencies
+                uses: actions/cache@v4
+                with:
+                    path: ${{ steps.composercache.outputs.dir }}
+                    key: ${{ runner.os }}-php8.5-composer-${{ hashFiles('**/composer.json') }}
+                    restore-keys: ${{ runner.os }}-php8.5-composer-
 
-      - name: "Run Tests with coverage"
-        run: "composer test-coverage"
+            -   name: Install dependencies
+                run: composer install --prefer-dist --no-progress --no-suggest --optimize-autoloader
 
-      - name: Test Report
-        uses: dorny/test-reporter@v2
-        if: ${{ !cancelled() }}
-        with:
-          name: TESTER Tests
-          path: tests/reports/junit.xml
-          reporter: tester-junit
+            -   name: Run Tests with coverage
+                run: composer test-coverage
 
-      - name: Upload tests coverage report to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: tests/reports/coverage.xml
-          fail_ci_if_error: true
-          report_type: coverage
+            -   name: Test Report
+                uses: dorny/test-reporter@v2
+                with:
+                    name: TESTER Tests
+                    path: tests/reports/junit.xml
+                    reporter: tester-junit
+
+            -   name: Upload tests coverage report to Codecov
+                uses: codecov/codecov-action@v5
+                with:
+                    token: ${{ secrets.CODECOV_TOKEN }}
+                    files: tests/reports/coverage.xml
+                    fail_ci_if_error: true
+                    report_type: coverage
 
