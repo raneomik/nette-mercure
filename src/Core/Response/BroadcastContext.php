@@ -13,47 +13,52 @@ declare(strict_types=1);
 
 namespace Raneomik\NetteMercure\Core\Response;
 
-use Raneomik\NetteMercure\Bridge\Utils\DefaultData;
+use Raneomik\NetteMercure\Bridge\Utils\DefinedData;
 use Raneomik\NetteMercure\Core\Response\Model\CookieData;
 use Raneomik\NetteMercure\Core\Response\Model\LinkData;
 
 final class BroadcastContext implements BroadcastContextInterface
 {
     /**
-     * @param array<string, DefaultData> $defaultData
+     * @param array<string, DefinedData> $definedData
      * @param array<string, LinkData> $linkData
      * @param array<string, CookieData> $cookieData
      */
     public function __construct(
-        private readonly Authorization $authorization,
+        private readonly AuthorizationInterface $authorization,
         private readonly Discovery $discovery,
-        private array $defaultData = [],
+        private array $definedData = [],
         private array $linkData = [],
         private array $cookieData = [],
     ) {}
 
-    public function addDefaultData(string $hubName, DefaultData $defaultData): void
+    public function addData(string $hubName, DefinedData $defaultData): void
     {
-        $this->defaultData[$hubName] = $defaultData;
+        $this->definedData[$hubName] = $defaultData;
     }
 
     #[\Override]
     public function setHubContextData(string $hubUrl, ?string $hubName = null, array $subscribe = [], array $publish = [], array $additionalClaims = []): void
     {
-        /** @var DefaultData $defaultDatum */
-        $defaultDatum = $this->defaultData[$hubName ?? ''] ?? array_first($this->defaultData);
-        $hubName ??= (string) array_search($defaultDatum, $this->defaultData, true);
+        /** @var DefinedData $definedDatum */
+        $definedDatum = $this->definedData[$hubName ?? ''] ?? array_first($this->definedData);
+        $hubName ??= (string) array_search($definedDatum, $this->definedData, true);
 
         if ([] === $subscribe) {
-            $subscribe = $defaultDatum->getSubscribe();
+            $subscribe = $definedDatum->subscribe;
         }
 
         if ([] === $publish) {
-            $publish = $defaultDatum->getPublish();
+            $publish = $definedDatum->publish;
+        }
+
+        $this->linkData[$hubName] = new LinkData($hubUrl);
+
+        if ($definedDatum->disableCookie) {
+            return;
         }
 
         $this->cookieData[$hubName] = new CookieData($subscribe, $publish, $additionalClaims);
-        $this->linkData[$hubName] = new LinkData($hubUrl);
     }
 
     public function addResponseLinks(): void

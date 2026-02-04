@@ -13,7 +13,7 @@
   "license": "MIT",
   "require": {
     "ext-tokenizer": "*",
-    "php": ">=8.4",
+    "php": ">=8.3",
     "lcobucci/jwt": "^5.6.0",
     "nette/http": "^2.0|^3.3",
     "symfony/mercure": "^0.7.2"
@@ -71,7 +71,7 @@
     "phpstan": "vendor/bin/phpstan analyse src tests",
     "test": "vendor/bin/tester tests -s",
     "test-coverage": "vendor/bin/tester -s --coverage tests/reports/coverage.xml --coverage-src src -o junit:tests/reports/junit.xml tests",
-    "test-cleanup": "rm -rf $(find tests -type d -name output) var"
+    "test-cleanup": "rm -rf $(find tests -type d -name output) var tests/reports/*"
   },
   "config": {
     "sort-packages": true,

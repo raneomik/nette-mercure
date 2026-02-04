@@ -13,8 +13,8 @@ declare(strict_types=1);
 
 namespace Raneomik\NetteMercure\Core\Response;
 
-use Nette\Http\Request;
-use Nette\Http\Response;
+use Nette\Http\IRequest;
+use Nette\Http\IResponse;
 use Symfony\Component\WebLink\HttpHeaderSerializer;
 use Symfony\Component\WebLink\Link;
 
@@ -25,8 +25,8 @@ final readonly class Discovery
 {
     public function __construct(
         private HttpHeaderSerializer $header,
-        private Request $request,
-        private Response $response,
+        private IRequest $request,
+        private IResponse $response,
     ) {}
 
     /**
@@ -34,7 +34,8 @@ final readonly class Discovery
      */
     public function addLink(string $hubLink): void
     {
-        if ($this->isPreflightRequest($this->request)) {
+        // avoid nette errors - does not accept OPTIONS requests
+        if ($this->isPreflightRequest()) {
             return;
         }
 
@@ -42,15 +43,11 @@ final readonly class Discovery
         $this->response->setHeader('Link', $this->header->serialize([
             new Link('mercure', $hubLink),
         ]));
-        $this->response->setHeader('Access-Control-Allow-Origin', '*'); // ou ton domaine spécifique
-        $this->response->setHeader('Access-Control-Allow-Credentials', 'true');
-        $this->response->setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
-
     }
 
-    private function isPreflightRequest(Request $request): bool
+    public function isPreflightRequest(): bool
     {
-        return $request->isMethod('OPTIONS')
-            && null !== $request->getHeader('Access-Control-Request-Method');
+        return $this->request->isMethod('OPTIONS')
+            && null !== $this->request->getHeader('Access-Control-Request-Method');
     }
 }

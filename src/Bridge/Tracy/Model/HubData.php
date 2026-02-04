@@ -8,7 +8,7 @@ use Raneomik\NetteMercure\Core\Broadcasters;
 use Raneomik\NetteMercure\Tracy\TraceableBroadcaster;
 
 /**
- * @template-extends \ArrayIterator<int, HubDatum>
+ * @template-extends \ArrayIterator<string, HubDatum>
  */
 final class HubData extends \ArrayIterator
 {
@@ -19,6 +19,7 @@ final class HubData extends \ArrayIterator
 	public function __construct(
 	    Broadcasters $broadcasters
 	) {
+		/** @var array<string, HubDatum> $data */
 		$data = [];
 		foreach ($broadcasters as $name => $broadcaster) {
 			if (false === $broadcaster instanceof TraceableBroadcaster) {
@@ -28,7 +29,7 @@ final class HubData extends \ArrayIterator
 			$this->totalDuration += $duration = $broadcaster->getDuration();
 			$this->totalMemory += $memory = $broadcaster->getMemory();
 
-			$data[] = new HubDatum(
+			$data[$name] = new HubDatum(
 			    $name,
 			    $broadcaster->broadcasterUrl(),
 			    $broadcaster->getMessageData(),

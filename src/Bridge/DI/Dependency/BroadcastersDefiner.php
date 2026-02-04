@@ -16,12 +16,13 @@ use Nette\DI\Definitions\Statement;
 use Nette\Http\Request;
 use Nette\Http\Response;
 use Raneomik\NetteMercure\Bridge\DI\MercureExtension;
-use Raneomik\NetteMercure\Bridge\Utils\DefaultData;
+use Raneomik\NetteMercure\Bridge\Utils\DefinedData;
 use Raneomik\NetteMercure\BroadcasterInterface;
 use Raneomik\NetteMercure\Core\Broadcasters;
 use Raneomik\NetteMercure\Core\JWTProvider;
 use Raneomik\NetteMercure\Core\PlainBroadcaster;
 use Raneomik\NetteMercure\Core\Response\Authorization;
+use Raneomik\NetteMercure\Core\Response\AuthorizationInterface;
 use Raneomik\NetteMercure\Core\Response\BroadcastContext;
 use Raneomik\NetteMercure\Core\Response\BroadcastContextInterface;
 use Raneomik\NetteMercure\Core\Response\Discovery;
@@ -90,7 +91,7 @@ final class BroadcastersDefiner
 
         $authorizationDef = $this->definitionsCache[$this->extension->prefix('authorization')]
             ??= $this->builder->addDefinition($this->extension->prefix('authorization'))
-                ->setType(Authorization::class)
+                ->setType(AuthorizationInterface::class)
                 ->setFactory(Authorization::class)
                 ->setArguments([
                     $jwtProviderDef,
@@ -122,12 +123,12 @@ final class BroadcastersDefiner
         $defaultsDef = $this->builder->addDefinition(
             $this->extension->prefix($this->extension->prefix(sprintf('defaults.%s', $hubName)))
         )
-            ->setType(DefaultData::class)
-            ->setFactory(DefaultData::class, [
+            ->setType(DefinedData::class)
+            ->setFactory(DefinedData::class, [
                 $hubConfig->url ?? null,
-                $hubConfig->jwt->subscribe,
-                $hubConfig->jwt->publish,
-                $hubConfig->jwt->additionalClaims ?? [],
+                $hubConfig->jwt->subscribe ?? [],
+                $hubConfig->jwt->publish ?? [],
+                $hubConfig->jwt->noCookie ?? false,
             ])
             ->setAutowired(false);
 
@@ -142,7 +143,7 @@ final class BroadcastersDefiner
                 $this->builder->hasDefinition($this->extension->prefix('broadcastContext'))
                     /** @phpstan-ignore-next-line  */
                     ? $this->builder->getDefinition($this->extension->prefix('broadcastContext'))
-                        ->addSetup('?->addDefaultData(?, ?)', [
+                        ->addSetup('?->addData(?, ?)', [
                             '@self',
                             $hubName,
                             $defaultsDef,

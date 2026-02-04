@@ -30,15 +30,14 @@ return ECSConfig::configure()
     )
 
     ->withPreparedSets(
-        spaces: true,
-        namespaces: true,
-        docblocks: true,
         arrays: true,
         comments: true,
-        cleanCode: true,
-        strict: true,
+        docblocks: true,
+        spaces: true,
+        namespaces: true,
         controlStructures: true,
-
+        strict: true,
+        cleanCode: true,
     )
 
     ->withSkip([

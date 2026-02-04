@@ -33,14 +33,15 @@ final class MercureExtension extends Nette\DI\CompilerExtension
     {
         return Expect::arrayOf(
             Expect::structure([
-                'url' => Expect::string()->default('%baseUrl%/.well-known/mercure')->required()->dynamic(),
+                'url' => Expect::string()->default('%baseUrl%/.well-known/mercure')->dynamic(),
                 'jwt' => Expect::structure([
-                    'secret' => Expect::string(getenv('MERCURE_JWT_SECRET_KEY') ?: '!m3rcur3C00ki3!')->dynamic(),
+                    'secret' => Expect::string()->required()->dynamic(),
                     'publish' => Expect::arrayOf('string')->default(['*'])->dynamic(),
                     'subscribe' => Expect::arrayOf('string')->default(['*'])->dynamic(),
                     'algorithm' => Expect::string('hmac.sha256'),
                     'factory' => Expect::string(LcobucciFactory::class),
                 ])->required(),
+                'disableCookie' => Expect::bool(false),
                 'debugger' => Expect::bool('%debugMode%'),
                 //                'autowired' => Expect::bool(),
             ]),

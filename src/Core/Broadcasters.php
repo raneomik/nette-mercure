@@ -38,11 +38,6 @@ final class Broadcasters implements BroadcasterInterface, \IteratorAggregate, \A
 		$this->broadcasters = new \ArrayIterator($broadcasters);
 	}
 
-	public function broadcasterName(): false|string
-	{
-        return $this->currentHub;
-    }
-
 	#[\Override]
 	public function broadcasterUrl(?string $hub = null): string
 	{
@@ -132,13 +127,13 @@ final class Broadcasters implements BroadcasterInterface, \IteratorAggregate, \A
 		throw new \LogicException('Cannot modify readonly collection.');
 	}
 
-	private function getHub(string $name): BroadcasterInterface
-	{
-		if (false === ($this[$name] ?? false)) {
-			throw new BroadcastException(sprintf('The hub "%s" is not defined.', $name));
-		}
+    private function getHub(string $name): BroadcasterInterface
+    {
+        if (false === ($this[$name] ?? false)) {
+            throw new BroadcastException(sprintf('The hub "%s" is not defined.', $name));
+        }
 
-		$this->currentHub = $name;
-		return $this[$name];
-	}
+        $this->currentHub = $name;
+        return $this[$name];
+    }
 }

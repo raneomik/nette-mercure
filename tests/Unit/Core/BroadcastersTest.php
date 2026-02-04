@@ -96,7 +96,6 @@ class BroadcastersTest extends TestCase
 		    ),
 		);
 
-		Assert::same('hub2', $this->broadcasters->broadcasterName());
 		Assert::same('http://hub2.example.com', $this->broadcasters->broadcasterUrl());
 
 		Assert::same(
@@ -110,7 +109,6 @@ class BroadcastersTest extends TestCase
 		    ),
 		);
 
-        Assert::same('hub1', $this->broadcasters->broadcasterName());
 		Assert::same('http://hub1.example.com', $this->broadcasters->broadcasterUrl());
 
 		Assert::same(
@@ -127,7 +125,6 @@ class BroadcastersTest extends TestCase
 		    ),
 		);
 
-        Assert::same('hub3', $this->broadcasters->broadcasterName());
 		Assert::same('http://hub3.example.com', $this->broadcasters->broadcasterUrl());
 	}
 
