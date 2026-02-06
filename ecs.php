@@ -2,32 +2,22 @@
 
 declare(strict_types=1);
 
-use PhpCsFixer\Fixer\Import\NoUnusedImportsFixer;
+use PhpCsFixer\Fixer\Basic\SingleLineEmptyBodyFixer;
 use PhpCsFixer\Fixer\ControlStructure\YodaStyleFixer;
-use Symplify\EasyCodingStandard\Config\ECSConfig;
+use PhpCsFixer\Fixer\Phpdoc\PhpdocAlignFixer;
+use PhpCsFixer\Fixer\PhpUnit\PhpUnitInternalClassFixer;
+use PhpCsFixer\Fixer\PhpUnit\PhpUnitTestAnnotationFixer;
+use PhpCsFixer\Fixer\PhpUnit\PhpUnitTestClassRequiresCoversFixer;
 use Symplify\CodingStandard\Fixer\ArrayNotation\StandaloneLineInMultilineArrayFixer;
+use Symplify\EasyCodingStandard\Config\ECSConfig;
 
 return ECSConfig::configure()
     ->withPaths([
-        __DIR__ . '/src',
-        __DIR__ . '/tests',
+        __DIR__.'/src',
+        __DIR__.'/tests',
+        __DIR__.'/ecs.php',
+        __DIR__.'/rector.php',
     ])
-
-    /** @phpstan-ignore-next-line */
-    ->withRules([
-        /** @phpstan-ignore-next-line */
-        NoUnusedImportsFixer::class,
-    ])
-
-    ->withConfiguredRule(
-        /** @phpstan-ignore-next-line */
-        YodaStyleFixer::class,
-        [
-            'equal' => true,
-            'identical' => true,
-            'less_and_greater' => true,
-        ],
-    )
 
     ->withPreparedSets(
         arrays: true,
@@ -40,7 +30,31 @@ return ECSConfig::configure()
         cleanCode: true,
     )
 
+    ->withPhpCsFixerSets(
+        phpCsFixer: true,
+        phpCsFixerRisky: true,
+    )
+
+    ->withConfiguredRule(
+        YodaStyleFixer::class, // @phpstan-ignore-line
+        [
+            'equal' => true,
+            'identical' => true,
+            'less_and_greater' => true,
+        ],
+    )
+    ->withConfiguredRule(
+        PhpdocAlignFixer::class, // @phpstan-ignore-line
+        [
+            'align' => 'left',
+        ],
+    )
+
     ->withSkip([
         StandaloneLineInMultilineArrayFixer::class,
+        SingleLineEmptyBodyFixer::class, // @phpstan-ignore-line
+        PhpUnitInternalClassFixer::class, // @phpstan-ignore-line
+        PhpUnitTestAnnotationFixer::class, // @phpstan-ignore-line
+        PhpUnitTestClassRequiresCoversFixer::class, // @phpstan-ignore-line
     ])
 ;

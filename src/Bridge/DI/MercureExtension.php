@@ -1,10 +1,5 @@
 <?php
 
-/**
- * This file is part of the Nette Framework (https://nette.org)
- * Copyright (c) 2004 David Grudl (https://davidgrudl.com)
- */
-
 declare(strict_types=1);
 
 namespace Raneomik\NetteMercure\Bridge\DI;
@@ -15,6 +10,7 @@ use Nette\DI\Definitions\Statement;
 use Nette\Schema\Expect;
 use Raneomik\NetteMercure\Bridge\DI\Dependency\BroadcastersDefiner;
 use Raneomik\NetteMercure\Bridge\DI\Dependency\MercureHubsDefiner;
+use Raneomik\NetteMercure\Bridge\DI\Dependency\SubscribersDefiner;
 use Raneomik\NetteMercure\Bridge\Latte\MercureExtension as LatteMercureExtension;
 use Raneomik\NetteMercure\Bridge\Tracy\MercurePanel;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
@@ -46,7 +42,7 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                 'debugger' => Expect::bool('%debugMode%'),
                 //                'autowired' => Expect::bool(),
             ]),
-        )->before(fn($val): mixed => is_array(reset($val)) || null === reset($val)
+        )->before(static fn ($val): mixed => \is_array(reset($val)) || null === reset($val)
             ? $val
             : [
                 'default' => $val,
@@ -58,7 +54,7 @@ final class MercureExtension extends Nette\DI\CompilerExtension
         $mercureHubsLoader = new MercureHubsDefiner($this);
 
         $hubDefinitions = [];
-        foreach (((array) $this->getConfig()) as $name => $config) {
+        foreach ((array) $this->getConfig() as $name => $config) {
             $hubDefinitions[$name] = $mercureHubsLoader->hubDefinition($config, $name);
         }
 
@@ -77,7 +73,9 @@ final class MercureExtension extends Nette\DI\CompilerExtension
             ? $builder->getDefinition('latte.latteFactory')->getResultDefinition()
             : false;
 
-        $broadcastersLoader->loadResponseListeners();
+        $subscribersDefiner = new SubscribersDefiner($this);
+        $subscribersDefiner->defineSubscriptionComponents();
+
         $broadcasterDefinitions = [];
         foreach ((array) $this->getConfig() as $name => $config) {
             $broadcasterDefinitions[$name] = $broadcastersLoader->broadcasterDefinition($config, $name, $latteDefinition);
@@ -86,21 +84,21 @@ final class MercureExtension extends Nette\DI\CompilerExtension
         $broadcastersLoader->postLoad($broadcasterDefinitions);
 
         if (false !== $latteDefinition) {
-
             $latteDefinition
                 ->addSetup('addExtension', [
                     new Statement(LatteMercureExtension::class, [
-                        '@' . $this->prefix('jwtProvider'),
+                        '@'.$this->prefix('jwtProvider'),
                         new Statement(BroadcastersLoader::class, [
                             $builder::literal('fn() => $this->getService(?)', [
                                 $this->prefix('broadcasters'),
                             ]),
                         ]),
+                        '@'.$this->prefix('hubsConfiguration'),
                     ]),
-                ]);
+                ])
+            ;
         }
 
-        bdump($this->hotReloadUrl);
         if ($builder->hasDefinition('tracy.bar')) {
             $panelDef = $builder->addDefinition($this->prefix('tracy.panel'))
                 ->setFactory(MercurePanel::class, [
@@ -111,15 +109,17 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                     ]),
                     $this->hotReloadUrl,
                 ])
-                ->setAutowired(false);
+                ->setAutowired(false)
+            ;
 
-            /** @phpstan-ignore-next-line */
+            // @phpstan-ignore-next-line
             $builder->getDefinition('tracy.bar')
                 ->addSetup('?->addPanel(?, ?)', [
                     '@self',
                     $panelDef,
                     'mercure',
-                ]);
+                ])
+            ;
         }
     }
 

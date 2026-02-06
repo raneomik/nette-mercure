@@ -55,7 +55,6 @@ final class DummyResponse implements IResponse
 
     public function redirect(string $url, int $code = self::S302_Found): void
     {
-
     }
 
     public function setExpiration(?string $expire): self

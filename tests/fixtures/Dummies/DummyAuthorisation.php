@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace Tests\Fixtures\Dummies;
 
 use Nette\Http\IResponse;
-use Raneomik\NetteMercure\Core\Response\AuthorizationInterface;
+use Raneomik\NetteMercure\Core\Subscribe\AuthorizationInterface;
 
 final readonly class DummyAuthorisation implements AuthorizationInterface
 {
+    /**
+     * @param DummyResponse $response
+     */
     public function __construct(
-        private IResponse $response = new DummyResponse(),
+        public IResponse $response = new DummyResponse(),
     ) {
     }
 
@@ -22,7 +25,7 @@ final readonly class DummyAuthorisation implements AuthorizationInterface
     ): void {
         $this->response->setCookie(
             name: 'cookie',
-            value: sprintf(
+            value: \sprintf(
                 'cookie-value-%s-%s-%s',
                 implode('-', (array) $subscribe),
                 implode('-', (array) $publish),

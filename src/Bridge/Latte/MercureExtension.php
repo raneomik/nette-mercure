@@ -6,8 +6,9 @@ namespace Raneomik\NetteMercure\Bridge\Latte;
 
 use Latte\Extension;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
-use Raneomik\NetteMercure\Core\Broadcasters;
-use Raneomik\NetteMercure\Core\JWTProviderInterface;
+use Raneomik\NetteMercure\Bridge\Utils\ConfiguredDataRegistry;
+use Raneomik\NetteMercure\Core\Publish\Broadcasters;
+use Raneomik\NetteMercure\Core\Subscribe\JWTProviderInterface;
 
 final class MercureExtension extends Extension
 {
@@ -16,7 +17,9 @@ final class MercureExtension extends Extension
     public function __construct(
         private readonly JWTProviderInterface $jwtProvider,
         private readonly BroadcastersLoader $broadcastersLoader,
-    ) {}
+        private readonly ConfiguredDataRegistry $configuredData,
+    ) {
+    }
 
     public function broadcasters(): Broadcasters
     {
@@ -32,19 +35,19 @@ final class MercureExtension extends Extension
     }
 
     /**
-     * @param string|string[]|null                                                                                                                       $topics  A topic or an array of topics to subscribe for. If this parameter is omitted or `null` is passed, the URL of the hub will be returned (useful for publishing in JavaScript).
-     * @param array{subscribe?: string[]|string, publish?: string[]|string, additionalClaims?: array<string, mixed>, lastEventId?: string, hub?: string, addJwt?: bool} $options The options to pass to the JWT factory
+     * @param null|string|string[] $topics A topic or an array of topics to subscribe for. If this parameter is omitted or `null` is passed, the URL of the hub will be returned (useful for publishing in JavaScript).
+     * @param array{subscribe?: string|string[], publish?: string|string[], additionalClaims?: array<string, mixed>, lastEventId?: string, hub?: string, addJwt?: bool} $options The options to pass to the JWT factory
      *
      * @return string The URL of the hub with the appropriate "topic" query parameters (if any)
      */
-    private function mercure(string|array|null $topics = null, ?string $hub = null, array $options = []): string
+    private function mercure(array|string|null $topics = null, ?string $hub = null, array $options = []): string
     {
         $url = $this->broadcasters()->broadcasterUrl($hub);
         if (null !== $topics) {
             // We cannot use http_build_query() because this method doesn't support generating multiple query parameters with the same name without the [] suffix
             $separator = '?';
             foreach ((array) $topics as $topic) {
-                $url .= $separator . 'topic=' . rawurlencode($topic);
+                $url .= $separator.'topic='.rawurlencode($topic);
                 if ('?' === $separator) {
                     $separator = '&';
                 }
@@ -53,14 +56,16 @@ final class MercureExtension extends Extension
 
         if ('' !== ($options['lastEventId'] ?? '')) {
             $encodedLastEventId = rawurlencode($options['lastEventId']);
-            $url .= '&lastEventID=' . $encodedLastEventId;
+            $url .= '&lastEventID='.$encodedLastEventId;
         }
 
+        $hubData = $this->configuredData->getConfiguration($hub);
+
         if (false !== ($options['addJwt'] ?? false)) {
-            $url .= '&authorization=' . $this->mercureJWTToken(
+            $url .= '&authorization='.$this->mercureJWTToken(
+                $options['subscribe'] ?? $hubData->subscribe ?? ['*'],
+                $options['publish'] ?? $hubData->publish ?? ['*'],
                 $hub,
-                $options['subscribe'] ?? ['*'],
-                $options['publish'] ?? ['*'],
             );
         }
 
@@ -68,10 +73,10 @@ final class MercureExtension extends Extension
     }
 
     /**
-     * @param string|string[]|null $subscribe
-     * @param string|string[]|null $publish
+     * @param null|string|string[] $subscribe
+     * @param null|string|string[] $publish
      */
-    private function mercureJWTToken(?string $hub = null, null|string|array $subscribe = ['*'], null|string|array $publish = ['*']): string
+    private function mercureJWTToken(array|string|null $subscribe = ['*'], array|string|null $publish = ['*'], ?string $hub = null): string
     {
         return $this->jwtProvider->provide(
             $hub,

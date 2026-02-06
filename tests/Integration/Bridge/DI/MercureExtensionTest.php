@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Raneomik\NetteMercure\Bridge\DI;
 
-require dirname(__DIR__, 3) . '/bootstrap.php';
+require \dirname(__DIR__, 3).'/bootstrap.php';
 
 use Nette\Bootstrap\Configurator;
 use Nette\DI\Compiler;
@@ -12,10 +12,10 @@ use Nette\DI\Config\Loader;
 use Nette\DI\MissingServiceException;
 use Raneomik\NetteMercure\Bridge\DI\MercureExtension;
 use Raneomik\NetteMercure\BroadcasterInterface;
-use Raneomik\NetteMercure\Core\Broadcasters;
-use Raneomik\NetteMercure\Core\PlainBroadcaster;
-use Raneomik\NetteMercure\Latte\TemplatingBroadcaster;
-use Raneomik\NetteMercure\Tracy\TraceableBroadcaster;
+use Raneomik\NetteMercure\Core\Publish\Broadcasters;
+use Raneomik\NetteMercure\Core\Publish\Latte\TemplatingBroadcaster;
+use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
+use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 use Symfony\Component\Mercure\FrankenPhpHub;
 use Symfony\Component\Mercure\Hub;
 use Symfony\Component\Mercure\HubInterface;
@@ -25,30 +25,31 @@ use Tester\Helpers;
 use Tester\TestCase;
 use Tests\Fixtures\Dummies\DummyJwtFactory;
 
-class MercureExtensionTest extends TestCase
+final class MercureExtensionTest extends TestCase
 {
     protected Configurator $configurator;
 
     protected function setUp(): void
     {
-        mkdir(dirname(__DIR__, 4) . '/var/log.test', recursive: true);
+        mkdir(\dirname(__DIR__, 4).'/var/log.test', recursive: true);
 
         $this->configurator = (new Configurator())
-            ->setTempDirectory(dirname(__DIR__, 4) . '/var/temp.test')
-            ->addConfig(dirname(__DIR__, 3) . '/fixtures/config/test.neon');
+            ->setTempDirectory(\dirname(__DIR__, 4).'/var/temp.test')
+            ->addConfig(\dirname(__DIR__, 3).'/fixtures/config/test.neon')
+        ;
     }
 
     protected function tearDown(): void
     {
-        Helpers::purge(dirname(__DIR__, 4) . '/var');
-        rmdir(dirname(__DIR__, 4) . '/var');
+        Helpers::purge(\dirname(__DIR__, 4).'/var');
+        rmdir(\dirname(__DIR__, 4).'/var');
     }
 
-	/**
-	 * @testCase
-	 */
-	public function testPlainSimpleCompilation(): void
-	{
+    /**
+     * @testCase
+     */
+    public function testPlainSimpleCompilation(): void
+    {
         $loader = new Loader();
         $config = $loader->load(FileMock::create('
         mercure:
@@ -78,18 +79,18 @@ class MercureExtensionTest extends TestCase
         }
 
         Assert::exception(
-            fn() => $container->getService('mercure.broadcaster.default.latte'),
+            static fn () => $container->getService('mercure.broadcaster.default.latte'),
             MissingServiceException::class,
             "Service 'mercure.broadcaster.default.latte' not found.",
         );
     }
 
-	/**
-	 * @testCase
-	 */
-	public function testBasicCompilation(): void
-	{
-        $this->configurator->onCompile[] = function ($configurator, $compiler): void {
+    /**
+     * @testCase
+     */
+    public function testBasicCompilation(): void
+    {
+        $this->configurator->onCompile[] = static function ($configurator, $compiler): void {
             $compiler->addExtension('mercure', new MercureExtension(false));
         };
 
@@ -101,42 +102,42 @@ class MercureExtensionTest extends TestCase
 
         ', 'neon'));
 
-		$container = $this->configurator->createContainer();
+        $container = $this->configurator->createContainer();
 
-		$toTest = [
-		    'mercure.sf.hub.default' => HubInterface::class,
-		    'mercure.broadcaster.default.plain' => PlainBroadcaster::class,
-		    'mercure.broadcaster.default.latte' => TemplatingBroadcaster::class,
-		    'mercure.broadcasters' => Broadcasters::class,
-		];
+        $toTest = [
+            'mercure.sf.hub.default' => HubInterface::class,
+            'mercure.broadcaster.default.plain' => PlainBroadcaster::class,
+            'mercure.broadcaster.default.latte' => TemplatingBroadcaster::class,
+            'mercure.broadcasters' => Broadcasters::class,
+        ];
 
-		foreach ($toTest as $serviceAlias => $expectedType) {
-			$service = $container->getService($serviceAlias);
-			Assert::type($expectedType, $service);
-		}
-
-		Assert::exception(
-		    fn(): object => $container->getService('mercure.broadcaster.default.traceable'),
-		    MissingServiceException::class,
-		    "Service 'mercure.broadcaster.default.traceable' not found.",
-		);
+        foreach ($toTest as $serviceAlias => $expectedType) {
+            $service = $container->getService($serviceAlias);
+            Assert::type($expectedType, $service);
+        }
 
         Assert::exception(
-            fn(): object => $container->getByType(FrankenPhpHub::class),
+            static fn (): object => $container->getService('mercure.broadcaster.default.traceable'),
             MissingServiceException::class,
-            "~Service of type Symfony\\\Component\\\Mercure\\\FrankenPhpHub not found~",
+            "Service 'mercure.broadcaster.default.traceable' not found.",
         );
-	}
+
+        Assert::exception(
+            static fn (): object => $container->getByType(FrankenPhpHub::class),
+            MissingServiceException::class,
+            '~Service of type Symfony\\\Component\\\Mercure\\\FrankenPhpHub not found~',
+        );
+    }
 
     /**
      * @testCase
      */
     public function testFrankenPhpCompilation(): void
     {
-        putenv('FRANKENPHP_CONFIG=1'); //simulate FrankenPHP environment
+        putenv('FRANKENPHP_CONFIG=1'); // simulate FrankenPHP environment
 
         $this->configurator->setDebugMode(false);
-        $this->configurator->onCompile[] = function ($configurator, $compiler): void {
+        $this->configurator->onCompile[] = static function ($configurator, $compiler): void {
             $compiler->addExtension('mercure', new MercureExtension(false, 'test-url'));
         };
 
@@ -160,13 +161,13 @@ class MercureExtensionTest extends TestCase
         }
 
         Assert::exception(
-            fn(): object => $container->getByType(Hub::class),
+            static fn (): object => $container->getByType(Hub::class),
             MissingServiceException::class,
-            "~Service of type Symfony\\\Component\\\Mercure\\\Hub not found~",
+            '~Service of type Symfony\\\Component\\\Mercure\\\Hub not found~',
         );
 
         Assert::exception(
-            fn(): object => $container->getService('mercure.broadcaster.default.traceable'),
+            static fn (): object => $container->getService('mercure.broadcaster.default.traceable'),
             MissingServiceException::class,
             "Service 'mercure.broadcaster.default.traceable' not found.",
         );
@@ -181,9 +182,9 @@ class MercureExtensionTest extends TestCase
     {
         $this->configurator
             ->setDebugMode(true)
-            ->enableTracy(dirname(__DIR__, 4) . '/var/log.test')
+            ->enableTracy(\dirname(__DIR__, 4).'/var/log.test')
         ;
-        $this->configurator->onCompile[] = function ($configurator, $compiler): void {
+        $this->configurator->onCompile[] = static function ($configurator, $compiler): void {
             $compiler->addExtension('mercure', new MercureExtension(true));
         };
 
@@ -221,14 +222,14 @@ class MercureExtensionTest extends TestCase
         Assert::type(Broadcasters::class, $service);
     }
 
-	/**
-	 * @testCase
-	 */
-	public function testCompilationWithCustomJwtImplementation(): void
-	{
-		$dummyClass = DummyJwtFactory::class;
+    /**
+     * @testCase
+     */
+    public function testCompilationWithCustomJwtImplementation(): void
+    {
+        $dummyClass = DummyJwtFactory::class;
 
-        $this->configurator->onCompile[] = function ($configurator, $compiler): void {
+        $this->configurator->onCompile[] = static function ($configurator, $compiler): void {
             $compiler->addExtension('mercure', new MercureExtension(false));
         };
 
@@ -241,17 +242,17 @@ class MercureExtensionTest extends TestCase
         ", 'neon'));
         $container = $this->configurator->createContainer();
 
-		$toTest = [
-		    'mercure.sf.hub.default' => HubInterface::class,
-		    'mercure.broadcaster.default.plain' => PlainBroadcaster::class,
-		    'mercure.broadcasters' => Broadcasters::class,
-		];
+        $toTest = [
+            'mercure.sf.hub.default' => HubInterface::class,
+            'mercure.broadcaster.default.plain' => PlainBroadcaster::class,
+            'mercure.broadcasters' => Broadcasters::class,
+        ];
 
-		foreach ($toTest as $serviceAlias => $expectedType) {
-			$service = $container->getService($serviceAlias);
-			Assert::type($expectedType, $service);
-		}
-	}
+        foreach ($toTest as $serviceAlias => $expectedType) {
+            $service = $container->getService($serviceAlias);
+            Assert::type($expectedType, $service);
+        }
+    }
 }
 
 (new MercureExtensionTest())->run();

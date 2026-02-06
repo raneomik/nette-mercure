@@ -1,10 +1,5 @@
 <?php
 
-/**
- * This file is part of the Nette Framework (https://nette.org)
- * Copyright (c) 2004 David Grudl (https://davidgrudl.com)
- */
-
 declare(strict_types=1);
 
 namespace Raneomik\NetteMercure\Bridge\DI\Dependency;
@@ -47,12 +42,14 @@ final readonly class MercureHubsDefiner
                 array_first($broadcasterDefinitions),
                 $broadcasterDefinitions,
             ])
-            ->setAutowired(false);
+            ->setAutowired(false)
+        ;
 
         $this->builder->addDefinition($this->extension->prefix('symfony.links.headerSerializer'))
             ->setType(HttpHeaderSerializer::class)
             ->setFactory(HttpHeaderSerializer::class, [])
-            ->setAutowired(false);
+            ->setAutowired(false)
+        ;
     }
 
     public function hubDefinition(\stdClass $config, string $name): Definition
@@ -65,12 +62,13 @@ final readonly class MercureHubsDefiner
             $config->jwt->secret,
         ];
 
-        $tokenFactoryDefinition = $this->builder->addDefinition($this->extension->prefix('factory.token.' . $name))
+        $tokenFactoryDefinition = $this->builder->addDefinition($this->extension->prefix('factory.token.'.$name))
             ->setType(TokenFactoryInterface::class)
             ->setFactory(new Statement($config->jwt->factory, $factoryArguments))
-            ->setAutowired(false);
+            ->setAutowired(false)
+        ;
 
-        $hubAlias = $this->extension->prefix('sf.hub.' . $name);
+        $hubAlias = $this->extension->prefix('sf.hub.'.$name);
         if (getenv('FRANKENPHP_CONFIG') ?: false) {
             return $this->builder->addDefinition($hubAlias)
                 ->setType($this->debugMode ? FrankenPhpHub::class : HubInterface::class)
@@ -78,17 +76,19 @@ final readonly class MercureHubsDefiner
                     $config->url,
                     $tokenFactoryDefinition,
                 ])
-                ->setAutowired(false);
+                ->setAutowired(false)
+            ;
         }
 
-        $factoryProviderDefinition = $this->builder->addDefinition($this->extension->prefix('token.provider.' . $name))
+        $factoryProviderDefinition = $this->builder->addDefinition($this->extension->prefix('token.provider.'.$name))
             ->setType(TokenProviderInterface::class)
             ->setFactory(new Statement(FactoryTokenProvider::class, [
                 $tokenFactoryDefinition,
                 $config->jwt->subscribe,
                 $config->jwt->publish,
             ]))
-            ->setAutowired(false);
+            ->setAutowired(false)
+        ;
 
         return $this->builder->addDefinition($hubAlias)
             ->setType($this->debugMode ? Hub::class : HubInterface::class)
@@ -97,6 +97,7 @@ final readonly class MercureHubsDefiner
                 $factoryProviderDefinition,
                 $tokenFactoryDefinition,
             ]))
-            ->setAutowired(false);
+            ->setAutowired(false)
+        ;
     }
 }

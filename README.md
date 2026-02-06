@@ -5,7 +5,9 @@ Nette Mercure Extension
 [![.github/workflows/coverage.yml](https://github.com/raneomik/nette-mercure/actions/workflows/coverage.yml/badge.svg?style=flat-square)](https://github.com/raneomik/nette-mercure/actions/workflows/coverage.yml)
 [![.github/workflows/ci.yml](https://github.com/raneomik/nette-mercure/actions/workflows/ci.yml/badge.svg?style=flat-square)](https://github.com/raneomik/nette-mercure/actions/workflows/ci.yml)
 
-🚀 Nette Mercure Extension: wrapper for [symfony/mercure](https://github.com/symfony/mercure) to use Mercure in Nette framework
+_Work In Progress_
+
+🚀 [Nette](https://nette.org) Mercure Extension: wrapper for [symfony/mercure](https://github.com/symfony/mercure) to use Mercure in Nette framework
 
 > Mercure is a protocol allowing to push data updates to web browsers and other
   HTTP clients in a convenient, fast, reliable and battery-efficient way.
@@ -50,7 +52,7 @@ mercure:
 	# ...
 ```
 
-### Dispatch messages
+### Publish messages
 ```php
 
 use Raneomik\NetteMercure\BroadcasterInterface;
@@ -99,51 +101,64 @@ final class SomeService
 }
 ```
 
-Generate mercure url to listen to in Latte templates :
-```html
-<!-- ... -->
-<!-- use mercure(array|string|null $topics, ?string $hub = null) function to render mercure URL -->
-<div data-mercure-url="{mercure('test-topic', hub: hubName, [addJwt => true])}" data-mercure="test-topic">Waiting for updates...</div>
-<!-- "addJwt => true" options appends the JWT token in mercure url when not using eventsource polyfill -->
-<!-- ... -->
-```
 
+### Subscribe to updates
 
-
-### Listen to updates and render them dynamicaly with a js client implementation
-
-Setup your JavaScript client to listen to Mercure updates and render them in selected containers.
+Generate mercure url in Latte templates,
+setup your JavaScript client to listen to Mercure updates
+and render them in selected containers :
 
 _When working with JWT token authorisation, you may need a [polyfill](https://github.com/Yaffle/EventSource)._
 
-```js
-// assets/main.js - import a Mercure client sample
-import './../vendor/raneomik/nette-mercure/assets/js/mercure-client.js';
-// or implement your own Mercure client - here's a minimalistic template/example:
+```html
+<div class="mercure-container">
+    Waiting for updates...
+</div>
 
-const eventSource = new EventSource(/*mercureUrl*/);
+<script type="module">
+    // use mercure(array|string|null $topics, ?string $hub = null) function to render mercure URL. "addJwt" option adds jwt token in query url
+    const eventSource = new EventSource({mercure('test-topic', hub: hubName, [addJwt => true])});
 
-const containers = /* select containers for mercure updates to render */;
-eventSource.onmessage = event => {
-	for (const container of containers) {
-		container.textContent = event.data;
-	}
-}
+    const containers = document.querySelectorAll('.mercure-container');
+    eventSource.onmessage = event => {
+        for (const container of containers) {
+            container.textContent = event.data;
+        }
+    }
+
+    // or with polyfill with jwt token as Auth Bearer
+
+    import { EventSourcePolyfill } from 'event-source-polyfill';
+
+    const es = new EventSourcePolyfill({mercure('test-topic', hub: hubName)},
+        headers: {
+// use mercureJWTToken(array|string|null $subscribe = ['*'], array|string|null $publish = ['*'], ?string $hub = null) function to render mercure URL
+            'Authorization': 'Bearer: ' + {mercureJWTToken('test-topic', hub: hubName)}
+        }
+    );
+
+    eventSource.onmessage = event => {
+        for (const container of containers) {
+            container.textContent = event.data;
+        }
+    }
+</script>
 ```
-
 
 
 Resources
 ---------
-
-* [Mercure](https://mercure.rocks)
-* [Documentation](https://symfony.com/doc/current/mercure.html)
-* Based on [symfony/mercure](https://github.com/symfony/mercure)
-
+* Based on [symfony/mercure](https://github.com/symfony/mercure) / [Documentation](https://symfony.com/doc/current/mercure.html)
+* [<img src="https://mercure.rocks/favicon.ico" width="13"> Mercure](https://mercure.rocks)
+* [<img src="https://frankenphp.dev/favicon.ico" width="13"> FrankenPHP Real-time](https://frankenphp.dev/docs/mercure/)
+and [Hot-Reload](https://frankenphp.dev/docs/hot-reload/)
+* [<img src="https://nette.org/favicon.ico" width="13"> Nette](https://nette.org), [<img src="https://latte.nette.org/favicon.ico" width="13"> Latte](https://latte.nette.org), [<img src="https://tester.nette.org/favicon.ico" width="13"> Tester](https://tester.nette.org/en), [<img src="https://tracy.nette.org/favicon.ico" width="13"> Tracy](https://tracy.nette.org/en/)
+![](https://nette.org/favicon.ico|width=50)
 
 Known issues
 ------------
 
-"anonymous" option for mercure in Caddy configuration seems to work only with Symfony\Mercure\FrankenPhpHub and the FrankenPHP built-in `mercure_publish` function.
+- "anonymous" option for mercure in Caddy configuration seems to work only with Symfony\Mercure\FrankenPhpHub and the FrankenPHP built-in `mercure_publish` function.
+  HttpClient shows errors such as "405 Method Not Allowed" in this case.
 
-HttpClient shows errors such as "405 Method Not Allowed" in this case.
+- Subscribe and discovery parts are in ([TODO](TODO.md)) list and will be documented

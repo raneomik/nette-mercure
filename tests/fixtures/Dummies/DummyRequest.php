@@ -33,7 +33,7 @@ final class DummyRequest implements IRequest
             'getReferer' => null,
             'isSameSite' => true,
             'isFrom' => '/' === $this->fromUrl,
-            default => throw new \BadMethodCallException(sprintf('Method %s does not exist.', $name)),
+            default => throw new \BadMethodCallException(\sprintf('Method %s does not exist.', $name)),
         };
     }
 
