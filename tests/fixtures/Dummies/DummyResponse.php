@@ -81,8 +81,16 @@ final class DummyResponse implements IResponse
         return $this->headers;
     }
 
-    public function setCookie(string $name, string $value, \DateTimeInterface|int|string|null $expire, ?string $path = null, ?string $domain = null, ?bool $secure = null, ?bool $httpOnly = null): self
-    {
+    public function setCookie(
+        string $name,
+        string $value,
+        \DateTimeInterface|int|string|null $expire,
+        ?string $path = null,
+        ?string $domain = null,
+        ?bool $secure = null,
+        ?bool $httpOnly = null,
+        ?string $sameSite = null,
+    ): self {
         $this->cookie[$name] = [
             'value' => $value,
             'expire' => $expire,
@@ -90,6 +98,7 @@ final class DummyResponse implements IResponse
             'domain' => $domain,
             'secure' => $secure,
             'httpOnly' => $httpOnly,
+            'sameSite' => $sameSite ?? self::SameSiteLax,
         ];
 
         return $this;

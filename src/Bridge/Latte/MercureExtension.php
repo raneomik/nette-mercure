@@ -7,14 +7,14 @@ namespace Raneomik\NetteMercure\Bridge\Latte;
 use Latte\Extension;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Raneomik\NetteMercure\Core\Broadcasters;
-use Raneomik\NetteMercure\Core\JWTProvider;
+use Raneomik\NetteMercure\Core\JWTProviderInterface;
 
 final class MercureExtension extends Extension
 {
     private readonly Broadcasters $broadcasters;
 
     public function __construct(
-        private readonly JWTProvider $jwtProvider,
+        private readonly JWTProviderInterface $jwtProvider,
         private readonly BroadcastersLoader $broadcastersLoader,
     ) {}
 
@@ -75,8 +75,8 @@ final class MercureExtension extends Extension
     {
         return $this->jwtProvider->provide(
             $hub,
-            $subscribe,
-            $publish,
+            (array) $subscribe,
+            (array) $publish,
         );
     }
 }

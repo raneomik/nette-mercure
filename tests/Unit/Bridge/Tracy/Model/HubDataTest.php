@@ -88,8 +88,8 @@ class HubDataTest extends TestCase
         /** @var HubDatum $datum2 */
         $datum2 = $hubData['test'];
 
-        Assert::equal(1, $datum1->messageCount());
-        Assert::equal(1, $datum2->messageCount());
+        Assert::same(1, $datum1->messageCount());
+        Assert::same(1, $datum2->messageCount());
         Assert::notEqual(0.0, $hubData->totalDuration);
         Assert::notEqual(0.0, $hubData->totalMemory);
 	}

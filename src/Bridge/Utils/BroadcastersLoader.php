@@ -13,7 +13,7 @@ final readonly class BroadcastersLoader
 	public function __construct(
 	    callable $broadcastersLoader,
 	) {
-		// @phpstan-ignore-next-line
+		// @phpstan-ignore-next-line - on purpose
 		$this->broadcastersLoader = $broadcastersLoader;
 	}
 

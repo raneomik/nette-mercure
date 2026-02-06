@@ -6,6 +6,7 @@ namespace Tests\Unit\Raneomik\NetteMercure\Core\Response;
 
 require __DIR__ . '/../../../bootstrap.php';
 
+use Nette\Http\IResponse;
 use Raneomik\NetteMercure\Bridge\Utils\DefinedData;
 use Raneomik\NetteMercure\Core\Response\BroadcastContext;
 use Raneomik\NetteMercure\Core\Response\Discovery;
@@ -36,7 +37,6 @@ class BroadcastContextTest extends TestCase
 	 */
 	public function testDefinedDataWithCookie(): void
 	{
-
         $broadcastContext = new BroadcastContext(
             new DummyAuthorisation($this->response),
             $this->discovery,
@@ -55,11 +55,11 @@ class BroadcastContextTest extends TestCase
         $broadcastContext->addResponseLinks();
         $broadcastContext->createCookies();
 
-        Assert::equal(
+        Assert::same(
             '<http://hub.example.com>; rel="mercure"',
             $this->response->getHeader('Link'),
         );
-        Assert::equal(
+        Assert::same(
             [
                 'value' => 'cookie-value-subscribe-publish-test',
                 'expire' => 0,
@@ -67,6 +67,7 @@ class BroadcastContextTest extends TestCase
                 'domain' => null,
                 'secure' => null,
                 'httpOnly' => null,
+                'sameSite' => IResponse::SameSiteLax,
             ],
             $this->response->cookie['cookie'],
         );
@@ -95,7 +96,7 @@ class BroadcastContextTest extends TestCase
         $broadcastContext->addResponseLinks();
         $broadcastContext->createCookies();
 
-        Assert::equal(
+        Assert::same(
             '<http://hub.example.com>; rel="mercure"',
             $this->response->getHeader('Link'),
         );

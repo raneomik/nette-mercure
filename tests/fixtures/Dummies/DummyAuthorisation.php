@@ -14,8 +14,12 @@ final readonly class DummyAuthorisation implements AuthorizationInterface
     ) {
     }
 
-    public function createCookie(array|string|null $subscribe = [], array|string|null $publish = [], array $additionalClaims = [], ?string $hub = null): void
-    {
+    public function createCookie(
+        array|string|null $subscribe = [],
+        array|string|null $publish = [],
+        array $additionalClaims = [],
+        ?string $hub = null
+    ): void {
         $this->response->setCookie(
             name: 'cookie',
             value: sprintf(

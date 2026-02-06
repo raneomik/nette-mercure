@@ -64,6 +64,7 @@ final readonly class TemplatingBroadcaster implements BroadcasterInterface
 		    $options['template'] = $this->templatePathResolver->resolve($template),
 		    $data + [
 		        'contentType' => $this->resolveContentType($template),
+		        'target' => $options['target'] ?? null,
 		    ],
 		    $this->resolveAction($options['action'] ?? null),
 		);

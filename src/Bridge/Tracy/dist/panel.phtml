@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
-$formatFLoat = fn(float $number, string $unit = ''): string => sprintf('%.2f %s', $number, $unit);
+$formatData = fn(float $number, string $type): string => match($type) {
+    'duration' => sprintf('%.2f ms', $number * 1000),
+    'memory' => sprintf('%.2f kB', $number / 1024),
+};
 
 ?>
 <style class="tracy-debug">
@@ -69,7 +72,17 @@ $formatFLoat = fn(float $number, string $unit = ''): string => sprintf('%.2f %s'
 	<?php foreach ($hubData as $hubDatum): ?>
 		<details>
 			<summary>
-				<h2>Hub <?= Tracy\Helpers::escapeHtml($hubDatum->hubName) ?></h2>
+				<h2>Hub
+                    <?= Tracy\Helpers::escapeHtml($hubDatum->hubName) ?>
+                    <em>
+                        (<?= Tracy\Helpers::escapeHtml(match ($hubDatum->messageCount()) {
+                            0 => 'no messages',
+                            1 => '1 message',
+                            default => $hubDatum->messageCount() . ' messages',
+                        });
+                    ?>)
+                    </em>
+                </h2>
 			</summary>
 			<div style="margin-top: 1rem;">
 				<dl>
@@ -111,10 +124,10 @@ $formatFLoat = fn(float $number, string $unit = ''): string => sprintf('%.2f %s'
 					</dd>
 
 					<dt>Duration</dt>
-					<dd><?= Tracy\Helpers::escapeHtml($formatFLoat($hubDatum->duration * 1000, 'ms')) ?></dd>
+					<dd><?= Tracy\Helpers::escapeHtml($formatData($hubDatum->duration, 'duration')) ?></dd>
 
 					<dt>Memory</dt>
-					<dd><?= Tracy\Helpers::escapeHtml($formatFLoat($hubDatum->memory / 1024, 'kB')) ?></dd>
+					<dd><?= Tracy\Helpers::escapeHtml($formatData($hubDatum->memory, 'memory')) ?></dd>
 				</dl>
 			</div>
 		</details>
@@ -124,10 +137,10 @@ $formatFLoat = fn(float $number, string $unit = ''): string => sprintf('%.2f %s'
 		<div style="text-align: right;">
 			<dl>
 				<dt>Total Duration</dt>
-				<dd><?= Tracy\Helpers::escapeHtml($formatFLoat($hubData->totalDuration * 1000, 'ms')) ?></dd>
+				<dd><?= Tracy\Helpers::escapeHtml($formatData($hubData->totalDuration, 'duration')) ?></dd>
 
 				<dt>Total Memory</dt>
-				<dd><?= Tracy\Helpers::escapeHtml($formatFLoat($hubData->totalMemory / 1024, 'kB')) ?></dd>
+				<dd><?= Tracy\Helpers::escapeHtml($formatData($hubData->totalMemory, 'memory')) ?></dd>
 			</dl>
 		</div>
 	</div>

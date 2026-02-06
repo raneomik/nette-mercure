@@ -50,6 +50,7 @@ interface BroadcasterInterface
 	 *     template?: string,
 	 *     rendered_data?: string,
 	 *     action?: Action|string,
+	 *     target?: string,
 	 *     sse_id?: string,
 	 *     sse_type?: string,
 	 *     sse_retry?: int,

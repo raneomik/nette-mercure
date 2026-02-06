@@ -54,6 +54,15 @@ jobs:
                     path: tests/reports/junit.xml
                     reporter: tester-junit
 
+            -   name: Upload tests results report to Codecov
+                uses: codecov/codecov-action@v5
+                with:
+                    token: ${{ secrets.CODECOV_TOKEN }}
+                    files: tests/reports/junit.xml
+                    fail_ci_if_error: true
+                    report_type: test_results
+
+
             -   name: Upload tests coverage report to Codecov
                 uses: codecov/codecov-action@v5
                 with:

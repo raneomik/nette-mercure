@@ -40,6 +40,7 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                     'subscribe' => Expect::arrayOf('string')->default(['*'])->dynamic(),
                     'algorithm' => Expect::string('hmac.sha256'),
                     'factory' => Expect::string(LcobucciFactory::class),
+                    'lifetime' => Expect::int()->dynamic(),
                 ])->required(),
                 'disableCookie' => Expect::bool(false),
                 'debugger' => Expect::bool('%debugMode%'),
@@ -99,6 +100,7 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                 ]);
         }
 
+        bdump($this->hotReloadUrl);
         if ($builder->hasDefinition('tracy.bar')) {
             $panelDef = $builder->addDefinition($this->prefix('tracy.panel'))
                 ->setFactory(MercurePanel::class, [

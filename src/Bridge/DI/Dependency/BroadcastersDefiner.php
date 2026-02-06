@@ -20,6 +20,7 @@ use Raneomik\NetteMercure\Bridge\Utils\DefinedData;
 use Raneomik\NetteMercure\BroadcasterInterface;
 use Raneomik\NetteMercure\Core\Broadcasters;
 use Raneomik\NetteMercure\Core\JWTProvider;
+use Raneomik\NetteMercure\Core\JWTProviderInterface;
 use Raneomik\NetteMercure\Core\PlainBroadcaster;
 use Raneomik\NetteMercure\Core\Response\Authorization;
 use Raneomik\NetteMercure\Core\Response\AuthorizationInterface;
@@ -82,12 +83,12 @@ final class BroadcastersDefiner
                 ->setAutowired(false);
         $jwtProviderDef = $this->definitionsCache['jwtProvider']
             ??= $this->builder->addDefinition($this->extension->prefix('jwtProvider'))
-                ->setType(JWTProvider::class)
+                ->setType(JWTProviderInterface::class)
                 ->setFactory(JWTProvider::class)
                 ->setArguments([
                     $hubRegistryDef,
                 ])
-                ->setAutowired(false);
+                ->setAutowired();
 
         $authorizationDef = $this->definitionsCache[$this->extension->prefix('authorization')]
             ??= $this->builder->addDefinition($this->extension->prefix('authorization'))

@@ -4,17 +4,19 @@ declare(strict_types=1);
 
 namespace Raneomik\NetteMercure\Core\Response;
 
-use Nette\Http\Request;
-use Nette\Http\Response;
-use Raneomik\NetteMercure\Core\JWTProvider;
+use Nette\Http\IRequest;
+use Nette\Http\IResponse;
+use Raneomik\NetteMercure\Core\JWTProviderInterface;
 
 final readonly class Authorization implements AuthorizationInterface
 {
+    public const string COOKIE_NAME = 'mercureAuthorization';
+
     public function __construct(
-        private JWTProvider $jwtProvider,
-        private Request $request,
-        private Response $response,
-        private ?string $cookieSameSite = 'none',
+        private JWTProviderInterface $jwtProvider,
+        private IRequest $request,
+        private IResponse $response,
+        private ?string $cookieSameSite = IResponse::SameSiteLax,
     ) {
     }
 
@@ -32,14 +34,14 @@ final readonly class Authorization implements AuthorizationInterface
         $urlComponents = parse_url($url);
 
         $this->response->setCookie(
-            name: 'mercureAuthorization',
+            name: self::COOKIE_NAME,
             value: $token,
             expire: $this->jwtProvider->ttl(),
             path: $urlComponents['path'] ?? '/',
             domain: $this->getCookieDomain( $urlComponents['host'] ?? null),
             secure: 'http' !== strtolower($urlComponents['scheme'] ?? 'https'),
             httpOnly: true,
-            sameSite: $this->cookieSameSite
+            sameSite: $this->cookieSameSite,  //@phpstan-ignore-line
         );
     }
 

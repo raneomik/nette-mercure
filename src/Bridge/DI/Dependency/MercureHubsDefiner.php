@@ -60,6 +60,7 @@ final readonly class MercureHubsDefiner
         $factoryArguments = LcobucciFactory::class === $config->jwt->factory ? [
             $config->jwt->secret,
             $config->jwt->algorithm,
+            $config->jwt->lifetime,
         ] : [
             $config->jwt->secret,
         ];

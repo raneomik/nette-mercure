@@ -7,11 +7,11 @@ namespace Raneomik\NetteMercure\Core;
 use Symfony\Component\Mercure\HubRegistry;
 use Symfony\Component\Mercure\Jwt\TokenFactoryInterface;
 
-final class JWTProvider
+final class JWTProvider implements JWTProviderInterface
 {
     private readonly int $cookieLifetimeInSeconds;
 
-    private \DateTimeInterface $cookieLifetime;
+    private \DateTimeInterface $cookieDateTimeTtl;
 
     public function __construct(
         private readonly HubRegistry $registry,
@@ -20,15 +20,7 @@ final class JWTProvider
         $this->cookieLifetimeInSeconds = $cookieLifetimeInSeconds ?? (int) \ini_get('session.cookie_lifetime');
     }
 
-    /**
-     * Provides JWT token for the given hub.
-     *
-     * @param string|null $hubName the hub to generate the cookie for
-     * @param string[]|string|null $subscribe a list of topics that the authorization cookie will allow subscribing to
-     * @param string[]|string|null $publish a list of topics that the authorization cookie will allow publishing to
-     * @param array<string, mixed> $additionalClaims an array of additional claims for the JWT token
-     * @return string generated JWT token
-     */
+    #[\Override]
     public function provide(?string $hubName = null, string|array|null $subscribe = [], string|array|null $publish = [], array $additionalClaims = []): string
     {
         $hubInstance = $this->registry->getHub($hubName);
@@ -40,18 +32,7 @@ final class JWTProvider
             );
         }
 
-        $cookieLifetime = $this->cookieLifetimeInSeconds;
-        if (null !== ($additionalClaims['exp'] ?? null)) {
-            $cookieLifetime = $additionalClaims['exp'];
-        } else {
-            $additionalClaims['exp'] = new \DateTimeImmutable(
-                0 === $cookieLifetime
-                    ? '+1 hour'
-                    : sprintf('+%s seconds', $cookieLifetime)
-            );
-        }
-
-        $this->cookieLifetime = new \DateTimeImmutable(sprintf('+%s seconds', $cookieLifetime));
+        $this->setCookieLifeDateTime($additionalClaims);
 
         if (null !== $subscribe) {
             $subscribe = (array) $subscribe;
@@ -73,6 +54,26 @@ final class JWTProvider
 
     public function ttl(): \DateTimeInterface
     {
-        return $this->cookieLifetime;
+        return $this->cookieDateTimeTtl;
+    }
+
+    /**
+     * @param array<string, mixed> $additionalClaims
+     */
+    private function setCookieLifeDateTime(array &$additionalClaims): void
+    {
+        $cookieLifetime = $this->cookieLifetimeInSeconds;
+        if (null !== ($additionalClaims['exp'] ?? null)) {
+            $cookieLifetime = $additionalClaims['exp'];
+            $this->cookieDateTimeTtl = new \DateTimeImmutable(sprintf('+%s seconds', $cookieLifetime));
+
+            return;
+        }
+
+        $this->cookieDateTimeTtl = $additionalClaims['exp'] = new \DateTimeImmutable(
+            0 === $this->cookieLifetimeInSeconds
+                ? '+1 hour'
+                : sprintf('+%s seconds', $cookieLifetime)
+        );
     }
 }
