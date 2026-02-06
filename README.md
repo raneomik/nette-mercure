@@ -132,7 +132,7 @@ _When working with JWT token authorisation, you may need a [polyfill](https://gi
 
     const es = new EventSourcePolyfill({mercure('test-topic', hub: hubName)},
         headers: {
-// use mercureJWTToken(array|string|null $subscribe = ['*'], array|string|null $publish = ['*'], ?string $hub = null) function to render mercure URL
+// use mercureJWTToken(array|string|null $subscribe = ['*'], array|string|null $publish = ['*'], ?string $hub = null) function to render mercure JWT token
             'Authorization': 'Bearer: ' + {mercureJWTToken('test-topic', hub: hubName)}
         }
     );
