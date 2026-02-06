@@ -7,7 +7,7 @@ Nette Mercure Extension
 
 _Work In Progress_
 
-🚀 [Nette](https://nette.org) Mercure Extension: wrapper for [symfony/mercure](https://github.com/symfony/mercure) to use Mercure in Nette framework
+🚀 Nette Mercure Extension: wrapper for [symfony/mercure](https://github.com/symfony/mercure) to use Mercure in [Nette framework](https://nette.org)
 
 > Mercure is a protocol allowing to push data updates to web browsers and other
   HTTP clients in a convenient, fast, reliable and battery-efficient way.
@@ -161,4 +161,4 @@ Known issues
 - "anonymous" option for mercure in Caddy configuration seems to work only with Symfony\Mercure\FrankenPhpHub and the FrankenPHP built-in `mercure_publish` function.
   HttpClient shows errors such as "405 Method Not Allowed" in this case.
 
-- Subscribe and discovery parts are in ([TODO](TODO.md)) list and will be documented
+- Subscribe, with correct cookie generation, and discovery parts are in ([TODO](TODO.md)) list and will be documented
