@@ -3,7 +3,7 @@ TODO
 
 - [x] ~~Leverage confusions by separating clearly the active publish/broadcast from the passive subscribe/consume and discovery parts~~
 - [x] ~~Cleanup & refactor codebase and tests & remove unnecessary parts (eg. BroadcastContext related)~~
-- [ ] Add functional smoke test to check complete service integration, as Integration tests seems insufficient
+- [ ] Add functional smoke test to check correct services integrations, as Integration tests seems insufficient
 - [ ] Provide a subscribing service (add discovery Link header, JWT and auth cookie generationss, ...)
 - [ ] Add more documentation & examples (eg. subscribing endpoint setup, turbo streams,...) to README.md
 - [ ] Integration examples & demos
