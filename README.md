@@ -161,4 +161,4 @@ Known issues
 - "anonymous" option for mercure in Caddy configuration seems to work only with Symfony\Mercure\FrankenPhpHub and the FrankenPHP built-in `mercure_publish` function.
   HttpClient shows errors such as "405 Method Not Allowed" in this case.
 
-- Subscribe, with correct cookie generation, and discovery parts are in ([TODO](TODO.md)) list and will be documented
+- Subscribe, with correct cookie generation, and discovery enhancements are in ([TODO](TODO.md)) list and will be documented
