@@ -24,7 +24,9 @@ final class MockHubFactory
             static fn (Update $update): string => Json::encode([
                 'data' => $update->getData(),
                 'topics' => $update->getTopics(),
-            ]),
+            ] + ($update->getType() ? [
+                'sse_type' => $update->getType(),
+            ] : [])),
             $withoutJWTFactory ? null : new DummyJwtFactory($jwtSecret ?? 'secret'),
         );
     }

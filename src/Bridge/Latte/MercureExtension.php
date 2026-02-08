@@ -64,8 +64,8 @@ final class MercureExtension extends Extension
 
         if (false !== ($options['addJwt'] ?? false)) {
             $url .= '&authorization='.$this->mercureJWTToken(
-                $options['subscribe'] ?? $hubData->subscribe ?? ['*'],
-                $options['publish'] ?? $hubData->publish ?? ['*'],
+                $options['subscribe'] ?? $hubData->subscribe ?? $topics,
+                $options['publish'] ?? $hubData->publish ?? $topics,
                 $hub,
             );
         }

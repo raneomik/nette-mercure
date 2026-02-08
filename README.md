@@ -56,7 +56,8 @@ mercure:
 ```php
 
 use Raneomik\NetteMercure\BroadcasterInterface;
-use Raneomik\NetteMercure\Latte\TurboStream\Action;
+use Raneomik\NetteMercure\Core\Publish\Latte\TurboStream\Action;
+
 
 final class SomeService
 {
@@ -81,7 +82,7 @@ final class SomeService
 			topics: ['test-topic'],
 			template: 'test.latte', // existing template
 			options: [
-				'hub' => 'two'
+				'hub' => 'two' // hub name defined in configuration and where to publish, default is first found hub
 			],
 		);
 
@@ -116,8 +117,12 @@ _When working with JWT token authorisation, you may need a [polyfill](https://gi
 </div>
 
 <script type="module">
-    // use mercure(array|string|null $topics, ?string $hub = null) function to render mercure URL. "addJwt" option adds jwt token in query url
-    const eventSource = new EventSource({mercure('test-topic', hub: hubName, [addJwt => true])});
+    /**
+     * use mercure(array|string|null $topics, ?string $hub = null) function to render mercure URL.
+     * - "hub" param defines the hub to subscribe to if multiple hubs are defined in configuration, default is first found hub
+     * - "addJwt" option adds jwt token in query url (@see https://mercure.rocks/spec#uri-query-parameter)
+     */
+    const eventSource = new EventSource({mercure('test-topic', hub: 'hubName', [addJwt => true])});
 
     const containers = document.querySelectorAll('.mercure-container');
     eventSource.onmessage = event => {
@@ -130,10 +135,10 @@ _When working with JWT token authorisation, you may need a [polyfill](https://gi
 
     import { EventSourcePolyfill } from 'event-source-polyfill';
 
-    const es = new EventSourcePolyfill({mercure('test-topic', hub: hubName)},
+    const es = new EventSourcePolyfill({mercure('test-topic')},
         headers: {
 // use mercureJWTToken(array|string|null $subscribe = ['*'], array|string|null $publish = ['*'], ?string $hub = null) function to render mercure JWT token
-            'Authorization': 'Bearer: ' + {mercureJWTToken('test-topic', hub: hubName)}
+            'Authorization': 'Bearer: ' + {mercureJWTToken('test-topic')}
         }
     );
 
@@ -203,8 +208,75 @@ fetch('/subscribe?topics=/* topic(s) to define. "['*']" by default */&hub=/* hub
         headers: {
             'Authorization': `Bearer: ${jwtToken}`
         };
+
+        es.onmessage = event => {
+            for (const container of containers) {
+                container.textContent = event.data;
+            }
+        };
     );
 });
+```
+
+
+### Broadcast & Subscribe to turbo-streams
+
+You can also subscribe to [turbo-streams](https://turbo.hotwired.dev) :
+
+- Server side :
+```php
+//...
+		$this->broadcaster->broadcast(
+			data: 'Hello Nette from Mercure!',
+			topics: ['test-topic'],
+//to activate "text/vnd.turbo-stream.html" content type and "turbo-stream" mercure event type to listen to, template name must end with ".stream.latte" / "Stream.latte" and have matching "action" blocks
+			template: 'test.stream.latte',
+			options: [
+/** @see Raneomik\NetteMercure\Core\Publish\Latte\TurboStream\Action for available action blocks */
+				'action' => Action::Update
+				'target' => 'stream-container' // target container id to update in client side. Default is "stream-container"
+			],
+		);
+//...
+```
+
+```html
+<!-- test.stream.latte template, near to the broadcaster call -->
+{contentType $contentType ?? 'text/html'}
+
+{block update}
+    <turbo-stream action="update" target="{$target ?? 'stream-container'}">
+        <template>
+            {$data}
+        </template>
+    </turbo-stream>
+{/block}
+```
+
+- Client side :
+```js
+    import * as Turbo from '@hotwired/turbo'; //npm install @hotwired/turbo
+
+    const eventSource = new EventSource($mercureUrl);
+
+    const containers = document.querySelectorAll('.mercure-container');
+    eventSource.onmessage = event => {
+        eventSource.addEventListener('turbo-stream', event => {
+            Turbo.renderStreamMessage(event.data);
+        });
+
+        eventSource.onerror = event => {
+            console.error("Mercure connection error: ", event);
+
+            Turbo.disconnectStreamSource(eventSource);
+        }
+
+        document.onclose = () => {
+            console.info("Bye !");
+            Turbo.disconnectStreamSource(eventSource);
+            eventSource.close();
+        };
+    }
 ```
 
 Resources
@@ -214,7 +286,6 @@ Resources
 * [<img src="https://frankenphp.dev/favicon.ico" width="13"> FrankenPHP Real-time](https://frankenphp.dev/docs/mercure/)
 and [Hot-Reload](https://frankenphp.dev/docs/hot-reload/)
 * [<img src="https://nette.org/favicon.ico" width="13"> Nette](https://nette.org), [<img src="https://latte.nette.org/favicon.ico" width="13"> Latte](https://latte.nette.org), [<img src="https://tester.nette.org/favicon.ico" width="13"> Tester](https://tester.nette.org/en), [<img src="https://tracy.nette.org/favicon.ico" width="13"> Tracy](https://tracy.nette.org/en/)
-![](https://nette.org/favicon.ico|width=50)
 
 Known issues
 ------------

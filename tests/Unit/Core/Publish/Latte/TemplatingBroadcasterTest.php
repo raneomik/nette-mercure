@@ -123,6 +123,7 @@ final class TemplatingBroadcasterTest extends TestCase
             Json::encode([
                 'data' => "\tHello Mercure!\n",
                 'topics' => ['test'],
+                'sse_type' => 'turbo-stream',
             ]),
             $this->broadcaster->broadcast(
                 'test',

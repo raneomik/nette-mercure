@@ -11,6 +11,12 @@ use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
 
 final readonly class TemplatingBroadcaster implements BroadcasterInterface
 {
+    private const string DEFAULT_CONTENT_TYPE = 'text/html';
+
+    private const string JSON_CONTENT_TYPE = 'application/json';
+
+    private const string TURBO_STREAM_CONTENT_TYPE = 'text/vnd.turbo-stream.html';
+
     /**
      * @param PlainBroadcaster $decorated
      */
@@ -52,14 +58,20 @@ final readonly class TemplatingBroadcaster implements BroadcasterInterface
             ]
             : (array) $data;
 
+        $contentType = $this->resolveContentType($template);
+        $action = $this->resolveAction($options['action'] ?? null);
         $options['rendered_data'] = $renderedData = $this->latte->renderToString(
             $options['template'] = $this->templatePathResolver->resolve($template),
             $data + [
-                'contentType' => $this->resolveContentType($template),
+                'contentType' => $contentType,
                 'target' => $options['target'] ?? null,
             ],
-            $this->resolveAction($options['action'] ?? null),
+            $action,
         );
+
+        if ($this->isTurbo($contentType)) {
+            $options['sse_type'] = 'turbo-stream';
+        }
 
         return $this->decorated->broadcast(
             $topics,
@@ -68,32 +80,33 @@ final readonly class TemplatingBroadcaster implements BroadcasterInterface
         );
     }
 
+    private function isTurbo(string $contentType): bool
+    {
+        return self::TURBO_STREAM_CONTENT_TYPE === $contentType;
+    }
+
     private function resolveContentType(string $template): string
     {
         if (
             str_ends_with($template, 'Stream.latte')
             || str_ends_with($template, '.stream.latte')
         ) {
-            return 'text/vnd.turbo-stream.html';
+            return self::TURBO_STREAM_CONTENT_TYPE;
         }
 
         if (str_ends_with($template, '.json.latte')) {
-            return 'application/json';
+            return self::JSON_CONTENT_TYPE;
         }
 
-        return 'text/html';
+        return self::DEFAULT_CONTENT_TYPE;
     }
 
     private function resolveAction(Action|string|null $action): ?string
     {
-        if ($action instanceof Action) {
-            $action = $action->value;
-        }
-
-        if (\is_string($action)) {
-            $action = Action::from($action)->value;
-        }
-
-        return $action ?? null;
+        return match (true) {
+            \is_string($action) => Action::from($action)->value,
+            $action instanceof Action => $action->value,
+            default => null,
+        };
     }
 }
