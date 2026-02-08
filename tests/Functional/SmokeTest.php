@@ -32,6 +32,8 @@ final class SmokeTest extends TestCase
             throw new \RuntimeException('Failed to start the server process.');
         }
 
+        usleep(750_000); // Wait for the server to start
+
         $this->serverProcess = $process;
 
         mkdir(Bootstrap::varDir().'/tmp', recursive: true);
