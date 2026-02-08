@@ -26,7 +26,7 @@ final readonly class Discovery
      */
     public function addLink(string $hubLink): void
     {
-        // avoid nette errors - does not accept OPTIONS requests
+        // avoid nette errors - eg. does not accept OPTIONS requests
         if ($this->isPreflightRequest()) {
             return;
         }
@@ -39,7 +39,7 @@ final readonly class Discovery
         ]));
     }
 
-    public function isPreflightRequest(): bool
+    private function isPreflightRequest(): bool
     {
         return $this->request->isMethod('OPTIONS')
             && null !== $this->request->getHeader('Access-Control-Request-Method');

@@ -26,6 +26,7 @@ final class MercureExtension extends Extension
         return $this->broadcasters ??= ($this->broadcastersLoader)();
     }
 
+    #[\Override]
     public function getFunctions(): array
     {
         return [

@@ -10,6 +10,8 @@ return RectorConfig::configure()
         __DIR__.'/tests',
     ])
 
+    ->withPhpSets(php83: true)
+
     ->withPreparedSets(
         deadCode: true,
         codeQuality: true,

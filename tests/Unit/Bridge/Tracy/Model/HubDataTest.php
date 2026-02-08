@@ -11,11 +11,9 @@ use Raneomik\NetteMercure\Bridge\Tracy\Value\HubDatum;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
 use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
 use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
-use Symfony\Component\Mercure\Jwt\StaticTokenProvider;
-use Symfony\Component\Mercure\MockHub;
-use Symfony\Component\Mercure\Update;
 use Tester\Assert;
 use Tester\TestCase;
+use Tests\Fixtures\Dummies\Core\MockHubFactory;
 
 final class HubDataTest extends TestCase
 {
@@ -26,11 +24,7 @@ final class HubDataTest extends TestCase
     {
         $broadcasters = new Broadcasters([
             'test' => new PlainBroadcaster(
-                new MockHub(
-                    'test',
-                    new StaticTokenProvider('!ChangeMe1!'),
-                    static fn (Update $update): string => $update->getData(),
-                ),
+                MockHubFactory::create('http://hub.example.com'),
             ),
         ]);
 
@@ -44,20 +38,11 @@ final class HubDataTest extends TestCase
      */
     public function testRelevantData(): void
     {
-        $publishCallback = static fn (Update $update): string => $update->getData();
         $plainBro = new PlainBroadcaster(
-            new MockHub(
-                'test',
-                new StaticTokenProvider('!ChangeMe1!'),
-                $publishCallback,
-            ),
+            MockHubFactory::create('http://hub.example.com'),
         );
         $anotherBro = new PlainBroadcaster(
-            new MockHub(
-                'test2',
-                new StaticTokenProvider('!ChangeMe2!'),
-                $publishCallback,
-            ),
+            MockHubFactory::create('http://hub2.example.com'),
         );
 
         $broadcasters = new Broadcasters([

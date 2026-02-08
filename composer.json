@@ -71,7 +71,7 @@
     "phpstan": "vendor/bin/phpstan analyse",
     "test": "vendor/bin/tester tests -s",
     "test-coverage": "vendor/bin/tester -s --coverage tests/reports/coverage.xml --coverage-src src -o junit:tests/reports/junit.xml tests",
-    "test-cleanup": "rm -rf $(find tests -type d -name output) var tests/reports/*"
+    "test-cleanup": "rm -rf $(find tests -type d -name output) var tests/reports/* $(find tests -type d -name var)"
   },
   "config": {
     "sort-packages": true,

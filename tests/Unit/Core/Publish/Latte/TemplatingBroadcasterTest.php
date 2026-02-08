@@ -14,11 +14,9 @@ use Raneomik\NetteMercure\Core\Publish\Latte\TemplatingBroadcaster;
 use Raneomik\NetteMercure\Core\Publish\Latte\TurboStream\Action;
 use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
 use Raneomik\NetteMercure\Exception\BroadcastException;
-use Symfony\Component\Mercure\Jwt\StaticTokenProvider;
-use Symfony\Component\Mercure\MockHub;
-use Symfony\Component\Mercure\Update;
 use Tester\Assert;
 use Tester\TestCase;
+use Tests\Fixtures\Dummies\Core\MockHubFactory;
 
 final class TemplatingBroadcasterTest extends TestCase
 {
@@ -28,18 +26,9 @@ final class TemplatingBroadcasterTest extends TestCase
 
     protected function setUp(): void
     {
-        $publishCallback = static fn (Update $update): string => Json::encode([
-            'data' => $update->getData(),
-            'topics' => $update->getTopics(),
-        ]) ?: '';
-
         $this->broadcaster = new TemplatingBroadcaster(
             new PlainBroadcaster(
-                new MockHub(
-                    'http://example.com/hub',
-                    new StaticTokenProvider('!ChangeMe!'),
-                    $publishCallback,
-                ),
+                MockHubFactory::create('http://example.com/hub'),
             ),
             $this->templatePathResolver = new TemplatePathResolver(\dirname(__DIR__, 4).'/fixtures/templates'),
             new Engine(),

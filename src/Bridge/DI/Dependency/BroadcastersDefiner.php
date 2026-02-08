@@ -9,8 +9,6 @@ use Nette\DI\Definitions\Definition;
 use Nette\DI\Definitions\ServiceDefinition;
 use Nette\DI\Definitions\Statement;
 use Raneomik\NetteMercure\Bridge\DI\MercureExtension;
-use Raneomik\NetteMercure\Bridge\Utils\ConfiguredData;
-use Raneomik\NetteMercure\Bridge\Utils\ConfiguredDataRegistry;
 use Raneomik\NetteMercure\BroadcasterInterface;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
 use Raneomik\NetteMercure\Core\Publish\Latte\TemplatePathResolver;
@@ -92,27 +90,6 @@ final readonly class BroadcastersDefiner
                 $broadcasterDefinitions,
             ])
             ->setAutowired()
-        ;
-
-        $configDefinitions = [];
-        foreach ((array) $this->extension->getConfig() as $name => $config) {
-            $configDefinitions[$name] = new Statement(
-                ConfiguredData::class,
-                [
-                    $config->url,
-                    $config->jwt->subscribe ?? [],
-                    $config->jwt->publish ?? [],
-                    $config->jwt->noCookie ?? false,
-                ]
-            );
-        }
-
-        $this->builder->addDefinition($this->extension->prefix('hubsConfiguration'))
-            ->setType(ConfiguredDataRegistry::class)
-            ->setFactory(ConfiguredDataRegistry::class, [
-                $configDefinitions,
-            ])
-            ->setAutowired(false)
         ;
     }
 }

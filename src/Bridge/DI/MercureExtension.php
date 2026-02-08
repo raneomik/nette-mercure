@@ -14,6 +14,8 @@ use Raneomik\NetteMercure\Bridge\DI\Dependency\SubscribersDefiner;
 use Raneomik\NetteMercure\Bridge\Latte\MercureExtension as LatteMercureExtension;
 use Raneomik\NetteMercure\Bridge\Tracy\MercurePanel;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
+use Raneomik\NetteMercure\Bridge\Utils\ConfiguredData;
+use Raneomik\NetteMercure\Bridge\Utils\ConfiguredDataRegistry;
 use Symfony\Component\Mercure\Jwt\LcobucciFactory;
 
 final class MercureExtension extends Nette\DI\CompilerExtension
@@ -25,6 +27,7 @@ final class MercureExtension extends Nette\DI\CompilerExtension
         $this->hotReloadUrl ??= ($_SERVER['FRANKENPHP_HOT_RELOAD'] ?? null);
     }
 
+    #[\Override]
     public function getConfigSchema(): Nette\Schema\Schema
     {
         return Expect::arrayOf(
@@ -73,13 +76,33 @@ final class MercureExtension extends Nette\DI\CompilerExtension
             ? $builder->getDefinition('latte.latteFactory')->getResultDefinition()
             : false;
 
+        $configDefinitions = [];
+        $broadcasterDefinitions = [];
+        foreach ((array) $this->getConfig() as $hubName => $config) {
+            $configDefinitions[$hubName] = new Statement(
+                ConfiguredData::class,
+                [
+                    $hubName,
+                    $config->url,
+                    $config->jwt->subscribe ?? [],
+                    $config->jwt->publish ?? [],
+                    $config->jwt->noCookie ?? false,
+                ]
+            );
+
+            $broadcasterDefinitions[$hubName] = $broadcastersLoader->broadcasterDefinition($config, $hubName, $latteDefinition);
+        }
+
+        $builder->addDefinition($this->prefix('hubsConfiguration'))
+            ->setType(ConfiguredDataRegistry::class)
+            ->setFactory(ConfiguredDataRegistry::class, [
+                $configDefinitions,
+            ])
+            ->setAutowired(false)
+        ;
+
         $subscribersDefiner = new SubscribersDefiner($this);
         $subscribersDefiner->defineSubscriptionComponents();
-
-        $broadcasterDefinitions = [];
-        foreach ((array) $this->getConfig() as $name => $config) {
-            $broadcasterDefinitions[$name] = $broadcastersLoader->broadcasterDefinition($config, $name, $latteDefinition);
-        }
 
         $broadcastersLoader->postLoad($broadcasterDefinitions);
 

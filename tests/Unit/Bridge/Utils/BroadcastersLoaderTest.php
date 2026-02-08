@@ -9,11 +9,9 @@ require \dirname(__DIR__, 3).'/bootstrap.php';
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
 use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
-use Symfony\Component\Mercure\Jwt\StaticTokenProvider;
-use Symfony\Component\Mercure\MockHub;
-use Symfony\Component\Mercure\Update;
 use Tester\Assert;
 use Tester\TestCase;
+use Tests\Fixtures\Dummies\Core\MockHubFactory;
 
 final class BroadcastersLoaderTest extends TestCase
 {
@@ -22,15 +20,9 @@ final class BroadcastersLoaderTest extends TestCase
      */
     public function testLoad(): void
     {
-        $publishCallback = static fn (Update $update): string => $update->getData();
-
         $broadcasters = new Broadcasters([
             'test' => new PlainBroadcaster(
-                new MockHub(
-                    'test',
-                    new StaticTokenProvider('!ChangeMe1!'),
-                    $publishCallback,
-                ),
+                MockHubFactory::create('http://hub.example.com'),
             ),
         ]);
 

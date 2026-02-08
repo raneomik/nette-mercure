@@ -8,11 +8,9 @@ require \dirname(__DIR__, 3).'/bootstrap.php';
 
 use Nette\Utils\Json;
 use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
-use Symfony\Component\Mercure\Jwt\StaticTokenProvider;
-use Symfony\Component\Mercure\MockHub;
-use Symfony\Component\Mercure\Update;
 use Tester\Assert;
 use Tester\TestCase;
+use Tests\Fixtures\Dummies\Core\MockHubFactory;
 
 final class PlainBroadcasterTest extends TestCase
 {
@@ -20,16 +18,8 @@ final class PlainBroadcasterTest extends TestCase
 
     protected function setUp(): void
     {
-        $publishCallback = static fn (Update $update): string => Json::encode([
-            'data' => $update->getData(),
-            'topics' => $update->getTopics(),
-        ]);
         $this->broadcaster = new PlainBroadcaster(
-            new MockHub(
-                'http://example.com/hub',
-                new StaticTokenProvider('!ChangeMe!'),
-                $publishCallback,
-            ),
+            MockHubFactory::create('http://example.com/hub'),
         );
     }
 

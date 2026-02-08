@@ -11,11 +11,9 @@ use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
 use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
 use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
-use Symfony\Component\Mercure\Jwt\StaticTokenProvider;
-use Symfony\Component\Mercure\MockHub;
-use Symfony\Component\Mercure\Update;
 use Tester\Assert;
 use Tester\TestCase;
+use Tests\Fixtures\Dummies\Core\MockHubFactory;
 
 final class MercurePanelTest extends TestCase
 {
@@ -25,11 +23,7 @@ final class MercurePanelTest extends TestCase
     public function testPanelComponents(): void
     {
         $broadcaster = new PlainBroadcaster(
-            new MockHub(
-                'http://hub.example.com',
-                new StaticTokenProvider('!ChangeMe1!'),
-                static fn (Update $update): string => $update->getData(),
-            ),
+            MockHubFactory::create('http://hub.example.com'),
         );
         $broadcasters = new Broadcasters([
             'test' => $broadcaster = new TraceableBroadcaster($broadcaster),

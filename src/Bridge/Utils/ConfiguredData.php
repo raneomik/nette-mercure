@@ -11,6 +11,7 @@ final readonly class ConfiguredData
      * @param string[] $publish
      */
     public function __construct(
+        public string $hubName,
         public string $hubUrl,
         public array $subscribe,
         public array $publish,

@@ -10,11 +10,9 @@ use Nette\Utils\Json;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
 use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
 use Raneomik\NetteMercure\Exception\BroadcastException;
-use Symfony\Component\Mercure\Jwt\StaticTokenProvider;
-use Symfony\Component\Mercure\MockHub;
-use Symfony\Component\Mercure\Update;
 use Tester\Assert;
 use Tester\TestCase;
+use Tests\Fixtures\Dummies\Core\MockHubFactory;
 
 final class BroadcastersTest extends TestCase
 {
@@ -22,33 +20,16 @@ final class BroadcastersTest extends TestCase
 
     protected function setUp(): void
     {
-        $publishCallback = static fn (Update $update): string => Json::encode([
-            'data' => $update->getData(),
-            'topics' => $update->getTopics(),
-        ]);
-
         $this->broadcasters = new Broadcasters(
             [
                 'hub1' => new PlainBroadcaster(
-                    new MockHub(...[
-                        'http://hub1.example.com',
-                        new StaticTokenProvider('!ChangeMe1!'),
-                        $publishCallback,
-                    ]),
+                    MockHubFactory::create('http://hub1.example.com'),
                 ),
                 'hub2' => new PlainBroadcaster(
-                    new MockHub(...[
-                        'http://hub2.example.com',
-                        new StaticTokenProvider('!ChangeMe2!'),
-                        $publishCallback,
-                    ]),
+                    MockHubFactory::create('http://hub2.example.com'),
                 ),
                 'hub3' => new PlainBroadcaster(
-                    new MockHub(...[
-                        'http://hub3.example.com',
-                        new StaticTokenProvider('!ChangeMe3!'),
-                        $publishCallback,
-                    ]),
+                    MockHubFactory::create('http://hub3.example.com'),
                 ),
             ]
         );

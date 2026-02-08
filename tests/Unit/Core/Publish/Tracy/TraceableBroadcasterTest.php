@@ -12,11 +12,9 @@ use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
 use Raneomik\NetteMercure\Core\Publish\Tracy\Metrics;
 use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 use Raneomik\NetteMercure\Core\Publish\Tracy\Value\BroadcastData;
-use Symfony\Component\Mercure\Jwt\StaticTokenProvider;
-use Symfony\Component\Mercure\MockHub;
-use Symfony\Component\Mercure\Update;
 use Tester\Assert;
 use Tester\TestCase;
+use Tests\Fixtures\Dummies\Core\MockHubFactory;
 
 final class TraceableBroadcasterTest extends TestCase
 {
@@ -26,18 +24,9 @@ final class TraceableBroadcasterTest extends TestCase
 
     protected function setUp(): void
     {
-        $publishCallback = static fn (Update $update): string => Json::encode([
-            'data' => $update->getData(),
-            'topics' => $update->getTopics(),
-        ]);
-
         $this->debugBroadcaster = new TraceableBroadcaster(
             new PlainBroadcaster(
-                new MockHub(
-                    'http://example.com/hub',
-                    new StaticTokenProvider('!ChangeMe!'),
-                    $publishCallback,
-                ),
+                MockHubFactory::create('http://example.com/hub'),
             ),
             $this->metrics = new Metrics(),
         );

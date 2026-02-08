@@ -6,15 +6,11 @@ namespace Tests\Unit\Raneomik\NetteMercure\Core;
 
 require \dirname(__DIR__, 3).'/bootstrap.php';
 
-use Nette\Utils\Json;
 use Raneomik\NetteMercure\Core\Subscribe\JWTProvider;
 use Symfony\Component\Mercure\HubRegistry;
-use Symfony\Component\Mercure\Jwt\StaticTokenProvider;
-use Symfony\Component\Mercure\MockHub;
-use Symfony\Component\Mercure\Update;
 use Tester\Assert;
 use Tester\TestCase;
-use Tests\Fixtures\Dummies\DummyJwtFactory;
+use Tests\Fixtures\Dummies\Core\MockHubFactory;
 
 final class JWTProviderTest extends TestCase
 {
@@ -23,24 +19,12 @@ final class JWTProviderTest extends TestCase
      */
     public function testMissingJWTFactoryException(): void
     {
-        $publishCallback = static fn (Update $update): string => Json::encode([
-            'data' => $update->getData(),
-            'topics' => $update->getTopics(),
-        ]);
         $jwtProvider = new JWTProvider(
             new HubRegistry(
-                $defaultHub = new MockHub(
-                    'http://hub.example.com',
-                    new StaticTokenProvider('?token?'),
-                    $publishCallback,
-                ),
+                $defaultHub = MockHubFactory::create('http://hub.example.com', jwtToken: '?token?', withoutJWTFactory: true),
                 [
                     'h1' => $defaultHub,
-                    'h2' => new MockHub(
-                        'http://hub2.example.com',
-                        new StaticTokenProvider('?token2?'),
-                        $publishCallback,
-                    ),
+                    'h2' => MockHubFactory::create('http://hub2.example.com', jwtToken: '?token2?', withoutJWTFactory: true),
                 ]
             ),
         );
@@ -70,18 +54,9 @@ final class JWTProviderTest extends TestCase
      */
     public function testMinimalisticProvision(): void
     {
-        $publishCallback = static fn (Update $update): string => Json::encode([
-            'data' => $update->getData(),
-            'topics' => $update->getTopics(),
-        ]);
         $jwtProvider = new JWTProvider(
             new HubRegistry(
-                new MockHub(
-                    'http://hub.example.com',
-                    new StaticTokenProvider('?token?'),
-                    $publishCallback,
-                    new DummyJwtFactory('secret?'),
-                ),
+                MockHubFactory::create('http://hub.example.com', jwtSecret: 'secret?', jwtToken: '?token?'),
             ),
         );
 
@@ -107,18 +82,9 @@ final class JWTProviderTest extends TestCase
      */
     public function testCustomCookieLifetime(): void
     {
-        $publishCallback = static fn (Update $update): string => Json::encode([
-            'data' => $update->getData(),
-            'topics' => $update->getTopics(),
-        ]);
         $jwtProvider = new JWTProvider(
             new HubRegistry(
-                new MockHub(
-                    'http://hub.example.com',
-                    new StaticTokenProvider('?token?'),
-                    $publishCallback,
-                    new DummyJwtFactory('secret?'),
-                ),
+                MockHubFactory::create('http://hub.example.com', jwtSecret: 'secret?'),
             ),
         );
 
@@ -143,26 +109,12 @@ final class JWTProviderTest extends TestCase
      */
     public function testMultipleProvisions(): void
     {
-        $publishCallback = static fn (Update $update): string => Json::encode([
-            'data' => $update->getData(),
-            'topics' => $update->getTopics(),
-        ]);
         $jwtProvider = new JWTProvider(
             new HubRegistry(
-                $defaultHub = new MockHub(
-                    'http://hub.example.com',
-                    new StaticTokenProvider('?token?'),
-                    $publishCallback,
-                    new DummyJwtFactory('secret?'),
-                ),
+                $defaultHub = MockHubFactory::create('http://hub.example.com', jwtSecret: 'secret?'),
                 [
                     'h1' => $defaultHub,
-                    'h2' => new MockHub(
-                        'http://hub2.example.com',
-                        new StaticTokenProvider('?token2?'),
-                        $publishCallback,
-                        new DummyJwtFactory('secret2?'),
-                    ),
+                    'h2' => MockHubFactory::create('http://hub2.example.com', jwtSecret: 'secret2?'),
                 ]
             ),
         );

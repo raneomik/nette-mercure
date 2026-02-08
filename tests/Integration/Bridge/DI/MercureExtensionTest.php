@@ -23,26 +23,28 @@ use Tester\Assert;
 use Tester\FileMock;
 use Tester\Helpers;
 use Tester\TestCase;
-use Tests\Fixtures\Dummies\DummyJwtFactory;
+use Tests\Fixtures\Dummies\Core\DummyJwtFactory;
 
 final class MercureExtensionTest extends TestCase
 {
     protected Configurator $configurator;
 
+    private string $tmpDir = __DIR__.'/../../../../var/log.test.int';
+
     protected function setUp(): void
     {
-        mkdir(\dirname(__DIR__, 4).'/var/log.test', recursive: true);
+        mkdir($this->tmpDir, recursive: true);
 
         $this->configurator = (new Configurator())
-            ->setTempDirectory(\dirname(__DIR__, 4).'/var/temp.test')
+            ->setTempDirectory($this->tmpDir)
             ->addConfig(\dirname(__DIR__, 3).'/fixtures/config/test.neon')
         ;
     }
 
     protected function tearDown(): void
     {
-        Helpers::purge(\dirname(__DIR__, 4).'/var');
-        rmdir(\dirname(__DIR__, 4).'/var');
+        Helpers::purge($tmpDir = \dirname(__DIR__, 4).'/var');
+        rmdir($tmpDir);
     }
 
     /**
@@ -178,11 +180,11 @@ final class MercureExtensionTest extends TestCase
     /**
      * @testCase
      */
-    public function testMultiCompilation(): void
+    public function testMultiCompilationWithDebug(): void
     {
         $this->configurator
             ->setDebugMode(true)
-            ->enableTracy(\dirname(__DIR__, 4).'/var/log.test')
+            ->enableTracy($this->tmpDir)
         ;
         $this->configurator->onCompile[] = static function ($configurator, $compiler): void {
             $compiler->addExtension('mercure', new MercureExtension(true));

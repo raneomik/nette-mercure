@@ -10,8 +10,8 @@ use Raneomik\NetteMercure\Core\Discovery;
 use Symfony\Component\WebLink\HttpHeaderSerializer;
 use Tester\Assert;
 use Tester\TestCase;
-use Tests\Fixtures\Dummies\DummyRequest;
-use Tests\Fixtures\Dummies\DummyResponse;
+use Tests\Fixtures\Dummies\Core\DummyRequest;
+use Tests\Fixtures\Dummies\Core\DummyResponse;
 
 final class DiscoveryTest extends TestCase
 {

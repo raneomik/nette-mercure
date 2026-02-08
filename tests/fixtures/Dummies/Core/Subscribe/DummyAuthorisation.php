@@ -2,10 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Tests\Fixtures\Dummies;
+namespace Tests\Fixtures\Dummies\Core\Subscribe;
 
 use Nette\Http\IResponse;
 use Raneomik\NetteMercure\Core\Subscribe\AuthorizationInterface;
+use Tests\Fixtures\Dummies\Core\DummyResponse;
 
 final readonly class DummyAuthorisation implements AuthorizationInterface
 {

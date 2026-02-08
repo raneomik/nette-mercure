@@ -2,10 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Tests\Fixtures\Dummies;
+namespace Tests\Fixtures\Dummies\Core\Subscribe;
 
 use Raneomik\NetteMercure\Core\Subscribe\JWTProviderInterface;
 use Symfony\Component\Mercure\Jwt\TokenFactoryInterface;
+use Tests\Fixtures\Dummies\Core\DummyJwtFactory;
 
 final class DummyJwtProvider implements JWTProviderInterface
 {

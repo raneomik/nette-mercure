@@ -145,6 +145,67 @@ _When working with JWT token authorisation, you may need a [polyfill](https://gi
 </script>
 ```
 
+### Subscribe using discovery
+
+You can subscribe to specific topic(s) and hub using [Discovery mechanism](https://symfony.com/doc/current/mercure.html#discovery).
+
+- Setup a `/subscribe` endpoint :
+
+```php
+
+use Nette;
+use Nette\Application\Attributes\Parameter;
+use Raneomik\NetteMercure\SubscriberInterface;
+
+final class SubscribePresenter extends Nette\Application\UI\Presenter
+{
+    #[Parameter]
+    public ?string $hub = null;
+
+    #[Parameter]
+    public string|array $topics = ['*'];
+
+    public function __construct(
+        private readonly SubscriberInterface $subscriber,
+    ) {
+    }
+
+    public function renderDefault(): void
+    {
+        if (!$this->isAjax()) {
+            return;
+        }
+
+        $this->sendJson(
+            $this->subscriber->subscribe($this->hub, $this->topics),
+        );
+    }
+}
+```
+
+- Setup the listening client :
+
+```js
+import { EventSourcePolyfill } from 'event-source-polyfill';
+
+fetch('/subscribe?topics=/* topic(s) to define. "['*']" by default */&hub=/* hubname if multiple, first by default */') // Has header Link: </* your defined hub url */>; rel="mercure"
+    .then(response => {
+        // Extract the hub URL from the Link header
+        const hubUrl = response.headers.get('Link').match(/<([^>]+)>;\s+rel=(?:mercure|"[^"]*mercure[^"]*")/)[1];
+
+        // Append the topic(s) to subscribe as query parameter
+        const hub = new URL(hubUrl, window.origin);
+        hub.searchParams.append('topic', /*topic(s)*/);
+
+        const jwtToken = response.json().jwtToken;
+
+        const es = new EventSourcePolyfill(hub,
+        headers: {
+            'Authorization': `Bearer: ${jwtToken}`
+        };
+    );
+});
+```
 
 Resources
 ---------
@@ -161,4 +222,4 @@ Known issues
 - "anonymous" option for mercure in Caddy configuration seems to work only with Symfony\Mercure\FrankenPhpHub and the FrankenPHP built-in `mercure_publish` function.
   HttpClient shows errors such as "405 Method Not Allowed" in this case.
 
-- Subscribe, with correct cookie generation, and discovery enhancements are in ([TODO](TODO.md)) list and will be documented
+- [TODO](TODO.md)

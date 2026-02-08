@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Fixtures\Dummies;
+namespace Tests\Fixtures\Dummies\Core;
 
 use Nette\Http\IRequest;
 use Nette\Http\UrlScript;

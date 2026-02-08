@@ -1,0 +1,18 @@
+includes:
+    - ../../config/test.neon
+
+application:
+    mapping: Tests\Fixtures\Dummies\App\Presentation\**Presenter
+
+mercure:
+    url: /.well-known/mercure
+    jwt:
+        secret: jwt-secret
+        factory: Tests\Fixtures\Dummies\Core\DummyJwtFactory
+
+services:
+    mercure.sf.hub.default:
+        factory: Tests\Fixtures\Dummies\Core\MockHubFactory::create
+        arguments:
+            - '/.well-known/mercure'
+        autowired: true

@@ -9,9 +9,9 @@ require \dirname(__DIR__, 3).'/bootstrap.php';
 use Raneomik\NetteMercure\Core\Subscribe\Authorization;
 use Tester\Assert;
 use Tester\TestCase;
-use Tests\Fixtures\Dummies\DummyJwtProvider;
-use Tests\Fixtures\Dummies\DummyRequest;
-use Tests\Fixtures\Dummies\DummyResponse;
+use Tests\Fixtures\Dummies\Core\DummyRequest;
+use Tests\Fixtures\Dummies\Core\DummyResponse;
+use Tests\Fixtures\Dummies\Core\Subscribe\DummyJwtProvider;
 
 final class AuthorizationTest extends TestCase
 {

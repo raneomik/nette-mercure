@@ -12,12 +12,10 @@ use Raneomik\NetteMercure\Bridge\Utils\ConfiguredData;
 use Raneomik\NetteMercure\Bridge\Utils\ConfiguredDataRegistry;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
 use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
-use Symfony\Component\Mercure\Jwt\StaticTokenProvider;
-use Symfony\Component\Mercure\MockHub;
-use Symfony\Component\Mercure\Update;
 use Tester\Assert;
 use Tester\TestCase;
-use Tests\Fixtures\Dummies\DummyJwtProvider;
+use Tests\Fixtures\Dummies\Core\MockHubFactory;
+use Tests\Fixtures\Dummies\Core\Subscribe\DummyJwtProvider;
 
 final class MercureExtensionTest extends TestCase
 {
@@ -28,11 +26,7 @@ final class MercureExtensionTest extends TestCase
     {
         $broadcasters = new Broadcasters([
             'test' => new PlainBroadcaster(
-                new MockHub(
-                    'http://hub.example.com',
-                    new StaticTokenProvider('!ChangeMe1!'),
-                    static fn (Update $update): string => $update->getData(),
-                ),
+                MockHubFactory::create('http://hub.example.com'),
             ),
         ]);
 
@@ -41,6 +35,7 @@ final class MercureExtensionTest extends TestCase
             new BroadcastersLoader(static fn (): Broadcasters => $broadcasters),
             new ConfiguredDataRegistry([
                 'test' => new ConfiguredData(
+                    'test',
                     'http://hub.example.com',
                     ['*'],
                     ['*'],
