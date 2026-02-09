@@ -38,7 +38,7 @@ mercure:
 		factory:  # Optional, default is Symfony\Component\Mercure\Jwt\LcobucciFactory
         useQueryParam: # false by default, to use JWT token in "authorization" query parameter when using {mercure()} function (https://mercure.rocks/spec#uri-query-parameter)
     # following options depends on request parameters "hub" or "hubName" if several hubs are defined in configuration, and "topics" (and "additionnalClaims", specificaly for cookie)
-    useCookie: # true by default, to set JWT token in cookie (https://mercure.rocks/spec#cookie)
+    useCookie: # true by default, to set JWT token in cookie (https://mercure.rocks/spec#cookie). SSL/Https required client-side
     autoDiscovery: # true by default, to add Link header for Mercure hub discovery (https://mercure.rocks/spec#discovery)
 
 # several Mercure hubs
