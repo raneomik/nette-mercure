@@ -15,7 +15,9 @@ final readonly class ConfiguredData
         public string $hubUrl,
         public array $subscribe,
         public array $publish,
-        public bool $disableCookie,
+        public bool $jwtInQueryParam = false,
+        public bool $useCookie = false,
+        public bool $autoDiscovery = false,
     ) {
     }
 }

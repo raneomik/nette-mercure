@@ -19,8 +19,7 @@ final readonly class DummyAuthorisation implements AuthorizationInterface
     }
 
     public function createCookie(
-        array|string|null $subscribe = [],
-        array|string|null $publish = [],
+        array|string|null $subscribedTopics = [],
         array $additionalClaims = [],
         ?string $hub = null
     ): void {
@@ -28,8 +27,8 @@ final readonly class DummyAuthorisation implements AuthorizationInterface
             name: 'cookie',
             value: \sprintf(
                 'cookie-value-%s-%s-%s',
-                implode('-', (array) $subscribe),
-                implode('-', (array) $publish),
+                implode('-', (array) $subscribedTopics),
+                implode('-', $additionalClaims),
                 $hub ?? 'default',
             ),
             expire: 0,

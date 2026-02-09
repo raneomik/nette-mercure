@@ -57,6 +57,7 @@ final readonly class SubscribersDefiner
                 $jwtProviderDef,
                 $requestDef,
                 $responseDef,
+                '@'.$this->extension->prefix('hubsConfiguration'),
             ])
             ->setAutowired()
         ;
@@ -68,6 +69,7 @@ final readonly class SubscribersDefiner
                 $this->builder->getDefinition($this->extension->prefix('symfony.links.headerSerializer')),
                 $requestDef,
                 $responseDef,
+                '@'.$this->extension->prefix('hubsConfiguration'),
             ])
             ->setAutowired()
         ;
@@ -76,12 +78,19 @@ final readonly class SubscribersDefiner
             ->setType(SubscriberInterface::class)
             ->setFactory(Subscriber::class)
             ->setArguments([
-                $authorizationDef,
                 $jwtProviderDef,
-                $discoveryDef,
                 '@'.$this->extension->prefix('hubsConfiguration'),
             ])
             ->setAutowired()
         ;
+
+        $appDef->addSetup('?->onRequest[] = function() {
+            ?->addLinkFromCurrentRequest();
+            ?->createCookieFromCurrentRequest();
+        }', [
+            '@self',
+            $discoveryDef,
+            $authorizationDef,
+        ]);
     }
 }

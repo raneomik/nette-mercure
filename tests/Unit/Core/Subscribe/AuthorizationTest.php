@@ -6,6 +6,8 @@ namespace Tests\Unit\Raneomik\NetteMercure\Core\Response;
 
 require \dirname(__DIR__, 3).'/bootstrap.php';
 
+use Raneomik\NetteMercure\Bridge\Utils\ConfiguredData;
+use Raneomik\NetteMercure\Bridge\Utils\ConfiguredDataRegistry;
 use Raneomik\NetteMercure\Core\Subscribe\Authorization;
 use Tester\Assert;
 use Tester\TestCase;
@@ -24,18 +26,92 @@ final class AuthorizationTest extends TestCase
             new DummyJwtProvider(),
             new DummyRequest(),
             $response = new DummyResponse(),
+            new ConfiguredDataRegistry([
+                'test' => new ConfiguredData(
+                    hubName: 'test',
+                    hubUrl: 'http://hub.example.com',
+                    subscribe: ['*'],
+                    publish: ['*'],
+                    useCookie: true,
+                ),
+            ])
         );
 
-        $authorization->createCookie(subscribe: ['test'], publish: ['test'], hub: 'null');
+        $authorization->createCookie(subscribedTopics: ['test'], hub: 'null');
 
         Assert::same(
             (new \DateTime('+1 hour'))->format('Y-m-d H:i:s'),
             $response->cookie[Authorization::COOKIE_NAME]['expire']->format('Y-m-d H:i:s'),
         );
         Assert::same(
-            'dummy-jwt-token-test-provider-token-test-test',
+            'dummy-jwt-token-test-provider-token-test-',
             $response->cookie[Authorization::COOKIE_NAME]['value'],
         );
+    }
+
+    /**
+     * @testCase
+     */
+    public function testAuthorizationCookieFromRequest(): void
+    {
+        $authorization = new Authorization(
+            new DummyJwtProvider(),
+            new DummyRequest(fromUrl: 'http://example.com/?topics=test&hub=test2'),
+            $response = new DummyResponse(),
+            new ConfiguredDataRegistry([
+                'test' => new ConfiguredData(
+                    hubName: 'test',
+                    hubUrl: 'http://hub.example.com',
+                    subscribe: ['*'],
+                    publish: ['*'],
+                ),
+                'test2' => new ConfiguredData(
+                    hubName: 'test2',
+                    hubUrl: 'http://hub2.example.com',
+                    subscribe: ['*'],
+                    publish: ['*'],
+                    useCookie: true,
+                ),
+            ]),
+        );
+
+        $authorization->createCookieFromCurrentRequest();
+
+        Assert::same(
+            'example.com',
+            $response->cookie[Authorization::COOKIE_NAME]['domain'],
+        );
+        Assert::same(
+            'dummy-jwt-token-test-provider-token-test-',
+            $response->cookie[Authorization::COOKIE_NAME]['value'],
+        );
+    }
+
+    /**
+     * @testCase
+     */
+    public function testNoAuthorizationCookieFromRequest(): void
+    {
+        $authorization = new Authorization(
+            new DummyJwtProvider(),
+            new DummyRequest(fromUrl: '/?topics=test&hub=test2'),
+            $response = new DummyResponse(),
+            new ConfiguredDataRegistry(
+                [
+                    'test' => new ConfiguredData(
+                        hubName: 'test',
+                        hubUrl: '/',
+                        subscribe: ['*'],
+                        publish: ['*'],
+                        useCookie: false,
+                    ),
+                ],
+            )
+        );
+
+        $authorization->createCookieFromCurrentRequest();
+
+        Assert::hasNotKey(Authorization::COOKIE_NAME, $response->cookie);
     }
 
     /**
@@ -47,11 +123,19 @@ final class AuthorizationTest extends TestCase
             new DummyJwtProvider(),
             new DummyRequest(fromUrl: 'https://hub.mercure.example.com'),
             $response = new DummyResponse(),
+            new ConfiguredDataRegistry([
+                'test' => new ConfiguredData(
+                    hubName: 'test',
+                    hubUrl: 'http://hub.example.com',
+                    subscribe: ['*'],
+                    publish: ['*'],
+                ),
+            ])
         );
 
-        $authorization->createCookie(subscribe: ['test'], publish: ['test']);
+        $authorization->createCookie(subscribedTopics: ['test']);
         Assert::same(
-            'dummy-jwt-token-test-provider-token-test-test',
+            'dummy-jwt-token-test-provider-token-test-',
             $response->cookie[Authorization::COOKIE_NAME]['value'],
         );
     }
@@ -63,20 +147,27 @@ final class AuthorizationTest extends TestCase
     {
         $authorization = new Authorization(
             new DummyJwtProvider(),
-            $request = new DummyRequest(fromUrl: 'https://example.com'),
+            new DummyRequest(fromUrl: 'https://hub.example.com'),
             $response = new DummyResponse(),
+            new ConfiguredDataRegistry([
+                'test' => new ConfiguredData(
+                    hubName: 'test',
+                    hubUrl: 'http://hub.example.com',
+                    subscribe: ['*'],
+                    publish: ['*'],
+                ),
+            ])
         );
 
-        $authorization->createCookie(subscribe: ['test'], publish: ['test']);
+        $authorization->createCookie(subscribedTopics: ['test']);
         Assert::same(
-            'dummy-jwt-token-test-provider-token-test-test',
+            'dummy-jwt-token-test-provider-token-test-',
             $response->cookie[Authorization::COOKIE_NAME]['value'],
         );
 
-        $request->fromUrl = 'https://hub.example.com';
-        $authorization->createCookie(subscribe: ['test'], publish: ['test']);
+        $authorization->createCookie(subscribedTopics: ['test']);
         Assert::same(
-            'dummy-jwt-token-test-provider-token-test-test',
+            'dummy-jwt-token-test-provider-token-test-',
             $response->cookie[Authorization::COOKIE_NAME]['value'],
         );
     }
@@ -88,8 +179,16 @@ final class AuthorizationTest extends TestCase
     {
         $authorization = new Authorization(
             new DummyJwtProvider(),
-            $request = new DummyRequest(fromUrl: 'https://example.cz'),
+            new DummyRequest(fromUrl: 'https://example.cz'),
             new DummyResponse(),
+            new ConfiguredDataRegistry([
+                'test' => new ConfiguredData(
+                    hubName: 'test',
+                    hubUrl: 'http://hub.example.com',
+                    subscribe: ['*'],
+                    publish: ['*'],
+                ),
+            ])
         );
 
         Assert::exception(

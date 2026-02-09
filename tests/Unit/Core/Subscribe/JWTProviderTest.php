@@ -31,8 +31,7 @@ final class JWTProviderTest extends TestCase
 
         Assert::exception(
             static fn (): string => $jwtProvider->provide(
-                subscribe: 'test',
-                publish: 'test',
+                subscribedTopics: 'test',
             ),
             \LogicException::class,
             'The default hub does not contain a token factory.',
@@ -41,8 +40,7 @@ final class JWTProviderTest extends TestCase
         Assert::exception(
             static fn (): string => $jwtProvider->provide(
                 hubName: 'h2',
-                subscribe: 'test',
-                publish: 'test',
+                subscribedTopics: 'test',
             ),
             \LogicException::class,
             'The "h2" hub does not contain a token factory.',
@@ -61,19 +59,14 @@ final class JWTProviderTest extends TestCase
         );
 
         Assert::same(
-            'dummy-jwt-token-secret?-test-test',
+            'dummy-jwt-token-secret?-test-',
             $jwtProvider->provide(
-                subscribe: 'test',
-                publish: 'test',
+                subscribedTopics: 'test',
             ),
         );
         Assert::same(
             (new \DateTime('+1hour'))->format('Y-m-d H:i:s'),
             $jwtProvider->ttl()->format('Y-m-d H:i:s'),
-        );
-        Assert::same(
-            'http://hub.example.com',
-            $jwtProvider->hubUrl(),
         );
     }
 
@@ -89,10 +82,9 @@ final class JWTProviderTest extends TestCase
         );
 
         Assert::same(
-            'dummy-jwt-token-secret?-test-test',
+            'dummy-jwt-token-secret?-test-',
             $jwtProvider->provide(
-                subscribe: 'test',
-                publish: 'test',
+                subscribedTopics: 'test',
                 additionalClaims: [
                     'exp' => 1800,
                 ],
@@ -120,10 +112,9 @@ final class JWTProviderTest extends TestCase
         );
 
         Assert::same(
-            'dummy-jwt-token-secret?-test-test',
+            'dummy-jwt-token-secret?-test-',
             $jwtProvider->provide(
-                subscribe: 'test',
-                publish: 'test',
+                subscribedTopics: 'test',
             ),
         );
         Assert::same(
@@ -132,24 +123,15 @@ final class JWTProviderTest extends TestCase
         );
 
         Assert::same(
-            'http://hub.example.com',
-            $jwtProvider->hubUrl(),
-        );
-        Assert::same(
-            'dummy-jwt-token-secret2?-test-test',
+            'dummy-jwt-token-secret2?-test-',
             $jwtProvider->provide(
                 hubName: 'h2',
-                subscribe: 'test',
-                publish: 'test',
+                subscribedTopics: 'test',
             ),
         );
         Assert::same(
             (new \DateTime('+1hour'))->format('Y-m-d H:i:s'),
             $jwtProvider->ttl()->format('Y-m-d H:i:s'),
-        );
-        Assert::same(
-            'http://hub2.example.com',
-            $jwtProvider->hubUrl('h2'),
         );
     }
 }

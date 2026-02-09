@@ -40,10 +40,11 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                     'algorithm' => Expect::string('hmac.sha256'),
                     'factory' => Expect::string(LcobucciFactory::class),
                     'lifetime' => Expect::int()->dynamic(),
+                    'useQueryParam' => Expect::bool(false),
                 ])->required(),
-                'disableCookie' => Expect::bool(false),
-                'debugger' => Expect::bool('%debugMode%'),
-                //                'autowired' => Expect::bool(),
+                'useCookie' => Expect::bool(true),
+                'autoDiscovery' => Expect::bool(true),
+                'debugger' => Expect::bool($this->debugMode),
             ]),
         )->before(static fn ($val): mixed => \is_array(reset($val)) || null === reset($val)
             ? $val
@@ -76,6 +77,7 @@ final class MercureExtension extends Nette\DI\CompilerExtension
             ? $builder->getDefinition('latte.latteFactory')->getResultDefinition()
             : false;
 
+        $debug = false;
         $configDefinitions = [];
         $broadcasterDefinitions = [];
         foreach ((array) $this->getConfig() as $hubName => $config) {
@@ -86,11 +88,15 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                     $config->url,
                     $config->jwt->subscribe ?? [],
                     $config->jwt->publish ?? [],
-                    $config->jwt->noCookie ?? false,
+                    $config->jwt->useQueryParam ?? false,
+                    $config->useCookie ?? false,
+                    $config->autoDiscovery ?? false,
                 ]
             );
 
             $broadcasterDefinitions[$hubName] = $broadcastersLoader->broadcasterDefinition($config, $hubName, $latteDefinition);
+
+            $debug |= $config->debugger;
         }
 
         $builder->addDefinition($this->prefix('hubsConfiguration'))
@@ -122,7 +128,7 @@ final class MercureExtension extends Nette\DI\CompilerExtension
             ;
         }
 
-        if ($builder->hasDefinition('tracy.bar')) {
+        if ($debug && $builder->hasDefinition('tracy.bar')) {
             $panelDef = $builder->addDefinition($this->prefix('tracy.panel'))
                 ->setFactory(MercurePanel::class, [
                     new Statement(BroadcastersLoader::class, [

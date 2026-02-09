@@ -6,6 +6,7 @@ namespace Raneomik\NetteMercure\Core;
 
 use Nette\Http\IRequest;
 use Nette\Http\IResponse;
+use Raneomik\NetteMercure\Bridge\Utils\ConfiguredDataRegistry;
 use Symfony\Component\WebLink\HttpHeaderSerializer;
 use Symfony\Component\WebLink\Link;
 
@@ -18,12 +19,23 @@ final readonly class Discovery
         private HttpHeaderSerializer $header,
         private IRequest $request,
         private IResponse $response,
+        private ConfiguredDataRegistry $config,
     ) {
     }
 
-    /**
-     * Add mercure link header to the given request.
-     */
+    public function addLinkFromCurrentRequest(): void
+    {
+        $hub = $this->request->getQuery('hub') ?? $this->request->getQuery('hubName');
+
+        $hubData = $this->config->getConfiguration($hub);
+
+        if (false === $hubData->autoDiscovery) {
+            return;
+        }
+
+        $this->addLink($hubData->hubUrl);
+    }
+
     public function addLink(string $hubLink): void
     {
         // avoid nette errors - eg. does not accept OPTIONS requests

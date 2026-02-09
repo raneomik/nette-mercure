@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Tracy\Dumper;
+
 $formatData = fn(float $number, string $type): string => match($type) {
     'duration' => sprintf('%.2f ms', $number * 1000),
     'memory' => sprintf('%.2f kB', $number / 1024),
@@ -108,7 +110,7 @@ $formatData = fn(float $number, string $type): string => match($type) {
 								<?php foreach ($hubDatum->broadcastData as $message): ?>
 									<tr>
 										<td><?= Tracy\Helpers::escapeHtml(implode(', ', $message->getTopics())) ?></td>
-										<td><?= Tracy\Helpers::escapeHtml($message->getData()) ?></td>
+										<td><?= Dumper::toHtml($message->getData(), [Dumper::COLLAPSE => true]) ?></td>
 										<td><?= Tracy\Helpers::escapeHtml($message->getTemplate()) ?></td>
 									</tr>
 								<?php endforeach ?>

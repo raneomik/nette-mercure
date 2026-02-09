@@ -21,7 +21,7 @@ final class JWTProvider implements JWTProviderInterface
     }
 
     #[\Override]
-    public function provide(?string $hubName = null, array|string|null $subscribe = [], array|string|null $publish = [], array $additionalClaims = []): string
+    public function provide(?string $hubName = null, array|string|null $subscribedTopics = [], array $additionalClaims = []): string
     {
         $hubInstance = $this->registry->getHub($hubName);
         $tokenFactory = $hubInstance->getFactory();
@@ -34,22 +34,7 @@ final class JWTProvider implements JWTProviderInterface
 
         $this->setCookieLifeDateTime($additionalClaims);
 
-        if (null !== $subscribe) {
-            $subscribe = (array) $subscribe;
-        }
-
-        if (null !== $publish) {
-            $publish = (array) $publish;
-        }
-
-        return $tokenFactory->create($subscribe, $publish, $additionalClaims);
-    }
-
-    public function hubUrl(?string $hubName = null): string
-    {
-        $hubInstance = $this->registry->getHub($hubName);
-
-        return $hubInstance->getPublicUrl();
+        return $tokenFactory->create((array) $subscribedTopics, null, $additionalClaims);
     }
 
     public function ttl(): \DateTimeInterface

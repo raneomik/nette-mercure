@@ -6,6 +6,7 @@ namespace Raneomik\NetteMercure\Core\Subscribe;
 
 use Nette\Http\IRequest;
 use Nette\Http\IResponse;
+use Raneomik\NetteMercure\Bridge\Utils\ConfiguredDataRegistry;
 
 final readonly class Authorization implements AuthorizationInterface
 {
@@ -15,15 +16,35 @@ final readonly class Authorization implements AuthorizationInterface
         private JWTProviderInterface $jwtProvider,
         private IRequest $request,
         private IResponse $response,
+        private ConfiguredDataRegistry $config,
         private ?string $cookieSameSite = IResponse::SameSiteLax,
     ) {
     }
 
-    public function createCookie(array|string|null $subscribe = [], array|string|null $publish = [], array $additionalClaims = [], ?string $hub = null): void
+    public function createCookieFromCurrentRequest(): void
     {
-        $token = $this->jwtProvider->provide($hub, $subscribe, $publish, $additionalClaims);
+        $hub = $this->request->getQuery('hub') ?? $this->request->getQuery('hubName');
+        $hubConfig = $this->config->getConfiguration($hub);
 
-        $url = $this->jwtProvider->hubUrl($hub);
+        if (false === $hubConfig->useCookie) {
+            return;
+        }
+
+        $topics = $this->request->getQuery('topics') ?? ['*'];
+        $additionalClaims = $this->request->getQuery('claims') ?? [];
+
+        $this->createCookie(
+            $topics,
+            $additionalClaims,
+            $hub,
+        );
+    }
+
+    public function createCookie(array|string|null $subscribedTopics = [], array $additionalClaims = [], ?string $hub = null): void
+    {
+        $token = $this->jwtProvider->provide($hub, $subscribedTopics, $additionalClaims);
+
+        $hubConfig = $this->config->getConfiguration($hub);
 
         /** @var array{
          * scheme?: string,
@@ -31,7 +52,7 @@ final readonly class Authorization implements AuthorizationInterface
          * port?: int,
          * path?: string,
          * } $urlComponents */
-        $urlComponents = parse_url($url);
+        $urlComponents = parse_url($hubConfig->hubUrl);
 
         $this->response->setCookie(
             name: self::COOKIE_NAME,

@@ -20,23 +20,16 @@ final readonly class BroadcastersDefiner
 {
     private ContainerBuilder $builder;
 
-    private bool $debugMode;
-
     public function __construct(
         private MercureExtension $extension,
     ) {
         $this->builder = $extension->getContainerBuilder();
-        $this->debugMode = $extension->getDebugMode();
     }
 
     public function broadcasterDefinition(\stdClass $hubConfig, string $hubName, false|ServiceDefinition $latteDefinition): Definition
     {
         $plainBroadcasterDef = $this->builder->addDefinition($this->extension->prefix(\sprintf('broadcaster.%s.plain', $hubName)))
-            ->setType(
-                false !== $latteDefinition && $this->debugMode
-                    ? PlainBroadcaster::class
-                    : BroadcasterInterface::class
-            )
+            ->setType(PlainBroadcaster::class)
             ->setFactory(PlainBroadcaster::class, [
                 $this->builder->getDefinition($this->extension->prefix('sf.hub.'.$hubName)),
             ])
@@ -58,7 +51,7 @@ final readonly class BroadcastersDefiner
         }
 
         $broadcasterDefinition = null;
-        if ($this->debugMode && $hubConfig->debugger) {
+        if ($hubConfig->debugger) {
             $broadcasterDefinition = $this->builder->addDefinition(
                 $this->extension->prefix(\sprintf('broadcaster.%s.traceable', $hubName))
             )

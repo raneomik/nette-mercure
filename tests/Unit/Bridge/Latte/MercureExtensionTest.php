@@ -40,26 +40,29 @@ final class MercureExtensionTest extends TestCase
                     ['*'],
                     ['*'],
                     false,
+                    false,
+                    false,
                 ),
             ]),
         );
 
         Assert::type('callable', $extension->getFunctions()['mercure']);
         Assert::same(
-            'http://hub.example.com?topic=test',
-            $extension->getFunctions()['mercure']('test', 'test'),
+            'http://hub.example.com?topic=test&authorization=dummy-jwt-token-test-provider-token-*-',
+            $extension->getFunctions()['mercure']('test', 'test', options: [
+                'addJwt' => true,
+            ]),
         );
         Assert::same(
-            'http://hub.example.com?topic=test&lastEventID=123&authorization=dummy-jwt-token-test-provider-token-*-*',
+            'http://hub.example.com?topic=test&lastEventID=123',
             $extension->getFunctions()['mercure']('test', hub: 'test', options: [
                 'lastEventId' => '123',
-                'addJwt' => true,
             ]),
         );
 
         Assert::type('callable', $extension->getFunctions()['mercureJWTToken']);
         Assert::same(
-            'dummy-jwt-token-test-provider-token-*-*',
+            'dummy-jwt-token-test-provider-token-*-',
             $extension->getFunctions()['mercureJWTToken'](),
         );
     }

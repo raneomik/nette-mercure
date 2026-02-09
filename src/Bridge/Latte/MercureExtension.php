@@ -37,7 +37,14 @@ final class MercureExtension extends Extension
 
     /**
      * @param null|string|string[] $topics A topic or an array of topics to subscribe for. If this parameter is omitted or `null` is passed, the URL of the hub will be returned (useful for publishing in JavaScript).
-     * @param array{subscribe?: string|string[], publish?: string|string[], additionalClaims?: array<string, mixed>, lastEventId?: string, hub?: string, addJwt?: bool} $options The options to pass to the JWT factory
+     * @param array{
+     *     subscribe?: string|string[],
+     *     publish?: string|string[],
+     *     additionalClaims?: array<string, mixed>,
+     *     lastEventId?: string,
+     *     hub?: string,
+     *     addJwt?: bool // force jwt in "authorization" query parameter and override default configuration
+     * } $options The options to pass to the JWT factory
      *
      * @return string The URL of the hub with the appropriate "topic" query parameters (if any)
      */
@@ -62,10 +69,10 @@ final class MercureExtension extends Extension
 
         $hubData = $this->configuredData->getConfiguration($hub);
 
-        if (false !== ($options['addJwt'] ?? false)) {
+        if ($hubData->jwtInQueryParam || true === ($options['addJwt'] ?? false)) {
             $url .= '&authorization='.$this->mercureJWTToken(
                 $options['subscribe'] ?? $hubData->subscribe ?? $topics,
-                $options['publish'] ?? $hubData->publish ?? $topics,
+                $options['additionalClaims'] ?? [],
                 $hub,
             );
         }
@@ -75,14 +82,14 @@ final class MercureExtension extends Extension
 
     /**
      * @param null|string|string[] $subscribe
-     * @param null|string|string[] $publish
+     * @param array<string, mixed> $additionClaims
      */
-    private function mercureJWTToken(array|string|null $subscribe = ['*'], array|string|null $publish = ['*'], ?string $hub = null): string
+    private function mercureJWTToken(array|string|null $subscribe = ['*'], array $additionClaims = [], ?string $hub = null): string
     {
         return $this->jwtProvider->provide(
             $hub,
             (array) $subscribe,
-            (array) $publish,
+            $additionClaims,
         );
     }
 }

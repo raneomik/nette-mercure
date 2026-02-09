@@ -12,16 +12,19 @@ use Nette\Http\UrlScript;
  * @method bool isSameSite()
  * @method bool isFrom(string[]|string|null $site = null, string|null $initiator = null)
  */
-final class DummyRequest implements IRequest
+final readonly class DummyRequest implements IRequest
 {
+    private UrlScript $url;
+
     /**
      * @param array<string,string> $headers
      */
     public function __construct(
-        private readonly array $headers = [],
-        private readonly string $method = 'GET',
-        public string $fromUrl = '/',
+        private array $headers = [],
+        private string $method = 'GET',
+        string $fromUrl = '/',
     ) {
+        $this->url = new UrlScript($fromUrl);
     }
 
     /**
@@ -32,19 +35,24 @@ final class DummyRequest implements IRequest
         return match ($name) {
             'getReferer' => null,
             'isSameSite' => true,
-            'isFrom' => '/' === $this->fromUrl,
+            'isFrom' => '/' === $this->url->getBaseUrl(),
             default => throw new \BadMethodCallException(\sprintf('Method %s does not exist.', $name)),
         };
     }
 
     public function getUrl(): UrlScript
     {
-        return new UrlScript($this->fromUrl);
+        return $this->url;
     }
 
-    public function getQuery(?string $key = null): null
+    /**
+     * @return null|array<string, mixed>|string
+     */
+    public function getQuery(?string $key = null): array|string|null
     {
-        return null;
+        return null === $key
+            ? $this->url->getQueryParameters()
+            : $this->url->getQueryParameter($key);
     }
 
     public function getPost(?string $key = null): null

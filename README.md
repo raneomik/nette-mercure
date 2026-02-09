@@ -36,6 +36,10 @@ mercure:
 		algorithm: HS256 # Optional, default is HS256. @see Symfony\Component\Mercure\Jwt\LcobucciFactory::SIGN_ALGORITHMS
 		# You can implement your own Symfony\Component\Mercure\Jwt\TokenFactoryInterface
 		factory:  # Optional, default is Symfony\Component\Mercure\Jwt\LcobucciFactory
+        useQueryParam: # false by default, to use JWT token in "authorization" query parameter when using {mercure()} function (https://mercure.rocks/spec#uri-query-parameter)
+    # following options depends on request parameters "hub" or "hubName" if several hubs are defined in configuration, and "topics" (and "additionnalClaims", specificaly for cookie)
+    useCookie: # true by default, to set JWT token in cookie (https://mercure.rocks/spec#cookie)
+    autoDiscovery: # true by default, to add Link header for Mercure hub discovery (https://mercure.rocks/spec#discovery)
 
 # several Mercure hubs
 mercure:
@@ -109,7 +113,7 @@ Generate mercure url in Latte templates,
 setup your JavaScript client to listen to Mercure updates
 and render them in selected containers :
 
-_When working with JWT token authorisation, you may need a [polyfill](https://github.com/Yaffle/EventSource)._
+_When working with JWT token in Authorisation Header, you may need a [polyfill](https://github.com/Yaffle/EventSource)._
 
 ```html
 <div class="mercure-container">
@@ -120,7 +124,7 @@ _When working with JWT token authorisation, you may need a [polyfill](https://gi
     /**
      * use mercure(array|string|null $topics, ?string $hub = null) function to render mercure URL.
      * - "hub" param defines the hub to subscribe to if multiple hubs are defined in configuration, default is first found hub
-     * - "addJwt" option adds jwt token in query url (@see https://mercure.rocks/spec#uri-query-parameter)
+     * - "addJwt" option adds jwt token in query url and overrides "useQueryParam: false" (default) configuration option
      */
     const eventSource = new EventSource({mercure('test-topic', hub: 'hubName', [addJwt => true])});
 
@@ -131,7 +135,7 @@ _When working with JWT token authorisation, you may need a [polyfill](https://gi
         }
     }
 
-    // or with polyfill with jwt token as Auth Bearer
+    // or using polyfill with jwt token as Auth Bearer
 
     import { EventSourcePolyfill } from 'event-source-polyfill';
 
@@ -193,7 +197,7 @@ final class SubscribePresenter extends Nette\Application\UI\Presenter
 ```js
 import { EventSourcePolyfill } from 'event-source-polyfill';
 
-fetch('/subscribe?topics=/* topic(s) to define. "['*']" by default */&hub=/* hubname if multiple, first by default */') // Has header Link: </* your defined hub url */>; rel="mercure"
+fetch('/subscribe?topics=/* topic(s) to define. "['*']" by default */&hub=/* hubname if multiple hubs configured, first by default */') // Has header Link: </* your defined hub url */>; rel="mercure"
     .then(response => {
         // Extract the hub URL from the Link header
         const hubUrl = response.headers.get('Link').match(/<([^>]+)>;\s+rel=(?:mercure|"[^"]*mercure[^"]*")/)[1];
