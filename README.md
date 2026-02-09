@@ -260,7 +260,6 @@ You can also subscribe to [turbo-streams](https://turbo.hotwired.dev) :
     const eventSource = new EventSource($mercureUrl);
 
     const containers = document.querySelectorAll('.mercure-container');
-    eventSource.onmessage = event => {
         eventSource.addEventListener('turbo-stream', event => {
             Turbo.renderStreamMessage(event.data);
         });
