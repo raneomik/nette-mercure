@@ -8,6 +8,9 @@ use Nette;
 use Nette\Application\Attributes\Parameter;
 use Raneomik\NetteMercure\SubscriberInterface;
 
+/**
+ * @testCase
+ */
 final class SubscribePresenter extends Nette\Application\UI\Presenter
 {
     #[Parameter]

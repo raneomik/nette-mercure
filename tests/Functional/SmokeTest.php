@@ -12,6 +12,9 @@ use Tester\HttpAssert;
 use Tester\TestCase;
 use Tests\Fixtures\Dummies\App\Bootstrap;
 
+/**
+ * @testCase
+ */
 final class SmokeTest extends TestCase
 {
     /**
@@ -48,9 +51,6 @@ final class SmokeTest extends TestCase
         proc_terminate($this->serverProcess);
     }
 
-    /**
-     * @testCase
-     */
     public function testSubscribePublish(): void
     {
         $response = HttpAssert::fetch('http://localhost:8765?presenter=Subscribe', headers: [

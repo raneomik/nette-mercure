@@ -13,11 +13,11 @@ use Tester\Assert;
 use Tester\TestCase;
 use Tests\Fixtures\Dummies\Core\MockHubFactory;
 
+/**
+ * @testCase
+ */
 final class BroadcastersLoaderTest extends TestCase
 {
-    /**
-     * @testCase
-     */
     public function testLoad(): void
     {
         $broadcasters = new Broadcasters([

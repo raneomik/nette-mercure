@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Raneomik\NetteMercure\Latte;
+namespace Tests\Unit\Raneomik\NetteMercure\Core\Publish\Latte;
 
 require \dirname(__DIR__, 4).'/bootstrap.php';
 
@@ -11,11 +11,11 @@ use Raneomik\NetteMercure\Exception\BroadcastException;
 use Tester\Assert;
 use Tester\TestCase;
 
+/**
+ * @testCase
+ */
 final class TemplatePathResolverTest extends TestCase
 {
-    /**
-     * @testCase
-     */
     public function testConfigured(): void
     {
         $resolver = new TemplatePathResolver(\dirname(__DIR__, 4).'/fixtures/templates');
@@ -32,9 +32,6 @@ final class TemplatePathResolverTest extends TestCase
         );
     }
 
-    /**
-     * @testCase
-     */
     public function testResolution(): void
     {
         $resolver = new TemplatePathResolver();

@@ -10,6 +10,9 @@ use Symfony\Component\Mercure\Jwt\StaticTokenProvider;
 use Symfony\Component\Mercure\MockHub;
 use Symfony\Component\Mercure\Update;
 
+/**
+ * @testCase
+ */
 final class MockHubFactory
 {
     public static function create(

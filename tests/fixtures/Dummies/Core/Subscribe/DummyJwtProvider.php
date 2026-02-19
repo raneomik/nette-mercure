@@ -8,6 +8,9 @@ use Raneomik\NetteMercure\Core\Subscribe\JWTProviderInterface;
 use Symfony\Component\Mercure\Jwt\TokenFactoryInterface;
 use Tests\Fixtures\Dummies\Core\DummyJwtFactory;
 
+/**
+ * @testCase
+ */
 final class DummyJwtProvider implements JWTProviderInterface
 {
     private \DateTimeInterface $jwtTtl;

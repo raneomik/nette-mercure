@@ -6,6 +6,9 @@ namespace Tests\Fixtures\Dummies\Core;
 
 use Nette\Http\IResponse;
 
+/**
+ * @testCase
+ */
 final class DummyResponse implements IResponse
 {
     /**

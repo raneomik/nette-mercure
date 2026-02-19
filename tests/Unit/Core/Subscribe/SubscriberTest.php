@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Raneomik\NetteMercure\Core;
+namespace Tests\Unit\Raneomik\NetteMercure\Core\Subscribe;
 
 require \dirname(__DIR__, 3).'/bootstrap.php';
 
@@ -13,11 +13,11 @@ use Tester\Assert;
 use Tester\TestCase;
 use Tests\Fixtures\Dummies\Core\Subscribe\DummyJwtProvider;
 
+/**
+ * @testCase
+ */
 final class SubscriberTest extends TestCase
 {
-    /**
-     * @testCase
-     */
     public function testDefaults(): void
     {
         $subscriber = new Subscriber(

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Raneomik\NetteMercure\Tracy;
+namespace Tests\Unit\Raneomik\NetteMercure\Core\Publish\Tracy;
 
 require \dirname(__DIR__, 4).'/bootstrap.php';
 
@@ -10,11 +10,11 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\Metrics;
 use Tester\Assert;
 use Tester\TestCase;
 
+/**
+ * @testCase
+ */
 final class MetricsTest extends TestCase
 {
-    /**
-     * @testCase
-     */
     public function testMinimalistOptions(): void
     {
         $metrics = new Metrics();

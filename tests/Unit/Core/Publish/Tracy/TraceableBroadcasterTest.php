@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Raneomik\NetteMercure\Tracy;
+namespace Tests\Unit\Raneomik\NetteMercure\Core\Publish\Tracy;
 
 require \dirname(__DIR__, 4).'/bootstrap.php';
 
@@ -16,6 +16,9 @@ use Tester\Assert;
 use Tester\TestCase;
 use Tests\Fixtures\Dummies\Core\MockHubFactory;
 
+/**
+ * @testCase
+ */
 final class TraceableBroadcasterTest extends TestCase
 {
     private TraceableBroadcaster $debugBroadcaster;
@@ -32,9 +35,6 @@ final class TraceableBroadcasterTest extends TestCase
         );
     }
 
-    /**
-     * @testCase
-     */
     public function testBroadcastTracing(): void
     {
         Assert::same(

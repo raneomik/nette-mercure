@@ -10,7 +10,6 @@ use Nette\Http\UrlScript;
 /**
  * @method null getReferer()
  * @method bool isSameSite()
- * @method bool isFrom(string[]|string|null $site = null, string|null $initiator = null)
  */
 final readonly class DummyRequest implements IRequest
 {
@@ -34,8 +33,7 @@ final readonly class DummyRequest implements IRequest
     {
         return match ($name) {
             'getReferer' => null,
-            'isSameSite' => true,
-            'isFrom' => '/' === $this->url->getBaseUrl(),
+            'isSameSite' => '/' === $this->url->getBaseUrl(),
             default => throw new \BadMethodCallException(\sprintf('Method %s does not exist.', $name)),
         };
     }

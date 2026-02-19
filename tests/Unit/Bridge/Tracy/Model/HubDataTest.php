@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Raneomik\NetteMercure\Bridge\Tracy\Value;
+namespace Tests\Unit\Raneomik\NetteMercure\Bridge\Tracy\Model;
 
 require \dirname(__DIR__, 4).'/bootstrap.php';
 
@@ -15,11 +15,11 @@ use Tester\Assert;
 use Tester\TestCase;
 use Tests\Fixtures\Dummies\Core\MockHubFactory;
 
+/**
+ * @testCase
+ */
 final class HubDataTest extends TestCase
 {
-    /**
-     * @testCase
-     */
     public function testMinimalistOptions(): void
     {
         $broadcasters = new Broadcasters([
@@ -33,9 +33,6 @@ final class HubDataTest extends TestCase
         Assert::type(HubData::class, $hubData);
     }
 
-    /**
-     * @testCase
-     */
     public function testRelevantData(): void
     {
         $plainBro = new PlainBroadcaster(

@@ -75,7 +75,7 @@ final readonly class Authorization implements AuthorizationInterface
         $hubDomain = strtolower($hubDomain);
         $host = strtolower($this->request->getUrl()->getHost());
 
-        if ($this->request->isFrom(['same-site', 'same-origin'])
+        if ($this->request->isSameSite()
             || $hubDomain === $host
         ) {
             return null;

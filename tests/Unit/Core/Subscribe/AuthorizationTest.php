@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Raneomik\NetteMercure\Core\Response;
+namespace Tests\Unit\Raneomik\NetteMercure\Core\Subscribe;
 
 require \dirname(__DIR__, 3).'/bootstrap.php';
 
@@ -15,11 +15,11 @@ use Tests\Fixtures\Dummies\Core\DummyRequest;
 use Tests\Fixtures\Dummies\Core\DummyResponse;
 use Tests\Fixtures\Dummies\Core\Subscribe\DummyJwtProvider;
 
+/**
+ * @testCase
+ */
 final class AuthorizationTest extends TestCase
 {
-    /**
-     * @testCase
-     */
     public function testMinimalisticAuthorizationCookie(): void
     {
         $authorization = new Authorization(
@@ -49,9 +49,6 @@ final class AuthorizationTest extends TestCase
         );
     }
 
-    /**
-     * @testCase
-     */
     public function testAuthorizationCookieFromRequest(): void
     {
         $authorization = new Authorization(
@@ -87,9 +84,6 @@ final class AuthorizationTest extends TestCase
         );
     }
 
-    /**
-     * @testCase
-     */
     public function testNoAuthorizationCookieFromRequest(): void
     {
         $authorization = new Authorization(
@@ -114,9 +108,6 @@ final class AuthorizationTest extends TestCase
         Assert::hasNotKey(Authorization::COOKIE_NAME, $response->cookie);
     }
 
-    /**
-     * @testCase
-     */
     public function testCookieFromSubdomain(): void
     {
         $authorization = new Authorization(
@@ -140,9 +131,6 @@ final class AuthorizationTest extends TestCase
         );
     }
 
-    /**
-     * @testCase
-     */
     public function testCookieFromSameMainDomain(): void
     {
         $authorization = new Authorization(
@@ -172,9 +160,6 @@ final class AuthorizationTest extends TestCase
         );
     }
 
-    /**
-     * @testCase
-     */
     public function testCreationExceptionCookie(): void
     {
         $authorization = new Authorization(

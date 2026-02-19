@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Raneomik\NetteMercure\Tracy\Value;
+namespace Tests\Unit\Raneomik\NetteMercure\Core\Publish\Tracy\Value;
 
 require \dirname(__DIR__, 5).'/bootstrap.php';
 
@@ -11,11 +11,11 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\Value\BroadcastData;
 use Tester\Assert;
 use Tester\TestCase;
 
+/**
+ * @testCase
+ */
 final class BroadcastDataTest extends TestCase
 {
-    /**
-     * @testCase
-     */
     public function testMinimalistOptions(): void
     {
         $bdata = new BroadcastData(

@@ -7,6 +7,9 @@ namespace Tests\Fixtures\Dummies\App\Presentation\Publish;
 use Nette;
 use Raneomik\NetteMercure\BroadcasterInterface;
 
+/**
+ * @testCase
+ */
 final class PublishPresenter extends Nette\Application\UI\Presenter
 {
     public function __construct(

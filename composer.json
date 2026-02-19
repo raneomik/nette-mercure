@@ -19,18 +19,20 @@
     "symfony/mercure": "^0.7.2"
   },
   "require-dev": {
-    "latte/latte": "^3.1@dev",
-    "nette/application": "^4.0@dev",
-    "nette/bootstrap": "^3.3@dev",
-    "nette/di": "^3.0",
-    "nette/security": "^3.0",
-    "nette/tester": "^2.5@dev",
-    "phpro/grumphp": "v2.x-dev",
-    "phpstan/extension-installer": "1.4.x-dev",
-    "phpstan/phpstan-nette": "^2.0@stable",
-    "rector/rector": "^2.3.4",
+    "infection/infection": "^0.32.4",
+    "latte/latte": "^3.1",
+    "nette/application": "^3.2",
+    "nette/bootstrap": "^3.2",
+    "nette/di": "^3.2",
+    "nette/security": "^3.2",
+    "nette/tester": "^2.5",
+    "phpro/grumphp": "^2.0",
+    "phpstan/extension-installer": "^1.4",
+    "phpstan/phpstan-nette": "^2.0",
+    "raneomik/infection-tester-adapter": "^0.2.0",
+    "rector/rector": "^2.3",
     "symplify/easy-coding-standard": "^13.0",
-    "tomasvotruba/type-coverage": "dev-main",
+    "tomasvotruba/type-coverage": "^2.1",
     "tracy/tracy": "^2.8"
   },
   "autoload": {
@@ -46,7 +48,7 @@
       "Tests\\Fixtures\\Dummies\\": "tests/fixtures/Dummies"
     }
   },
-  "minimum-stability": "dev",
+  "minimum-stability": "stable",
   "extra": {
     "nette": {
       "di-extensions": {
@@ -70,12 +72,14 @@
     "ecs": "vendor/bin/ecs check --fix",
     "phpstan": "vendor/bin/phpstan analyse",
     "test": "vendor/bin/tester tests -s",
+    "infection": "vendor/bin/infection --threads=max --with-uncovered --show-mutations=0",
     "test-coverage": "vendor/bin/tester -s --coverage tests/reports/coverage.xml --coverage-src src -o junit:tests/reports/junit.xml tests",
     "test-cleanup": "rm -rf $(find tests -type d -name output) var tests/reports/* $(find tests -type d -name var)"
   },
   "config": {
     "sort-packages": true,
     "allow-plugins": {
+      "infection/extension-installer": true,
       "phpro/grumphp": true,
       "phpstan/extension-installer": true
     }

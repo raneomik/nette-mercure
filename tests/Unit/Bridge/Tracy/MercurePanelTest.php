@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Raneomik\NetteMercure\Bridge\Latte;
+namespace Tests\Unit\Raneomik\NetteMercure\Bridge\Tracy;
 
 require \dirname(__DIR__, 3).'/bootstrap.php';
 
@@ -15,11 +15,11 @@ use Tester\Assert;
 use Tester\TestCase;
 use Tests\Fixtures\Dummies\Core\MockHubFactory;
 
+/**
+ * @testCase
+ */
 final class MercurePanelTest extends TestCase
 {
-    /**
-     * @testCase
-     */
     public function testPanelComponents(): void
     {
         $broadcaster = new PlainBroadcaster(

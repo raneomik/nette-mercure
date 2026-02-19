@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Raneomik\NetteMercure\Core;
+namespace Tests\Unit\Raneomik\NetteMercure\Core\Publish;
 
 require \dirname(__DIR__, 3).'/bootstrap.php';
 
@@ -14,6 +14,9 @@ use Tester\Assert;
 use Tester\TestCase;
 use Tests\Fixtures\Dummies\Core\MockHubFactory;
 
+/**
+ * @testCase
+ */
 final class BroadcastersTest extends TestCase
 {
     private Broadcasters $broadcasters;
@@ -35,9 +38,6 @@ final class BroadcastersTest extends TestCase
         );
     }
 
-    /**
-     * @testCase
-     */
     public function testMinimalisticBroadcast(): void
     {
         Assert::same(
@@ -52,9 +52,6 @@ final class BroadcastersTest extends TestCase
         );
     }
 
-    /**
-     * @testCase
-     */
     public function testMovingHubsBroadcast(): void
     {
         Assert::same(
@@ -103,9 +100,6 @@ final class BroadcastersTest extends TestCase
         Assert::same('http://hub3.example.com', $this->broadcasters->broadcasterUrl());
     }
 
-    /**
-     * @testCase
-     */
     public function testBroadcastToAll(): void
     {
         $output = Json::encode([
@@ -131,9 +125,6 @@ final class BroadcastersTest extends TestCase
         );
     }
 
-    /**
-     * @testCase
-     */
     public function testNotExistentHub(): void
     {
         Assert::exception(
@@ -161,9 +152,6 @@ final class BroadcastersTest extends TestCase
         );
     }
 
-    /**
-     * @testCase
-     */
     public function testEmptyBroadcasters(): void
     {
         $broadcasters = new Broadcasters([]);

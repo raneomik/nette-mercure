@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Raneomik\NetteMercure\Core;
+namespace Tests\Unit\Raneomik\NetteMercure\Core\Subscribe;
 
 require \dirname(__DIR__, 3).'/bootstrap.php';
 
@@ -12,11 +12,11 @@ use Tester\Assert;
 use Tester\TestCase;
 use Tests\Fixtures\Dummies\Core\MockHubFactory;
 
+/**
+ * @testCase
+ */
 final class JWTProviderTest extends TestCase
 {
-    /**
-     * @testCase
-     */
     public function testMissingJWTFactoryException(): void
     {
         $jwtProvider = new JWTProvider(
@@ -47,9 +47,6 @@ final class JWTProviderTest extends TestCase
         );
     }
 
-    /**
-     * @testCase
-     */
     public function testMinimalisticProvision(): void
     {
         $jwtProvider = new JWTProvider(
@@ -70,9 +67,6 @@ final class JWTProviderTest extends TestCase
         );
     }
 
-    /**
-     * @testCase
-     */
     public function testCustomCookieLifetime(): void
     {
         $jwtProvider = new JWTProvider(
@@ -96,9 +90,6 @@ final class JWTProviderTest extends TestCase
         );
     }
 
-    /**
-     * @testCase
-     */
     public function testMultipleProvisions(): void
     {
         $jwtProvider = new JWTProvider(

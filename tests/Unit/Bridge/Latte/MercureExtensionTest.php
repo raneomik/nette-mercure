@@ -17,11 +17,11 @@ use Tester\TestCase;
 use Tests\Fixtures\Dummies\Core\MockHubFactory;
 use Tests\Fixtures\Dummies\Core\Subscribe\DummyJwtProvider;
 
+/**
+ * @testCase
+ */
 final class MercureExtensionTest extends TestCase
 {
-    /**
-     * @testCase
-     */
     public function testExtensionFunctions(): void
     {
         $broadcasters = new Broadcasters([

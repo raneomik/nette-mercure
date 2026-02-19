@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Raneomik\NetteMercure\Core\Response;
+namespace Tests\Unit\Raneomik\NetteMercure\Core;
 
 require \dirname(__DIR__, 2).'/bootstrap.php';
 
@@ -15,11 +15,11 @@ use Tester\TestCase;
 use Tests\Fixtures\Dummies\Core\DummyRequest;
 use Tests\Fixtures\Dummies\Core\DummyResponse;
 
+/**
+ * @testCase
+ */
 final class DiscoveryTest extends TestCase
 {
-    /**
-     * @testCase
-     */
     public function testNoLinkAddition(): void
     {
         $discovery = new Discovery(
@@ -46,9 +46,6 @@ final class DiscoveryTest extends TestCase
         Assert::null($response->getHeader('Link'));
     }
 
-    /**
-     * @testCase
-     */
     public function testMinimalisticBroadcast(): void
     {
         $discovery = new Discovery(
@@ -72,9 +69,6 @@ final class DiscoveryTest extends TestCase
         );
     }
 
-    /**
-     * @testCase
-     */
     public function testDiscoverySetFromRequest(): void
     {
         $discovery = new Discovery(

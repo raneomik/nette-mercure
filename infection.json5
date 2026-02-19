@@ -1,0 +1,20 @@
+{
+  "$schema": "vendor/infection/infection/resources/schema.json",
+  "testFramework": "tester",
+    "source": {
+        "directories": [
+            "src"
+        ],
+    },
+    "logs": {
+        "text": "var/infection.log",
+        "html": "var/infection.html",
+        "summary": "var/infection-summary.log",
+        "stryker": {
+            "report": "main"
+        }
+    },
+    "mutators": {
+        "@default": true
+    }
+}

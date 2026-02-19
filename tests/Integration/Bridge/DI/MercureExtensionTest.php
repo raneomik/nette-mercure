@@ -25,31 +25,29 @@ use Tester\Helpers;
 use Tester\TestCase;
 use Tests\Fixtures\Dummies\Core\DummyJwtFactory;
 
+/**
+ * @testCase
+ */
 final class MercureExtensionTest extends TestCase
 {
     protected Configurator $configurator;
 
-    private string $tmpDir = __DIR__.'/../../../../var/log.test.int';
-
     protected function setUp(): void
     {
-        mkdir($this->tmpDir, recursive: true);
+        mkdir($this->tmpDir(), recursive: true);
 
         $this->configurator = (new Configurator())
-            ->setTempDirectory($this->tmpDir)
+            ->setTempDirectory($this->tmpDir())
             ->addConfig(\dirname(__DIR__, 3).'/fixtures/config/test.neon')
         ;
     }
 
     protected function tearDown(): void
     {
-        Helpers::purge($tmpDir = \dirname(__DIR__, 4).'/var');
-        rmdir($tmpDir);
+        Helpers::purge($this->tmpDir());
+        rmdir($this->tmpDir());
     }
 
-    /**
-     * @testCase
-     */
     public function testPlainSimpleCompilation(): void
     {
         $loader = new Loader();
@@ -87,9 +85,6 @@ final class MercureExtensionTest extends TestCase
         );
     }
 
-    /**
-     * @testCase
-     */
     public function testBasicCompilation(): void
     {
         $this->configurator->onCompile[] = static function ($configurator, $compiler): void {
@@ -131,9 +126,6 @@ final class MercureExtensionTest extends TestCase
         );
     }
 
-    /**
-     * @testCase
-     */
     public function testFrankenPhpCompilation(): void
     {
         putenv('FRANKENPHP_CONFIG=1'); // simulate FrankenPHP environment
@@ -177,14 +169,11 @@ final class MercureExtensionTest extends TestCase
         putenv('FRANKENPHP_CONFIG=0');
     }
 
-    /**
-     * @testCase
-     */
     public function testMultiCompilationWithDebug(): void
     {
         $this->configurator
             ->setDebugMode(true)
-            ->enableTracy($this->tmpDir)
+            ->enableTracy($this->tmpDir())
         ;
         $this->configurator->onCompile[] = static function ($configurator, $compiler): void {
             $compiler->addExtension('mercure', new MercureExtension(true));
@@ -224,9 +213,6 @@ final class MercureExtensionTest extends TestCase
         Assert::type(Broadcasters::class, $service);
     }
 
-    /**
-     * @testCase
-     */
     public function testCompilationWithCustomJwtImplementation(): void
     {
         $dummyClass = DummyJwtFactory::class;
@@ -254,6 +240,11 @@ final class MercureExtensionTest extends TestCase
             $service = $container->getService($serviceAlias);
             Assert::type($expectedType, $service);
         }
+    }
+
+    private function tmpDir(): string
+    {
+        return \sprintf('%s/var/log.test.%s', \dirname(__DIR__, 3), getmypid());
     }
 }
 

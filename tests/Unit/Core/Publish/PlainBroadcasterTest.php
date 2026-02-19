@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Raneomik\NetteMercure\Core;
+namespace Tests\Unit\Raneomik\NetteMercure\Core\Publish;
 
 require \dirname(__DIR__, 3).'/bootstrap.php';
 
@@ -12,6 +12,9 @@ use Tester\Assert;
 use Tester\TestCase;
 use Tests\Fixtures\Dummies\Core\MockHubFactory;
 
+/**
+ * @testCase
+ */
 final class PlainBroadcasterTest extends TestCase
 {
     private PlainBroadcaster $broadcaster;
@@ -23,9 +26,6 @@ final class PlainBroadcasterTest extends TestCase
         );
     }
 
-    /**
-     * @testCase
-     */
     public function testMinimalisticBroadcast(): void
     {
         Assert::same(
@@ -61,9 +61,6 @@ final class PlainBroadcasterTest extends TestCase
         ], $this->broadcaster->broadcastOptions());
     }
 
-    /**
-     * @testCase
-     */
     public function testJsonBroadcast(): void
     {
         Assert::same(
