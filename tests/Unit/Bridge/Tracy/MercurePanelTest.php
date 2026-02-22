@@ -20,6 +20,11 @@ use Tests\Fixtures\Dummies\Core\MockHubFactory;
  */
 final class MercurePanelTest extends TestCase
 {
+    protected function tearDown(): void
+    {
+        @unlink(__DIR__.'/test.js');
+    }
+
     public function testPanelComponents(): void
     {
         $broadcaster = new PlainBroadcaster(

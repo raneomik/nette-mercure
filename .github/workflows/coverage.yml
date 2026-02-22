@@ -15,8 +15,14 @@ env:
 
 jobs:
     coverage:
-        name: Test Coverage - PHP 8.5
         runs-on: ubuntu-latest
+
+        strategy:
+            matrix:
+                operating-system: [ ubuntu-latest ]
+                php-version: [ '8.3', '8.4', '8.5' ]
+
+        name: Test Coverage - PHP ${{ matrix.php-version }}
 
         steps:
             -   name: Checkout
@@ -25,8 +31,8 @@ jobs:
             -   name: Install PHP
                 uses: shivammathur/setup-php@v2
                 with:
-                    php-version: 8.5
-                    extensions: pcov
+                    php-version: ${{ matrix.php-version }}
+                    coverage: pcov
                     tools: ${{ env.tools }}
 
             -   name: Setup problem matchers for PHP
@@ -40,8 +46,8 @@ jobs:
                 uses: actions/cache@v4
                 with:
                     path: ${{ steps.composercache.outputs.dir }}
-                    key: ${{ runner.os }}-php8.5-composer-${{ hashFiles('**/composer.json') }}
-                    restore-keys: ${{ runner.os }}-php8.5-composer-
+                    key: ${{ runner.os }}-php${{ matrix.php-version }}-composer-${{ hashFiles('**/composer.json') }}
+                    restore-keys: ${{ runner.os }}-php${{ matrix.php-version }}-composer-
 
             -   name: Install dependencies
                 run: composer install --prefer-dist --no-progress --no-suggest --optimize-autoloader
@@ -58,15 +64,16 @@ jobs:
 
             -   name: Upload tests results report to Codecov
                 uses: codecov/codecov-action@v5
+                if: ${{ matrix.php-version == '8.5' }}
                 with:
                     token: ${{ secrets.CODECOV_TOKEN }}
                     files: tests/reports/junit.xml
                     fail_ci_if_error: true
                     report_type: test_results
 
-
             -   name: Upload tests coverage report to Codecov
                 uses: codecov/codecov-action@v5
+                if: ${{ matrix.php-version == '8.5' }}
                 with:
                     token: ${{ secrets.CODECOV_TOKEN }}
                     files: tests/reports/coverage.xml

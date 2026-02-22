@@ -1,9 +1,11 @@
 Nette Mercure Extension
 =================
 
-[![codecov](https://codecov.io/gh/raneomik/nette-mercure/graph/badge.svg?token=Bc23JJTFL0&style=flat-square)](https://codecov.io/gh/raneomik/nette-mercure)
-[![.github/workflows/coverage.yml](https://github.com/raneomik/nette-mercure/actions/workflows/coverage.yml/badge.svg?style=flat-square)](https://github.com/raneomik/nette-mercure/actions/workflows/coverage.yml)
 [![.github/workflows/ci.yml](https://github.com/raneomik/nette-mercure/actions/workflows/ci.yml/badge.svg?style=flat-square)](https://github.com/raneomik/nette-mercure/actions/workflows/ci.yml)
+[![.github/workflows/coverage.yml](https://github.com/raneomik/nette-mercure/actions/workflows/coverage.yml/badge.svg?style=flat-square)](https://github.com/raneomik/nette-mercure/actions/workflows/coverage.yml)
+[![Mutation Testing](https://github.com/raneomik/nette-mercure/actions/workflows/mutation-test.yml/badge.svg)](https://github.com/raneomik/nette-mercure/actions/workflows/mutation-test.yml)
+[![codecov](https://codecov.io/gh/raneomik/nette-mercure/graph/badge.svg?token=Bc23JJTFL0&style=flat-square)](https://codecov.io/gh/raneomik/nette-mercure)
+[![Mutation testing badge](https://img.shields.io/endpoint?style=flat&url=https%3A%2F%2Fbadge-api.stryker-mutator.io%2Fgithub.com%2Franeomik%2Fnette-mercure%2Fmain)](https://dashboard.stryker-mutator.io/reports/github.com/raneomik/nette-mercure/main)
 
 _Work In Progress_
 
@@ -26,7 +28,7 @@ $ composer require nette/mercure
 
 _JWT options to set. Secret, publish & subscribe can be configured at [jwt.io](https://www.jwt.io/#token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZXJjdXJlIjp7InB1Ymxpc2giOlsiKiJdfX0.iHLdpAEjX4BqCsHJEegxRmO-Y6sMxXwNATrQyRNt3GY)_
 ```neon
-# Configure one default Mercure hub (default hub on same host in frankenphp environment)
+# Configure one default Mercure hub (e.g.:  hub is confgigured to be on same host in frankenphp environment)
 mercure:
 	url: '%baseUrl%/.well-known/mercure'
 	jwt:
@@ -37,7 +39,11 @@ mercure:
 		# You can implement your own Symfony\Component\Mercure\Jwt\TokenFactoryInterface
 		factory:  # Optional, default is Symfony\Component\Mercure\Jwt\LcobucciFactory
         useQueryParam: # false by default, to use JWT token in "authorization" query parameter when using {mercure()} function (https://mercure.rocks/spec#uri-query-parameter)
-    # following options depends on request parameters "hub" or "hubName" if several hubs are defined in configuration, and "topics" (and "additionnalClaims", specificaly for cookie)
+        lifetime: # Optional, default is 3600 (1 hour).
+    # following options depends on request parameters
+    # - "hub" or "hubName" if several hubs are defined in configuration, 
+    # - "topics" 
+    # [- "claims" to pass addtional data to cookie, e.g.: "claims=[exp=1800]" to specificaly set cookie lifetime to 30 minutes]
     useCookie: # true by default, to set JWT token in cookie (https://mercure.rocks/spec#cookie). SSL/Https required client-side
     autoDiscovery: # true by default, to add Link header for Mercure hub discovery (https://mercure.rocks/spec#discovery)
 
@@ -61,7 +67,6 @@ mercure:
 
 use Raneomik\NetteMercure\BroadcasterInterface;
 use Raneomik\NetteMercure\Core\Publish\Latte\TurboStream\Action;
-
 
 final class SomeService
 {

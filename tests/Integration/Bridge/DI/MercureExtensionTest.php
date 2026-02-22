@@ -244,7 +244,7 @@ final class MercureExtensionTest extends TestCase
 
     private function tmpDir(): string
     {
-        return \sprintf('%s/var/log.test.%s', \dirname(__DIR__, 3), getmypid());
+        return \sprintf('%s/var/log.test.%s', \dirname(__DIR__, 4), getmypid());
     }
 }
 
