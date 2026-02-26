@@ -21,7 +21,7 @@ Getting Started
 ---------------
 
 ```
-$ composer require nette/mercure
+$ composer require raneomik/nette-mercure
 ```
 
 ### Configuration
