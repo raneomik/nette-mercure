@@ -22,17 +22,21 @@ use Tests\Fixtures\Dummies\Core\Subscribe\DummyJwtProvider;
  */
 final class MercureExtensionTest extends TestCase
 {
-    public function testExtensionFunctions(): void
+    private static ?Broadcasters $broadcasters = null;
+
+    private static ?MercureExtension $extension = null;
+
+    protected function setUp(): void
     {
-        $broadcasters = new Broadcasters([
+        self::$broadcasters ??= new Broadcasters([
             'test' => new PlainBroadcaster(
                 MockHubFactory::create('http://hub.example.com'),
             ),
         ]);
 
-        $extension = new MercureExtension(
+        self::$extension ??= new MercureExtension(
             new DummyJwtProvider(),
-            new BroadcastersLoader(static fn (): Broadcasters => $broadcasters),
+            new BroadcastersLoader(static fn (): Broadcasters => self::$broadcasters),
             new ConfiguredDataRegistry([
                 'test' => new ConfiguredData(
                     'test',
@@ -45,25 +49,48 @@ final class MercureExtensionTest extends TestCase
                 ),
             ]),
         );
+    }
 
-        Assert::type('callable', $extension->getFunctions()['mercure']);
+    public function testExtensionDependencyLoad(): void
+    {
+        Assert::same(self::$broadcasters, self::$extension->broadcasters());
+    }
+
+    public function testExtensionFunctions(): void
+    {
+        [
+            'mercure' => $mercureFunction,
+            'mercureJWTToken' => $JWTTokenFunction,
+        ] = self::$extension->getFunctions();
+
+        Assert::type('callable', $mercureFunction);
         Assert::same(
             'http://hub.example.com?topic=test&authorization=dummy-jwt-token-test-provider-token-*-',
-            $extension->getFunctions()['mercure']('test', 'test', options: [
+            $mercureFunction('test', 'test', options: [
                 'addJwt' => true,
             ]),
         );
         Assert::same(
             'http://hub.example.com?topic=test&lastEventID=123',
-            $extension->getFunctions()['mercure']('test', hub: 'test', options: [
+            $mercureFunction('test', hub: 'test', options: [
+                'lastEventId' => '123',
+            ]),
+        );
+        Assert::same(
+            'http://hub.example.com?lastEventID=123',
+            $mercureFunction(hub: 'test', options: [
                 'lastEventId' => '123',
             ]),
         );
 
-        Assert::type('callable', $extension->getFunctions()['mercureJWTToken']);
+        Assert::type('callable', $JWTTokenFunction);
         Assert::same(
             'dummy-jwt-token-test-provider-token-*-',
-            $extension->getFunctions()['mercureJWTToken'](),
+            $JWTTokenFunction(),
+        );
+        Assert::same(
+            'dummy-jwt-token-test-provider-token-foo|bar-',
+            $JWTTokenFunction(subscribe: ['foo', 'bar']),
         );
     }
 }

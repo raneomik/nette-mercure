@@ -5,9 +5,14 @@ declare(strict_types=1);
 namespace Raneomik\NetteMercure;
 
 use Raneomik\NetteMercure\Core\Publish\Latte\TurboStream\Action;
+use Symfony\Component\Mercure\HubInterface;
 
 interface BroadcasterInterface
 {
+    public function broadcasterHub(
+        // ?string $hub = null
+    ): HubInterface;
+
     public function broadcasterUrl(
         // ?string $hub = null
     ): string;

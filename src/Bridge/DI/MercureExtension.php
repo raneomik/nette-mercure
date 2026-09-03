@@ -73,8 +73,8 @@ final class MercureExtension extends Nette\DI\CompilerExtension
 
         /** @var false|ServiceDefinition $latteDefinition */
         $latteDefinition = $builder->hasDefinition('latte.latteFactory')
-            // @phpstan-ignore-next-line
-            ? $builder->getDefinition('latte.latteFactory')->getResultDefinition()
+            ? $builder->getDefinition('latte.latteFactory')
+                ->getResultDefinition() // @phpstan-ignore method.notFound
             : false;
 
         $debug = false;
@@ -141,8 +141,8 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                 ->setAutowired(false)
             ;
 
-            // @phpstan-ignore-next-line
             $builder->getDefinition('tracy.bar')
+                // @phpstan-ignore-next-line
                 ->addSetup('?->addPanel(?, ?)', [
                     '@self',
                     $panelDef,

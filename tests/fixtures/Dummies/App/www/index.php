@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+
 use Nette\Application\Application;
 use Tests\Fixtures\Dummies\App\Bootstrap;
 

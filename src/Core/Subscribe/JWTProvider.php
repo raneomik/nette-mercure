@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Raneomik\NetteMercure\Core\Subscribe;
 
 use Symfony\Component\Mercure\HubRegistry;
+use Symfony\Component\Mercure\Jwt\Grant;
 use Symfony\Component\Mercure\Jwt\TokenFactoryInterface;
 
 final class JWTProvider implements JWTProviderInterface
@@ -21,7 +22,7 @@ final class JWTProvider implements JWTProviderInterface
     }
 
     #[\Override]
-    public function provide(?string $hubName = null, array|string|null $subscribedTopics = [], array $additionalClaims = []): string
+    public function provide(?string $hubName = null, array|string $subscribedTopics = [], array $additionalClaims = []): string
     {
         $hubInstance = $this->registry->getHub($hubName);
         $tokenFactory = $hubInstance->getFactory();
@@ -34,7 +35,15 @@ final class JWTProvider implements JWTProviderInterface
 
         $this->setCookieLifeDateTime($additionalClaims);
 
-        return $tokenFactory->create((array) $subscribedTopics, null, $additionalClaims);
+        return $tokenFactory->create(
+            [
+                new Grant(
+                    [Grant::ACTION_SUBSCRIBE],
+                    \is_array($subscribedTopics) ? $subscribedTopics : [$subscribedTopics],
+                ),
+            ],
+            $additionalClaims,
+        );
     }
 
     public function ttl(): \DateTimeInterface

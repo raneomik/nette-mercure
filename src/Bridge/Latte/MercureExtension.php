@@ -7,8 +7,10 @@ namespace Raneomik\NetteMercure\Bridge\Latte;
 use Latte\Extension;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Raneomik\NetteMercure\Bridge\Utils\ConfiguredDataRegistry;
+use Raneomik\NetteMercure\Bridge\Utils\MatcherInput;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
 use Raneomik\NetteMercure\Core\Subscribe\JWTProviderInterface;
+use Symfony\Component\Mercure\ProtocolVersion;
 
 final class MercureExtension extends Extension
 {
@@ -27,12 +29,61 @@ final class MercureExtension extends Extension
     }
 
     #[\Override]
+    /**
+     * @return array{
+     *     mercure: callable,
+     *     mercureJWTToken: callable,
+     * }
+     */
     public function getFunctions(): array
     {
         return [
             'mercure' => $this->mercure(...),
             'mercureJWTToken' => $this->mercureJWTToken(...),
         ];
+    }
+
+    private function buildQuery(string $hub, array $topics, array $options): string
+    {
+        $hubInstance = $this->broadcasters()
+            ->broadcasterHub($hub)
+        ;
+
+        $query = '';
+        $separator = '?';
+        if (ProtocolVersion::V1 === $hubInstance->getProtocolVersion()) {
+            $normalized = MatcherInput::normalize($topics);
+            foreach ($normalized as $matcherType => $patterns) {
+                $paramName = 'exact' === $matcherType ? 'match' : 'match_'.rawurlencode($matcherType);
+                foreach ($patterns as $pattern) {
+                    $query .= $separator.$paramName.'='.rawurlencode($pattern);
+                    $separator = '&';
+                }
+            }
+        } else {
+            foreach (MatcherInput::flattenToExactOrFail($topics) as $topic) {
+                $query .= $separator.'topic='.rawurlencode($topic);
+                $separator = '&';
+            }
+        }
+
+        if ('' !== ($options['lastEventId'] ?? '')) {
+            $encodedLastEventId = rawurlencode($options['lastEventId']);
+            $query .= $separator.'lastEventID='.$encodedLastEventId;
+            $separator = '&';
+        }
+
+        $hubData = $this->configuredData->getConfiguration($hub);
+
+        if ($hubData->jwtInQueryParam || true === ($options['addJwt'] ?? false)) {
+            $query .= $separator.'authorization='.$this->mercureJWTToken(
+                $options['subscribe'] ?? $hubData->subscribe,
+                $options['additionalClaims'] ?? [],
+                $hub,
+            );
+        }
+
+        return $query;
     }
 
     /**
@@ -50,45 +101,26 @@ final class MercureExtension extends Extension
      */
     private function mercure(array|string|null $topics = null, ?string $hub = null, array $options = []): string
     {
-        $url = $this->broadcasters()->broadcasterUrl($hub);
-        if (null !== $topics) {
-            // We cannot use http_build_query() because this method doesn't support generating multiple query parameters with the same name without the [] suffix
-            $separator = '?';
-            foreach ((array) $topics as $topic) {
-                $url .= $separator.'topic='.rawurlencode($topic);
-                if ('?' === $separator) {
-                    $separator = '&';
-                }
-            }
-        }
+        $url = $this->broadcasters()
+            ->broadcasterUrl($hub)
+        ;
 
-        if ('' !== ($options['lastEventId'] ?? '')) {
-            $encodedLastEventId = rawurlencode($options['lastEventId']);
-            $url .= '&lastEventID='.$encodedLastEventId;
-        }
-
-        $hubData = $this->configuredData->getConfiguration($hub);
-
-        if ($hubData->jwtInQueryParam || true === ($options['addJwt'] ?? false)) {
-            $url .= '&authorization='.$this->mercureJWTToken(
-                $options['subscribe'] ?? $hubData->subscribe ?? $topics,
-                $options['additionalClaims'] ?? [],
-                $hub,
-            );
-        }
-
-        return $url;
+        return $url.$this->buildQuery(
+            $hub,
+            \is_string($topics) ? [$topics] : ($topics ?? []),
+            $options,
+        );
     }
 
     /**
-     * @param null|string|string[] $subscribe
+     * @param string|string[] $subscribe
      * @param array<string, mixed> $additionClaims
      */
-    private function mercureJWTToken(array|string|null $subscribe = ['*'], array $additionClaims = [], ?string $hub = null): string
+    private function mercureJWTToken(array|string $subscribe = ['*'], array $additionClaims = [], ?string $hub = null): string
     {
         return $this->jwtProvider->provide(
             $hub,
-            (array) $subscribe,
+            $subscribe,
             $additionClaims,
         );
     }

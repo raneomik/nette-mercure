@@ -40,7 +40,9 @@ final readonly class MercurePanel implements Tracy\IBarPanel
         return Tracy\Helpers::capture(function (): void {
             $name = 'Mercure';
             $icon = $this->icon;
-            $count = $this->broadcasters()->count();
+            $count = $this->broadcasters()
+                ->count()
+            ;
 
             require_once __DIR__.'/dist/tab.phtml';
         });

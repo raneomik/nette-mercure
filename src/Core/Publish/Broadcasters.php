@@ -6,6 +6,7 @@ namespace Raneomik\NetteMercure\Core\Publish;
 
 use Raneomik\NetteMercure\BroadcasterInterface;
 use Raneomik\NetteMercure\Exception\BroadcastException;
+use Symfony\Component\Mercure\HubInterface;
 
 /**
  * @implements \IteratorAggregate<string, BroadcasterInterface>
@@ -29,11 +30,20 @@ final class Broadcasters implements BroadcasterInterface, \IteratorAggregate, \A
         $this->broadcasters = new \ArrayIterator($broadcasters);
     }
 
+    public function broadcasterHub(?string $hub = null): HubInterface
+    {
+        return $this->getHub($hub)
+            ->broadcasterHub()
+        ;
+    }
+
     #[\Override]
     public function broadcasterUrl(?string $hub = null): string
     {
         if (null !== $hub) {
-            return $this->getHub($hub)->broadcasterUrl();
+            return $this->getHub($hub)
+                ->broadcasterUrl()
+            ;
         }
 
         return $this[$this->currentHub ?: '']->broadcasterUrl();
@@ -43,7 +53,9 @@ final class Broadcasters implements BroadcasterInterface, \IteratorAggregate, \A
     public function broadcastOptions(?string $hub = null): array
     {
         if (null !== $hub) {
-            return $this->getHub($hub)->broadcastOptions();
+            return $this->getHub($hub)
+                ->broadcastOptions()
+            ;
         }
 
         return $this[$this->currentHub ?: '']->broadcastOptions();
@@ -60,11 +72,15 @@ final class Broadcasters implements BroadcasterInterface, \IteratorAggregate, \A
         $hub = $options['hub'] ?? false;
 
         if ($hub) {
-            return $this->getHub($hub)->broadcast($topics, $data, $options, $template);
+            return $this->getHub($hub)
+                ->broadcast($topics, $data, $options, $template)
+            ;
         }
 
         if (false === $toAll) {
-            return $this->first()->broadcast($topics, $data, $options, $template);
+            return $this->first()
+                ->broadcast($topics, $data, $options, $template)
+            ;
         }
 
         $publishId = [];

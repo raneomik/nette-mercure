@@ -33,6 +33,11 @@ final class PlainBroadcaster implements BroadcasterInterface
     ) {
     }
 
+    public function broadcasterHub(): HubInterface
+    {
+        return $this->hub;
+    }
+
     #[\Override]
     public function broadcasterUrl(): string
     {

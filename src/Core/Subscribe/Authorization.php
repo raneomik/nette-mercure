@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Raneomik\NetteMercure\Core\Subscribe;
 
+use Nette\Http\FetchSite;
 use Nette\Http\IRequest;
 use Nette\Http\IResponse;
+use Nette\Http\SameSite;
 use Raneomik\NetteMercure\Bridge\Utils\ConfiguredDataRegistry;
 
 final readonly class Authorization implements AuthorizationInterface
@@ -17,7 +19,7 @@ final readonly class Authorization implements AuthorizationInterface
         private IRequest $request,
         private IResponse $response,
         private ConfiguredDataRegistry $config,
-        private ?string $cookieSameSite = IResponse::SameSiteLax,
+        private ?SameSite $cookieSameSite = SameSite::Lax,
     ) {
     }
 
@@ -40,7 +42,7 @@ final readonly class Authorization implements AuthorizationInterface
         );
     }
 
-    public function createCookie(array|string|null $subscribedTopics = [], array $additionalClaims = [], ?string $hub = null): void
+    public function createCookie(array|string $subscribedTopics = [], array $additionalClaims = [], ?string $hub = null): void
     {
         $token = $this->jwtProvider->provide($hub, $subscribedTopics, $additionalClaims);
 
@@ -62,7 +64,7 @@ final readonly class Authorization implements AuthorizationInterface
             domain: $this->getCookieDomain($urlComponents['host'] ?? null),
             secure: 'http' !== strtolower($urlComponents['scheme'] ?? 'https'),
             httpOnly: true,
-            sameSite: $this->cookieSameSite,  // @phpstan-ignore-line
+            sameSite: $this->cookieSameSite->value,  // @phpstan-ignore-line
         );
     }
 
@@ -75,7 +77,7 @@ final readonly class Authorization implements AuthorizationInterface
         $hubDomain = strtolower($hubDomain);
         $host = strtolower($this->request->getUrl()->getHost());
 
-        if ($this->request->isSameSite()
+        if ($this->request->isFrom(FetchSite::SameSite)
             || $hubDomain === $host
         ) {
             return null;

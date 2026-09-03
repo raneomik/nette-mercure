@@ -63,7 +63,8 @@ final class JWTProviderTest extends TestCase
         );
         Assert::same(
             (new \DateTime('+1hour'))->format('Y-m-d H:i:s'),
-            $jwtProvider->ttl()->format('Y-m-d H:i:s'),
+            $jwtProvider->ttl()
+                ->format('Y-m-d H:i:s'),
         );
     }
 
@@ -86,7 +87,8 @@ final class JWTProviderTest extends TestCase
         );
         Assert::same(
             (new \DateTime('+ 30 minutes'))->format('Y-m-d H:i:s'),
-            $jwtProvider->ttl()->format('Y-m-d H:i:s'),
+            $jwtProvider->ttl()
+                ->format('Y-m-d H:i:s'),
         );
     }
 
@@ -110,7 +112,8 @@ final class JWTProviderTest extends TestCase
         );
         Assert::same(
             (new \DateTime('+1hour'))->format('Y-m-d H:i:s'),
-            $jwtProvider->ttl()->format('Y-m-d H:i:s'),
+            $jwtProvider->ttl()
+                ->format('Y-m-d H:i:s'),
         );
 
         Assert::same(
@@ -122,7 +125,8 @@ final class JWTProviderTest extends TestCase
         );
         Assert::same(
             (new \DateTime('+1hour'))->format('Y-m-d H:i:s'),
-            $jwtProvider->ttl()->format('Y-m-d H:i:s'),
+            $jwtProvider->ttl()
+                ->format('Y-m-d H:i:s'),
         );
     }
 }

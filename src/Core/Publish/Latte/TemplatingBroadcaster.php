@@ -8,6 +8,7 @@ use Latte\Engine;
 use Raneomik\NetteMercure\BroadcasterInterface;
 use Raneomik\NetteMercure\Core\Publish\Latte\TurboStream\Action;
 use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
+use Symfony\Component\Mercure\HubInterface;
 
 final readonly class TemplatingBroadcaster implements BroadcasterInterface
 {
@@ -25,6 +26,12 @@ final readonly class TemplatingBroadcaster implements BroadcasterInterface
         private TemplatePathResolver $templatePathResolver,
         private Engine $latte,
     ) {
+    }
+
+    #[\Override]
+    public function broadcasterHub(): HubInterface
+    {
+        return $this->decorated->broadcasterHub();
     }
 
     #[\Override]

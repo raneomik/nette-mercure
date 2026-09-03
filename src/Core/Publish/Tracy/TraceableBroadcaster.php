@@ -6,6 +6,7 @@ namespace Raneomik\NetteMercure\Core\Publish\Tracy;
 
 use Raneomik\NetteMercure\BroadcasterInterface;
 use Raneomik\NetteMercure\Core\Publish\Tracy\Value\BroadcastData;
+use Symfony\Component\Mercure\HubInterface;
 
 final class TraceableBroadcaster implements BroadcasterInterface
 {
@@ -23,6 +24,12 @@ final class TraceableBroadcaster implements BroadcasterInterface
         private readonly BroadcasterInterface $broadcaster,
         private readonly Metrics $metrics = new Metrics(),
     ) {
+    }
+
+    #[\Override]
+    public function broadcasterHub(): HubInterface
+    {
+        return $this->broadcaster->broadcasterHub();
     }
 
     public function broadcasterUrl(): string
