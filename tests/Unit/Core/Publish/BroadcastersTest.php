@@ -10,6 +10,7 @@ use Nette\Utils\Json;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
 use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
 use Raneomik\NetteMercure\Exception\BroadcastException;
+use Symfony\Component\Mercure\HubInterface;
 use Tester\Assert;
 use Tester\TestCase;
 use Tests\Fixtures\Dummies\Core\MockHubFactory;
@@ -19,23 +20,24 @@ use Tests\Fixtures\Dummies\Core\MockHubFactory;
  */
 final class BroadcastersTest extends TestCase
 {
+    /**
+     * @var array<string,HubInterface>
+     */
+    private array $broadcasterHubs;
+
     private Broadcasters $broadcasters;
 
     protected function setUp(): void
     {
-        $this->broadcasters = new Broadcasters(
-            [
-                'hub1' => new PlainBroadcaster(
-                    MockHubFactory::create('http://hub1.example.com'),
-                ),
-                'hub2' => new PlainBroadcaster(
-                    MockHubFactory::create('http://hub2.example.com'),
-                ),
-                'hub3' => new PlainBroadcaster(
-                    MockHubFactory::create('http://hub3.example.com'),
-                ),
-            ]
-        );
+        $this->broadcasterHubs = [
+            'hub1' => MockHubFactory::create('http://hub1.example.com'),
+            'hub2' => MockHubFactory::create('http://hub2.example.com'),
+            'hub3' => MockHubFactory::create('http://hub3.example.com'),
+        ];
+        $this->broadcasters = new Broadcasters(array_combine(
+            array_keys($this->broadcasterHubs),
+            array_map(static fn (HubInterface $hub): PlainBroadcaster => new PlainBroadcaster($hub), $this->broadcasterHubs),
+        ));
     }
 
     public function testMinimalisticBroadcast(): void
@@ -68,6 +70,7 @@ final class BroadcastersTest extends TestCase
             ),
         );
 
+        Assert::same($this->broadcasterHubs['hub2'], $this->broadcasters->broadcasterHub());
         Assert::same('http://hub2.example.com', $this->broadcasters->broadcasterUrl());
 
         Assert::same(
@@ -116,11 +119,16 @@ final class BroadcastersTest extends TestCase
         );
 
         Assert::same(3, $this->broadcasters->count());
+        Assert::same($this->broadcasterHubs['hub2'], $this->broadcasters->broadcasterHub('hub2'));
         Assert::same('http://hub2.example.com', $this->broadcasters->broadcasterUrl('hub2'));
         Assert::same(
             [
                 'rendered_data' => '{"message": "Hello, World!"}',
             ],
+            $this->broadcasters->broadcastOptions()
+        );
+        Assert::same(
+            $this->broadcasters->broadcastOptions('hub2'),
             $this->broadcasters->broadcastOptions()
         );
     }

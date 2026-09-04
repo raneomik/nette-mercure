@@ -7,11 +7,12 @@ namespace Tests\Unit\Raneomik\NetteMercure\Core\Publish\Tracy;
 require \dirname(__DIR__, 4).'/bootstrap.php';
 
 use Nette\Utils\Json;
-use Raneomik\NetteMercure\Core\Publish\Latte\TurboStream\Action;
+use Raneomik\NetteMercure\Core\Publish\Latte\TurboStreamAction;
 use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
 use Raneomik\NetteMercure\Core\Publish\Tracy\Metrics;
 use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 use Raneomik\NetteMercure\Core\Publish\Tracy\Value\BroadcastData;
+use Symfony\Component\Mercure\HubInterface;
 use Tester\Assert;
 use Tester\TestCase;
 use Tests\Fixtures\Dummies\Core\MockHubFactory;
@@ -21,6 +22,8 @@ use Tests\Fixtures\Dummies\Core\MockHubFactory;
  */
 final class TraceableBroadcasterTest extends TestCase
 {
+    private HubInterface $broadcasterHub;
+
     private TraceableBroadcaster $debugBroadcaster;
 
     private Metrics $metrics;
@@ -29,7 +32,7 @@ final class TraceableBroadcasterTest extends TestCase
     {
         $this->debugBroadcaster = new TraceableBroadcaster(
             new PlainBroadcaster(
-                MockHubFactory::create('http://example.com/hub'),
+                $this->broadcasterHub = MockHubFactory::create('http://example.com/hub'),
             ),
             $this->metrics = new Metrics(),
         );
@@ -48,6 +51,7 @@ final class TraceableBroadcasterTest extends TestCase
             ),
         );
 
+        Assert::same($this->broadcasterHub, $this->debugBroadcaster->broadcasterHub());
         Assert::same('http://example.com/hub', $this->debugBroadcaster->broadcasterUrl());
         Assert::same([
             'rendered_data' => 'Hello, World!',
@@ -68,7 +72,7 @@ final class TraceableBroadcasterTest extends TestCase
             'test',
             'Hello, another World!',
             [
-                'action' => Action::Update,
+                'action' => TurboStreamAction::Update,
                 'metadata' => 'second broadcast',
             ],
             template: 'uncosidered_in_plain_broadcaster',
@@ -109,7 +113,7 @@ final class TraceableBroadcasterTest extends TestCase
                     'topics' => ['test'],
                     'data' => 'Hello, another World!',
                     'template' => 'uncosidered_in_plain_broadcaster',
-                    'action' => Action::Update,
+                    'action' => TurboStreamAction::Update,
                     'options' => [
                         'metadata' => 'second broadcast',
                     ],

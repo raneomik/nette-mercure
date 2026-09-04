@@ -75,6 +75,13 @@ final class AuthorizationTest extends TestCase
         $authorization->createCookieFromCurrentRequest();
 
         Assert::same(
+            '/',
+            $response->cookie[Authorization::COOKIE_NAME]['path'],
+        );
+        Assert::false(
+            $response->cookie[Authorization::COOKIE_NAME]['secure'],
+        );
+        Assert::same(
             'example.com',
             $response->cookie[Authorization::COOKIE_NAME]['domain'],
         );
@@ -84,7 +91,7 @@ final class AuthorizationTest extends TestCase
         );
     }
 
-    public function testNoAuthorizationCookieFromRequest(): void
+    public function testNoAuthorizationCookieFromRequestOnRelativeHub(): void
     {
         $authorization = new Authorization(
             new DummyJwtProvider(),
@@ -106,6 +113,75 @@ final class AuthorizationTest extends TestCase
         $authorization->createCookieFromCurrentRequest();
 
         Assert::hasNotKey(Authorization::COOKIE_NAME, $response->cookie);
+    }
+
+    public function testAlternativeValuesOnRelativeHub(): void
+    {
+        $authorization = new Authorization(
+            $provider = new DummyJwtProvider(),
+            new DummyRequest(fromUrl: '/publish?hubName=test&claims[exp]=300'),
+            $response = new DummyResponse(),
+            new ConfiguredDataRegistry(
+                [
+                    'test' => new ConfiguredData(
+                        hubName: 'test',
+                        hubUrl: '/publish',
+                        subscribe: ['*'],
+                        publish: ['*'],
+                        useCookie: true,
+                    ),
+                ],
+            )
+        );
+
+        $authorization->createCookieFromCurrentRequest();
+
+        Assert::null(
+            $response->cookie[Authorization::COOKIE_NAME]['domain'],
+            'null domain cookie set on same domain/relative path'
+        );
+        Assert::same(
+            '/publish',
+            $response->cookie[Authorization::COOKIE_NAME]['path'],
+        );
+        Assert::true(
+            $response->cookie[Authorization::COOKIE_NAME]['secure'],
+        );
+        Assert::true(
+            $response->cookie[Authorization::COOKIE_NAME]['httpOnly'],
+        );
+        Assert::same(
+            'dummy-jwt-token-test-provider-token-*-',
+            $response->cookie[Authorization::COOKIE_NAME]['value'],
+        );
+        Assert::same(
+            $provider->ttl(),
+            $response->cookie[Authorization::COOKIE_NAME]['expire'],
+        );
+    }
+
+    public function testAuthorizationCookieFromRequestOnRelativeHub(): void
+    {
+        $authorization = new Authorization(
+            new DummyJwtProvider(),
+            new DummyRequest(fromUrl: '/?topics=test&hub=test2'),
+            $response = new DummyResponse(),
+            new ConfiguredDataRegistry(
+                [
+                    'test' => new ConfiguredData(
+                        hubName: 'test',
+                        hubUrl: '/',
+                        subscribe: ['*'],
+                        publish: ['*'],
+                        useCookie: true,
+                    ),
+                ],
+            )
+        );
+
+        $authorization->createCookieFromCurrentRequest();
+
+        Assert::hasKey(Authorization::COOKIE_NAME, $response->cookie);
     }
 
     public function testCookieFromSubdomain(): void

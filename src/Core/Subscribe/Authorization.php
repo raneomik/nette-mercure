@@ -42,7 +42,7 @@ final readonly class Authorization implements AuthorizationInterface
         );
     }
 
-    public function createCookie(array|string $subscribedTopics = [], array $additionalClaims = [], ?string $hub = null): void
+    public function createCookie(array|string $subscribedTopics = ['*'], array $additionalClaims = [], ?string $hub = null): void
     {
         $token = $this->jwtProvider->provide($hub, $subscribedTopics, $additionalClaims);
 

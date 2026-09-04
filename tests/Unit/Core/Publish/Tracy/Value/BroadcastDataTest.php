@@ -6,7 +6,7 @@ namespace Tests\Unit\Raneomik\NetteMercure\Core\Publish\Tracy\Value;
 
 require \dirname(__DIR__, 5).'/bootstrap.php';
 
-use Raneomik\NetteMercure\Core\Publish\Latte\TurboStream\Action;
+use Raneomik\NetteMercure\Core\Publish\Latte\TurboStreamAction;
 use Raneomik\NetteMercure\Core\Publish\Tracy\Value\BroadcastData;
 use Tester\Assert;
 use Tester\TestCase;
@@ -36,7 +36,7 @@ final class BroadcastDataTest extends TestCase
             topics: (array) 'topic',
             data: '{"key":"value"}',
             options: [
-                'action' => Action::Update,
+                'action' => TurboStreamAction::Update,
                 'template' => 'template.latte',
                 'meta' => 'metadata',
                 'id' => 'id',
@@ -45,7 +45,7 @@ final class BroadcastDataTest extends TestCase
 
         Assert::same(['topic'], $bdata->getTopics());
         Assert::same('{"key":"value"}', $bdata->getData());
-        Assert::same(Action::Update, $bdata->getAction());
+        Assert::same(TurboStreamAction::Update, $bdata->getAction());
         Assert::same('template.latte', $bdata->getTemplate());
         Assert::same([
             'meta' => 'metadata',

@@ -11,9 +11,10 @@ use Latte\RuntimeException;
 use Nette\Utils\Json;
 use Raneomik\NetteMercure\Core\Publish\Latte\TemplatePathResolver;
 use Raneomik\NetteMercure\Core\Publish\Latte\TemplatingBroadcaster;
-use Raneomik\NetteMercure\Core\Publish\Latte\TurboStream\Action;
+use Raneomik\NetteMercure\Core\Publish\Latte\TurboStreamAction;
 use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
 use Raneomik\NetteMercure\Exception\BroadcastException;
+use Symfony\Component\Mercure\HubInterface;
 use Tester\Assert;
 use Tester\TestCase;
 use Tests\Fixtures\Dummies\Core\MockHubFactory;
@@ -23,6 +24,8 @@ use Tests\Fixtures\Dummies\Core\MockHubFactory;
  */
 final class TemplatingBroadcasterTest extends TestCase
 {
+    private HubInterface $broadcasterHub;
+
     private TemplatingBroadcaster $broadcaster;
 
     private TemplatePathResolver $templatePathResolver;
@@ -31,7 +34,7 @@ final class TemplatingBroadcasterTest extends TestCase
     {
         $this->broadcaster = new TemplatingBroadcaster(
             new PlainBroadcaster(
-                MockHubFactory::create('http://example.com/hub'),
+                $this->broadcasterHub = MockHubFactory::create('http://example.com/hub'),
             ),
             $this->templatePathResolver = new TemplatePathResolver(\dirname(__DIR__, 4).'/fixtures/templates'),
             new Engine(),
@@ -80,6 +83,7 @@ final class TemplatingBroadcasterTest extends TestCase
             ),
         );
 
+        Assert::same($this->broadcasterHub, $this->broadcaster->broadcasterHub());
         Assert::same('http://example.com/hub', $this->broadcaster->broadcasterUrl());
         Assert::same([
             'template' => $this->templatePathResolver->resolvedDir().'/example.latte',
@@ -120,7 +124,7 @@ final class TemplatingBroadcasterTest extends TestCase
                 'test',
                 'Hello Mercure!',
                 [
-                    'action' => Action::Update,
+                    'action' => TurboStreamAction::Update,
                 ],
                 template: 'exampleStream.latte',
             ),
@@ -131,7 +135,7 @@ final class TemplatingBroadcasterTest extends TestCase
                 'test',
                 'Hello Mercure!',
                 [
-                    'action' => Action::Remove,
+                    'action' => TurboStreamAction::Remove,
                 ],
                 template: 'exampleStream.latte',
             ),

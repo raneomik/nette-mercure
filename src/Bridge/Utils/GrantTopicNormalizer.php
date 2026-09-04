@@ -20,20 +20,21 @@ use Symfony\Component\Mercure\ProtocolVersion;
 /**
  * report from internal @see \Symfony\Component\Mercure\MatcherInput.
  */
-final class MatcherInput
+final class GrantTopicNormalizer
 {
     /**
-     * @param null|array<string, string[]>|string[] $topics
+     * @param array<string, string[]>|string[] $topics
      *
-     * @return array<string, string[]>
+     * @return array<string, string|string[]>
      */
-    public static function normalize(?array $topics): array
+    public static function normalize(array $topics): array
     {
-        if (null === $topics || [] === $topics) {
+        if ([] === $topics) {
             return [];
         }
 
         if (array_is_list($topics)) {
+            /** @var string[] $topics */
             return [
                 'exact' => $topics,
             ];
@@ -45,6 +46,7 @@ final class MatcherInput
             }
         }
 
+        /** @var array<string, string|string[]> $topics */
         return $topics;
     }
 
@@ -52,14 +54,15 @@ final class MatcherInput
      * Flattens a matcher-typed shape down to a flat exact-topic list, for factories/protocols
      * that only understand "exact" topic matching.
      *
-     * @param null|array<string, string[]>|string[] $topics
+     * @param array<string, string[]>|string[] $topics
      *
      * @return string[]
      *
      * @throws InvalidArgumentException if a non-"exact" matcher type is present
      */
-    public static function flattenToExactOrFail(?array $topics): array
+    public static function flattenToExactOrFail(array $topics): array
     {
+        /** @var array<string, string[]> $normalized */
         $normalized = self::normalize($topics);
 
         $unsupported = array_diff(array_keys($normalized), ['exact']);
@@ -76,13 +79,13 @@ final class MatcherInput
      * (mirroring Grant's constructor — actions/topics/payload — for contexts that can't construct a Grant object
      * directly, e.g. a Twig template).
      *
-     * @param null|array<int, array{actions?: string[], topics?: mixed, payload?: mixed}|string>|array<string, string[]>|Grant[]|string $grants
+     * @param array<int, array{actions?: string[], topics?: mixed, payload?: mixed}|string>|array<string, string[]>|Grant[]|string $grants
      *
      * @return Grant[]
      */
-    public static function normalizeGrants(array|string|null $grants): array
+    public static function normalizeGrants(array|string $grants): array
     {
-        if (null === $grants || [] === $grants) {
+        if ([] === $grants) {
             return [];
         }
 
@@ -91,22 +94,36 @@ final class MatcherInput
         }
 
         if (! array_is_list($grants)) {
-            // a matcher-type map (e.g. ["urlpattern" => [...]]): the topics of one implicit "subscribe" grant
+            // a matcher-type map (e.g. ["urlpattern" => [...]]): the topics of one implicit "subscribe" grant.
+            /** @var array<string, string|string[]> $grants */
             return [new Grant([Grant::ACTION_SUBSCRIBE], $grants)];
         }
 
         $first = reset($grants);
         if ($first instanceof Grant) {
+            /** @var Grant[] $grants */
             return $grants;
         }
 
         if (\is_string($first)) {
+            /** @var string[] $grants */
             return [new Grant([Grant::ACTION_SUBSCRIBE], $grants)];
         }
 
+        /**
+         * @var list<array{
+         *     actions?: string[],
+         *     topics?: string[],
+         *     payload?: mixed,
+         *  }> $grants
+         */
         return array_map(
-            static fn (array $item): Grant => new Grant($item['actions'] ?? [Grant::ACTION_SUBSCRIBE], $item['topics'] ?? [], $item['payload'] ?? null),
-            $grants
+            static fn (array $item): Grant => new Grant(
+                $item['actions'] ?? [Grant::ACTION_SUBSCRIBE],
+                $item['topics'] ?? [],
+                $item['payload'] ?? null,
+            ),
+            $grants,
         );
     }
 }

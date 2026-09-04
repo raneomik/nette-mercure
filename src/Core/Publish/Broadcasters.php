@@ -32,9 +32,13 @@ final class Broadcasters implements BroadcasterInterface, \IteratorAggregate, \A
 
     public function broadcasterHub(?string $hub = null): HubInterface
     {
-        return $this->getHub($hub)
-            ->broadcasterHub()
-        ;
+        if (null !== $hub) {
+            return $this->getHub($hub)
+                ->broadcasterHub()
+            ;
+        }
+
+        return $this[$this->currentHub ?: '']->broadcasterHub();
     }
 
     #[\Override]

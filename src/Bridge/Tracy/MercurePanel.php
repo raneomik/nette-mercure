@@ -30,11 +30,6 @@ final readonly class MercurePanel implements Tracy\IBarPanel
         }
     }
 
-    public function broadcasters(): Broadcasters
-    {
-        return $this->broadcasters ??= ($this->broadcastersLoader)();
-    }
-
     public function getTab(): string
     {
         return Tracy\Helpers::capture(function (): void {
@@ -56,6 +51,11 @@ final readonly class MercurePanel implements Tracy\IBarPanel
 
             require __DIR__.'/dist/panel.phtml';
         });
+    }
+
+    private function broadcasters(): Broadcasters
+    {
+        return $this->broadcasters ??= ($this->broadcastersLoader)();
     }
 
     private function hotReloadScript(): string

@@ -62,7 +62,7 @@ final readonly class MercureHubsDefiner
             $config->jwt->secret,
         ];
 
-        $tokenFactoryDefinition = $this->builder->addDefinition($this->extension->prefix('factory.token.'.$name))
+        $tokenFactoryDefinition = $this->builder->addDefinition($this->extension->prefix('token.factory.'.$name))
             ->setType(TokenFactoryInterface::class)
             ->setFactory(new Statement($config->jwt->factory, $factoryArguments))
             ->setAutowired(false)

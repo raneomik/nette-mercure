@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Fixtures\Dummies\Core\Subscribe;
 
+use Raneomik\NetteMercure\Bridge\Utils\GrantTopicNormalizer;
 use Raneomik\NetteMercure\Core\Subscribe\JWTProviderInterface;
-use Symfony\Component\Mercure\Jwt\Grant;
 use Symfony\Component\Mercure\Jwt\TokenFactoryInterface;
 use Tests\Fixtures\Dummies\Core\DummyJwtFactory;
 
@@ -26,12 +26,7 @@ final class DummyJwtProvider implements JWTProviderInterface
         $this->jwtTtl = new \DateTimeImmutable(\sprintf('+%s seconds', $additionalClaims['exp'] ?? 3600));
 
         return $this->tokenFactory->create(
-            [
-                new Grant(
-                    [Grant::ACTION_SUBSCRIBE],
-                    \is_array($subscribedTopics) ? $subscribedTopics : [$subscribedTopics],
-                ),
-            ],
+            GrantTopicNormalizer::normalizeGrants($subscribedTopics),
             $additionalClaims,
         );
     }

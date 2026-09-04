@@ -86,17 +86,17 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                 [
                     $hubName,
                     $config->url,
-                    $config->jwt->subscribe ?? [],
-                    $config->jwt->publish ?? [],
-                    $config->jwt->useQueryParam ?? false,
-                    $config->useCookie ?? false,
-                    $config->autoDiscovery ?? false,
+                    $config->jwt->subscribe,
+                    $config->jwt->publish,
+                    $config->jwt->useQueryParam,
+                    $config->useCookie,
+                    $config->autoDiscovery,
                 ]
             );
 
             $broadcasterDefinitions[$hubName] = $broadcastersLoader->broadcasterDefinition($config, $hubName, $latteDefinition);
 
-            $debug |= $config->debugger;
+            $debug = $debug || $config->debugger;
         }
 
         $builder->addDefinition($this->prefix('hubsConfiguration'))

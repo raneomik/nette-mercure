@@ -34,9 +34,12 @@ final class SubscriberTest extends TestCase
 
         $jwtData = $subscriber->subscribe(topics: 'test');
 
-        Assert::contains('dummy-jwt-token', $jwtData->jwtToken);
+        Assert::same('dummy-jwt-token-test-provider-token-test-', $jwtData->jwtToken);
         Assert::same('http://hub.example.com', $jwtData->hubUrl);
         Assert::type(\DateTimeInterface::class, $jwtData->expiresAt);
+
+        $jwtData = $subscriber->subscribe();
+        Assert::same('dummy-jwt-token-test-provider-token-*-', $jwtData->jwtToken);
     }
 }
 

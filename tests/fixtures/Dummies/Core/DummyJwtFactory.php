@@ -16,15 +16,18 @@ final readonly class DummyJwtFactory implements TokenFactoryInterface
 
     public function create(array $grants = [], array $additionalClaims = []): string
     {
-        $subscribedGrants = array_filter(
-            $grants,
-            static fn (Grant $grant): bool => \in_array(Grant::ACTION_SUBSCRIBE, $grant->actions, true),
-        );
+        $plainTopics = array_map(static fn (Grant $grant): array => array_values($grant->topics), $grants);
+
+        $first = reset($plainTopics);
+        if (\is_array(reset($first))) {// @phpstan-ignore-line argument.type
+            /** @var list<string[]> $plainTopics */
+            $plainTopics = array_merge(...$plainTopics);
+        }
 
         return \sprintf(
             'dummy-jwt-token-%s-%s-',
             $this->secret,
-            implode('|', ...array_map(static fn (Grant $grant): array => $grant->topics, $subscribedGrants)),
+            implode('|', ...$plainTopics),
         );
     }
 }

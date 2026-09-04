@@ -31,6 +31,7 @@ final class HubDataTest extends TestCase
         $hubData = new HubData($broadcasters);
 
         Assert::type(HubData::class, $hubData);
+        Assert::falsey($hubData->count());
     }
 
     public function testRelevantData(): void
@@ -44,6 +45,7 @@ final class HubDataTest extends TestCase
 
         $broadcasters = new Broadcasters([
             'test' => new TraceableBroadcaster($plainBro),
+            'excluded' => $anotherBro,
             'test2' => new TraceableBroadcaster($anotherBro),
         ]);
 
@@ -54,10 +56,21 @@ final class HubDataTest extends TestCase
 
         $hubData = new HubData($broadcasters);
 
+        Assert::count(2, $hubData);
+        Assert::true($hubData->offsetExists('test'));
+        Assert::true($hubData->offsetExists('test2'));
+        Assert::false($hubData->offsetExists('excluded'));
+
+        $totalDuration = 0;
+        $totalMemory = 0;
+
+        /** @var HubDatum $hubDatum */
         foreach ($hubData as $hubDatum) {
             Assert::type(HubDatum::class, $hubDatum);
-            Assert::notEqual(0.0, $hubDatum->duration);
-            Assert::notEqual(0.0, $hubDatum->memory);
+            $totalMemory += $memory = $hubDatum->memory;
+            $totalDuration += $duration = $hubDatum->duration;
+            Assert::notEqual(0.0, $duration);
+            Assert::notEqual(0.0, $memory);
             Assert::notEqual([], $hubDatum->broadcastData);
         }
 
@@ -65,12 +78,16 @@ final class HubDataTest extends TestCase
         $datum1 = $hubData['test'];
 
         /** @var HubDatum $datum2 */
-        $datum2 = $hubData['test'];
+        $datum2 = $hubData['test2'];
 
         Assert::same(1, $datum1->messageCount());
         Assert::same(1, $datum2->messageCount());
-        Assert::notEqual(0.0, $hubData->totalDuration);
-        Assert::notEqual(0.0, $hubData->totalMemory);
+        Assert::notEqual($datum1->memory, $hubData->totalMemory);
+        Assert::notEqual($datum1->duration, $hubData->totalDuration);
+        Assert::notEqual($datum2->memory, $hubData->totalMemory);
+        Assert::notEqual($datum2->duration, $hubData->totalDuration);
+        Assert::equal($totalMemory, $hubData->totalMemory);
+        Assert::equal($totalDuration, $hubData->totalDuration);
     }
 }
 
