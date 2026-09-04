@@ -6,8 +6,8 @@ namespace Tests\Unit\Raneomik\NetteMercure\Core\Subscribe;
 
 require \dirname(__DIR__, 3).'/bootstrap.php';
 
-use Raneomik\NetteMercure\Bridge\Utils\ConfiguredData;
-use Raneomik\NetteMercure\Bridge\Utils\ConfiguredDataRegistry;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredData;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
 use Raneomik\NetteMercure\Core\Subscribe\Authorization;
 use Tester\Assert;
 use Tester\TestCase;

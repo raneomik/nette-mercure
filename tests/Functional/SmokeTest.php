@@ -17,6 +17,8 @@ use Tests\Fixtures\Dummies\App\Bootstrap;
  */
 final class SmokeTest extends TestCase
 {
+    private const string DOMAIN = 'localhost:9876';
+
     /**
      * @var resource
      */
@@ -25,7 +27,7 @@ final class SmokeTest extends TestCase
     protected function setUp(): void
     {
         $process = proc_open(
-            'php -S localhost:8765 -t www',
+            \sprintf('php -S %s -t www', self::DOMAIN),
             [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']],
             $pipes,
             \dirname(__DIR__).'/fixtures/Dummies/App',
@@ -37,7 +39,7 @@ final class SmokeTest extends TestCase
 
         usleep(750_000); // Wait for the server to start
 
-        $this->serverProcess = $process;
+        $this->serverProcess ??= $process;
 
         mkdir(Bootstrap::varDir().'/tmp', recursive: true);
         mkdir(Bootstrap::varDir().'/log', recursive: true);
@@ -53,9 +55,12 @@ final class SmokeTest extends TestCase
 
     public function testSubscribePublish(): void
     {
-        $response = HttpAssert::fetch('http://localhost:8765?presenter=Subscribe', headers: [
-            'X-Requested-With' => 'XMLHttpRequest',
-        ]);
+        $response = HttpAssert::fetch(
+            \sprintf('http://%s?presenter=Subscribe', self::DOMAIN),
+            headers: [
+                'X-Requested-With' => 'XMLHttpRequest',
+            ],
+        );
 
         $response
             ->expectBody(static function (string $body): bool {
@@ -68,9 +73,11 @@ final class SmokeTest extends TestCase
             })
             ->expectCode(200)
             ->expectHeader('Content-Type', 'application/json; charset=utf-8')
+            ->expectHeader('Access-Control-Expose-Headers', 'Link')
+            ->expectHeader('Link', '</.well-known/mercure>; rel="mercure"')
         ;
 
-        $response = HttpAssert::fetch('http://localhost:8765?presenter=Publish');
+        $response = HttpAssert::fetch(\sprintf('http://%s?presenter=Publish', self::DOMAIN));
         $response
             ->expectCode(200)
             ->expectBody('{"data":"published"}')

@@ -8,7 +8,7 @@ use Nette\Http\FetchSite;
 use Nette\Http\IRequest;
 use Nette\Http\IResponse;
 use Nette\Http\SameSite;
-use Raneomik\NetteMercure\Bridge\Utils\ConfiguredDataRegistry;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
 
 final readonly class Authorization implements AuthorizationInterface
 {

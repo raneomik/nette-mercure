@@ -6,12 +6,12 @@ namespace Tests\Unit\Raneomik\NetteMercure\Bridge\Latte;
 
 require \dirname(__DIR__, 3).'/bootstrap.php';
 
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredData;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
 use Raneomik\NetteMercure\Bridge\Latte\Function\Mercure;
 use Raneomik\NetteMercure\Bridge\Latte\Function\MercureJWTToken;
 use Raneomik\NetteMercure\Bridge\Latte\MercureExtension;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
-use Raneomik\NetteMercure\Bridge\Utils\ConfiguredData;
-use Raneomik\NetteMercure\Bridge\Utils\ConfiguredDataRegistry;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
 use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
 use Symfony\Component\Mercure\Exception\InvalidArgumentException;

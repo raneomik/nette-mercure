@@ -6,7 +6,7 @@ namespace Raneomik\NetteMercure\Core;
 
 use Nette\Http\IRequest;
 use Nette\Http\IResponse;
-use Raneomik\NetteMercure\Bridge\Utils\ConfiguredDataRegistry;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
 use Symfony\Component\WebLink\HttpHeaderSerializer;
 use Symfony\Component\WebLink\Link;
 
@@ -15,6 +15,8 @@ use Symfony\Component\WebLink\Link;
  */
 final readonly class Discovery
 {
+    public const string NO_LINK_DISCOVER = 'noMercureLinkDiscover';
+
     public function __construct(
         private HttpHeaderSerializer $header,
         private IRequest $request,
@@ -26,10 +28,13 @@ final readonly class Discovery
     public function addLinkFromCurrentRequest(): void
     {
         $hub = $this->request->getQuery('hub') ?? $this->request->getQuery('hubName');
+        $noDiscovery = $this->request->getQuery(self::NO_LINK_DISCOVER)
+            ?? $this->request->getHeader(self::NO_LINK_DISCOVER)
+            ?? false;
 
         $hubData = $this->config->getConfiguration($hub);
 
-        if (false === $hubData->autoDiscovery) {
+        if ((false === $hubData->autoDiscovery) || $noDiscovery) {
             return;
         }
 

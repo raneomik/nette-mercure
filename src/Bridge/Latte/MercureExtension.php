@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Raneomik\NetteMercure\Bridge\Latte;
 
 use Latte\Extension;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
 use Raneomik\NetteMercure\Bridge\Latte\Function\Mercure;
 use Raneomik\NetteMercure\Bridge\Latte\Function\MercureJWTToken;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
-use Raneomik\NetteMercure\Bridge\Utils\ConfiguredDataRegistry;
 use Raneomik\NetteMercure\Core\Subscribe\JWTProviderInterface;
 
 final class MercureExtension extends Extension

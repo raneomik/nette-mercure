@@ -18,8 +18,8 @@ final readonly class DummyJwtFactory implements TokenFactoryInterface
     {
         $plainTopics = array_map(static fn (Grant $grant): array => array_values($grant->topics), $grants);
 
-        $first = reset($plainTopics);
-        if (\is_array(reset($first))) {// @phpstan-ignore-line argument.type
+        $first = reset($plainTopics) ?: [];
+        if (\is_array(reset($first))) {
             /** @var list<string[]> $plainTopics */
             $plainTopics = array_merge(...$plainTopics);
         }
@@ -27,7 +27,9 @@ final readonly class DummyJwtFactory implements TokenFactoryInterface
         return \sprintf(
             'dummy-jwt-token-%s-%s-',
             $this->secret,
-            implode('|', ...$plainTopics),
+            \is_array(reset($plainTopics))
+                ? implode('|', ...$plainTopics)
+                : implode('|', $plainTopics) // @phpstan-ignore-line argument.type
         );
     }
 }
