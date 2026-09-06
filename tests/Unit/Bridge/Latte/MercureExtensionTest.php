@@ -57,6 +57,15 @@ final class MercureExtensionTest extends TestCase
                     false,
                     false,
                 ),
+                'v1' => new ConfiguredData(
+                    'test',
+                    'http://hub.example.com',
+                    ['*'],
+                    ['*'],
+                    true,
+                    false,
+                    false,
+                ),
             ]),
         );
     }
@@ -78,6 +87,10 @@ final class MercureExtensionTest extends TestCase
             $mercureFunction('test', options: [
                 'addJwt' => true,
             ]),
+        );
+        Assert::same(
+            'http://v1.example.com?match=test&authorization=dummy-jwt-token-test-provider-token-*-',
+            $mercureFunction('test', hub: 'v1'),
         );
         Assert::same(
             'http://hub.example.com?topic=test&lastEventID=123',
@@ -115,11 +128,11 @@ final class MercureExtensionTest extends TestCase
         ] = self::$extension->getFunctions();
 
         Assert::same(
-            'http://v1.example.com?match=test',
+            'http://v1.example.com?match=test&authorization=dummy-jwt-token-test-provider-token-*-',
             $mercureFunction('test', hub: 'v1'),
         );
         Assert::same(
-            'http://v1.example.com?match_urlpattern=foo&match_urlpattern=bar&lastEventID=987',
+            'http://v1.example.com?match_urlpattern=foo&match_urlpattern=bar&lastEventID=987&authorization=dummy-jwt-token-test-provider-token-*-',
             $mercureFunction([
                 'urlpattern' => ['foo', 'bar'],
             ], hub: 'v1', options: [
@@ -159,11 +172,15 @@ final class MercureExtensionTest extends TestCase
         );
         Assert::same(
             'http://hub.example.com?topic=test&lastEventID=123',
-            $mercureFunction([
-                'exact' => ['test'],
-            ], hub: 'test', options: [
-                'lastEventId' => '123',
-            ]),
+            $mercureFunction(
+                [
+                    'exact' => ['test'],
+                ],
+                hub: 'test',
+                options: [
+                    'lastEventId' => '123',
+                ],
+            ),
         );
     }
 }
