@@ -69,7 +69,7 @@ final readonly class TemplatingBroadcaster implements BroadcasterInterface
             $action?->value,
         );
 
-        if ($this->isTurbo($contentType)) {
+        if (ContentType::TurboStream === $contentType) {
             $options['sse_type'] = 'turbo-stream';
         }
 
@@ -78,11 +78,6 @@ final readonly class TemplatingBroadcaster implements BroadcasterInterface
             $renderedData,
             $options,
         );
-    }
-
-    private function isTurbo(ContentType $contentType): bool
-    {
-        return ContentType::TurboStream === $contentType;
     }
 
     private function resolveContentType(string $template): ContentType
