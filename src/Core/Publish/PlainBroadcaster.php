@@ -6,7 +6,7 @@ namespace Raneomik\NetteMercure\Core\Publish;
 
 use Nette\Utils\Json;
 use Raneomik\NetteMercure\BroadcasterInterface;
-use Raneomik\NetteMercure\Core\Publish\Latte\TurboStream\Action;
+use Raneomik\NetteMercure\Core\Publish\Latte\TurboStreamAction;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
 
@@ -20,7 +20,7 @@ final class PlainBroadcaster implements BroadcasterInterface
      *     contentType?: string,
      *     template?: string,
      *     rendered_data?: string,
-     *     action?: Action|string,
+     *     action?: string|TurboStreamAction,
      *     sse_id?: string,
      *     sse_type?: string,
      *     sse_retry?: int,
@@ -31,6 +31,11 @@ final class PlainBroadcaster implements BroadcasterInterface
     public function __construct(
         private readonly HubInterface $hub,
     ) {
+    }
+
+    public function broadcasterHub(): HubInterface
+    {
+        return $this->hub;
     }
 
     #[\Override]

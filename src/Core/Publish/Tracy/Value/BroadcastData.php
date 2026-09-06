@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Raneomik\NetteMercure\Core\Publish\Tracy\Value;
 
-use Raneomik\NetteMercure\Core\Publish\Latte\TurboStream\Action;
+use Raneomik\NetteMercure\Core\Publish\Latte\TurboStreamAction;
 
 final readonly class BroadcastData
 {
@@ -34,7 +34,7 @@ final readonly class BroadcastData
         return $this->data;
     }
 
-    public function getAction(): Action|string|null
+    public function getAction(): string|TurboStreamAction|null
     {
         return $this->options['action'] ?? null;
     }

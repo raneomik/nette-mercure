@@ -6,6 +6,7 @@ namespace Raneomik\NetteMercure\Core\Publish\Tracy;
 
 use Raneomik\NetteMercure\BroadcasterInterface;
 use Raneomik\NetteMercure\Core\Publish\Tracy\Value\BroadcastData;
+use Symfony\Component\Mercure\HubInterface;
 
 final class TraceableBroadcaster implements BroadcasterInterface
 {
@@ -25,6 +26,12 @@ final class TraceableBroadcaster implements BroadcasterInterface
     ) {
     }
 
+    #[\Override]
+    public function broadcasterHub(): HubInterface
+    {
+        return $this->broadcaster->broadcasterHub();
+    }
+
     public function broadcasterUrl(): string
     {
         return $this->broadcaster->broadcasterUrl();
@@ -42,9 +49,11 @@ final class TraceableBroadcaster implements BroadcasterInterface
         array $options = [],
         ?string $template = null,
     ): string {
-        $this->metrics->start(self::class);
+        $key = self::class;
+
+        $this->metrics->start($key);
         $messageId = $this->broadcaster->broadcast($topics, $data, $options, $template);
-        $this->metrics->stop(self::class);
+        $this->metrics->stop($key);
 
         $options = $this->broadcastOptions();
 
@@ -57,8 +66,8 @@ final class TraceableBroadcaster implements BroadcasterInterface
                 $options['rendered_data'] ?? '',
                 $options,
             ),
-            'duration' => $this->metrics->getDuration(self::class),
-            'memory' => $this->metrics->getMemory(self::class),
+            'duration' => $this->metrics->getDuration($key),
+            'memory' => $this->metrics->getMemory($key),
         ];
 
         return $messageId;

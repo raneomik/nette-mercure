@@ -8,6 +8,7 @@ require \dirname(__DIR__, 3).'/bootstrap.php';
 
 use Nette\Utils\Json;
 use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
+use Symfony\Component\Mercure\HubInterface;
 use Tester\Assert;
 use Tester\TestCase;
 use Tests\Fixtures\Dummies\Core\MockHubFactory;
@@ -17,12 +18,14 @@ use Tests\Fixtures\Dummies\Core\MockHubFactory;
  */
 final class PlainBroadcasterTest extends TestCase
 {
+    private HubInterface $broadcasterHub;
+
     private PlainBroadcaster $broadcaster;
 
     protected function setUp(): void
     {
         $this->broadcaster = new PlainBroadcaster(
-            MockHubFactory::create('http://example.com/hub'),
+            $this->broadcasterHub = MockHubFactory::create('http://example.com/hub'),
         );
     }
 
@@ -39,6 +42,7 @@ final class PlainBroadcasterTest extends TestCase
             ),
         );
 
+        Assert::same($this->broadcasterHub, $this->broadcaster->broadcasterHub());
         Assert::same('http://example.com/hub', $this->broadcaster->broadcasterUrl());
         Assert::same([
             'rendered_data' => 'Hello, World!',

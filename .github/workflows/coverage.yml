@@ -1,7 +1,6 @@
 name: Test Coverage
 
 on:
-    pull_request:
     push:
 
 permissions:
@@ -56,14 +55,14 @@ jobs:
                 run: composer test-coverage
 
             -   name: Test Report
-                uses: dorny/test-reporter@v2
+                uses: dorny/test-reporter@v3
                 with:
                     name: TESTER Tests
                     path: tests/reports/junit.xml
                     reporter: tester-junit
 
             -   name: Upload tests results report to Codecov
-                uses: codecov/codecov-action@v5
+                uses: codecov/codecov-action@v6
                 if: ${{ matrix.php-version == '8.5' }}
                 with:
                     token: ${{ secrets.CODECOV_TOKEN }}
@@ -72,11 +71,10 @@ jobs:
                     report_type: test_results
 
             -   name: Upload tests coverage report to Codecov
-                uses: codecov/codecov-action@v5
+                uses: codecov/codecov-action@v6
                 if: ${{ matrix.php-version == '8.5' }}
                 with:
                     token: ${{ secrets.CODECOV_TOKEN }}
                     files: tests/reports/coverage.xml
                     fail_ci_if_error: true
                     report_type: coverage
-

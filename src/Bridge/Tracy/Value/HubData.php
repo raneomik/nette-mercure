@@ -19,7 +19,6 @@ final class HubData extends \ArrayIterator
     public function __construct(
         Broadcasters $broadcasters
     ) {
-        /** @var array<string, HubDatum> $data */
         $data = [];
         foreach ($broadcasters as $name => $broadcaster) {
             if (false === $broadcaster instanceof TraceableBroadcaster) {
@@ -28,7 +27,6 @@ final class HubData extends \ArrayIterator
 
             $this->totalDuration += $duration = $broadcaster->getDuration();
             $this->totalMemory += $memory = $broadcaster->getMemory();
-
             $data[$name] = new HubDatum(
                 $name,
                 $broadcaster->broadcasterUrl(),
@@ -38,6 +36,7 @@ final class HubData extends \ArrayIterator
             );
         }
 
+        /** @var array<string, HubDatum> $data */
         parent::__construct($data);
     }
 }

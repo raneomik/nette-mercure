@@ -6,8 +6,8 @@ namespace Tests\Unit\Raneomik\NetteMercure\Core\Subscribe;
 
 require \dirname(__DIR__, 3).'/bootstrap.php';
 
-use Raneomik\NetteMercure\Bridge\Utils\ConfiguredData;
-use Raneomik\NetteMercure\Bridge\Utils\ConfiguredDataRegistry;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredData;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
 use Raneomik\NetteMercure\Core\Subscribe\Subscriber;
 use Tester\Assert;
 use Tester\TestCase;
@@ -34,9 +34,12 @@ final class SubscriberTest extends TestCase
 
         $jwtData = $subscriber->subscribe(topics: 'test');
 
-        Assert::contains('dummy-jwt-token', $jwtData->jwtToken);
+        Assert::same('dummy-jwt-token-test-provider-token-test-', $jwtData->jwtToken);
         Assert::same('http://hub.example.com', $jwtData->hubUrl);
         Assert::type(\DateTimeInterface::class, $jwtData->expiresAt);
+
+        $jwtData = $subscriber->subscribe();
+        Assert::same('dummy-jwt-token-test-provider-token-*-', $jwtData->jwtToken);
     }
 }
 

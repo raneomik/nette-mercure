@@ -7,10 +7,6 @@ namespace Tests\Fixtures\Dummies\Core;
 use Nette\Http\IRequest;
 use Nette\Http\UrlScript;
 
-/**
- * @method null getReferer()
- * @method bool isSameSite()
- */
 final readonly class DummyRequest implements IRequest
 {
     private UrlScript $url;
@@ -33,7 +29,7 @@ final readonly class DummyRequest implements IRequest
     {
         return match ($name) {
             'getReferer' => null,
-            'isSameSite' => '/' === $this->url->getBaseUrl(),
+            'isFrom' => '/' === $this->url->getBaseUrl(),
             default => throw new \BadMethodCallException(\sprintf('Method %s does not exist.', $name)),
         };
     }

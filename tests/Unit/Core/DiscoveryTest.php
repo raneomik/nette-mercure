@@ -6,8 +6,8 @@ namespace Tests\Unit\Raneomik\NetteMercure\Core;
 
 require \dirname(__DIR__, 2).'/bootstrap.php';
 
-use Raneomik\NetteMercure\Bridge\Utils\ConfiguredData;
-use Raneomik\NetteMercure\Bridge\Utils\ConfiguredDataRegistry;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredData;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
 use Raneomik\NetteMercure\Core\Discovery;
 use Symfony\Component\WebLink\HttpHeaderSerializer;
 use Tester\Assert;
@@ -46,7 +46,7 @@ final class DiscoveryTest extends TestCase
         Assert::null($response->getHeader('Link'));
     }
 
-    public function testMinimalisticBroadcast(): void
+    public function testMinimalisticDefaultBroadcast(): void
     {
         $discovery = new Discovery(
             new HttpHeaderSerializer(),
@@ -108,6 +108,40 @@ final class DiscoveryTest extends TestCase
                     hubUrl: 'http://hub.example.com',
                     subscribe: ['*'],
                     publish: ['*'],
+                ),
+            ])
+        );
+
+        $discovery->addLinkFromCurrentRequest();
+        Assert::hasNotKey('Link', $response->getHeaders());
+
+        $discovery = new Discovery(
+            new HttpHeaderSerializer(),
+            new DummyRequest(fromUrl: '/?hubName=test2&'.Discovery::NO_LINK_DISCOVER.'=1'),
+            $response = new DummyResponse(),
+            new ConfiguredDataRegistry([
+                'test' => new ConfiguredData(
+                    hubName: 'test',
+                    hubUrl: 'http://hub.example.com',
+                    subscribe: ['*'],
+                    publish: ['*'],
+                    autoDiscovery: true,
+                ),
+            ])
+        );
+        $discovery = new Discovery(
+            new HttpHeaderSerializer(),
+            new DummyRequest([
+                Discovery::NO_LINK_DISCOVER => '1',
+            ], fromUrl: '/?hubName=test2&'),
+            $response = new DummyResponse(),
+            new ConfiguredDataRegistry([
+                'test' => new ConfiguredData(
+                    hubName: 'test',
+                    hubUrl: 'http://hub.example.com',
+                    subscribe: ['*'],
+                    publish: ['*'],
+                    autoDiscovery: true,
                 ),
             ])
         );

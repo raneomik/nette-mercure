@@ -30,17 +30,14 @@ final readonly class MercurePanel implements Tracy\IBarPanel
         }
     }
 
-    public function broadcasters(): Broadcasters
-    {
-        return $this->broadcasters ??= ($this->broadcastersLoader)();
-    }
-
     public function getTab(): string
     {
         return Tracy\Helpers::capture(function (): void {
             $name = 'Mercure';
             $icon = $this->icon;
-            $count = $this->broadcasters()->count();
+            $count = $this->broadcasters()
+                ->count()
+            ;
 
             require_once __DIR__.'/dist/tab.phtml';
         });
@@ -54,6 +51,11 @@ final readonly class MercurePanel implements Tracy\IBarPanel
 
             require __DIR__.'/dist/panel.phtml';
         });
+    }
+
+    private function broadcasters(): Broadcasters
+    {
+        return $this->broadcasters ??= ($this->broadcastersLoader)();
     }
 
     private function hotReloadScript(): string

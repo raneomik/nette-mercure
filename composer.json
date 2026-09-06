@@ -5,6 +5,7 @@
     "nette-extension",
     "mercure",
     "sse",
+    "realtime",
     "push",
     "updates",
     "broadcasting"
@@ -12,28 +13,29 @@
   "homepage": "https://github.com/raneomik/nette-mercure",
   "license": "MIT",
   "require": {
-    "ext-tokenizer": "*",
     "php": ">=8.3",
-    "lcobucci/jwt": "^5.6.0",
-    "nette/http": "^2.0|^3.3",
-    "symfony/mercure": "^0.7.2"
+    "ext-tokenizer": "*",
+    "lcobucci/jwt": "^5.6",
+    "nette/http": "^2.0|^3.4",
+    "symfony/mercure": "^0.8"
   },
   "require-dev": {
-    "infection/infection": "^0.32",
+    "infection/infection": "^0.35.4",
     "latte/latte": "^3.1",
-    "nette/application": "^3.2",
-    "nette/bootstrap": "^3.2",
+    "nette/application": "^3.3",
+    "nette/bootstrap": "^3.3",
     "nette/di": "^3.2",
     "nette/security": "^3.2",
-    "nette/tester": "^2.5",
-    "phpro/grumphp": "^2.0",
+    "nette/tester": "^2.6",
+    "phpro/grumphp": "^2.23",
     "phpstan/extension-installer": "^1.4",
+    "phpstan/phpdoc-parser": "^2.3",
     "phpstan/phpstan-nette": "^2.0",
     "raneomik/infection-tester-adapter": "^0.2",
-    "rector/rector": "^2.3",
-    "symplify/easy-coding-standard": "^13.0",
-    "tomasvotruba/type-coverage": "^2.1",
-    "tracy/tracy": "^2.8"
+    "rector/rector": "^2.6",
+    "symplify/easy-coding-standard": "^13.2",
+    "tomasvotruba/type-coverage": "^2.2.0|^2.3",
+    "tracy/tracy": "^2.12"
   },
   "autoload": {
     "psr-4": {

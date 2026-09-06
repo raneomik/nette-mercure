@@ -63,10 +63,10 @@ mercure:
 ```
 
 ### Publish messages
+
 ```php
 
-use Raneomik\NetteMercure\BroadcasterInterface;
-use Raneomik\NetteMercure\Core\Publish\Latte\TurboStream\Action;
+use Raneomik\NetteMercure\BroadcasterInterface;use Raneomik\NetteMercure\Core\Publish\Latte\TurboStreamAction;
 
 final class SomeService
 {
@@ -101,7 +101,7 @@ final class SomeService
 			topics: ['test-topic'],
 			template: 'test.stream.latte',
 			options: [
-				'action' => Action::Update  // for turbo streams or block organisation in same template. Template must have Action blocks
+				'action' => TurboStreamAction::Update  // for turbo streams or block organisation in same template. Template must have Action blocks
 			],
 			toAll: true,
 		);
@@ -233,6 +233,7 @@ fetch('/subscribe?topics=/* topic(s) to define. "['*']" by default */&hub=/* hub
 You can also subscribe to [turbo-streams](https://turbo.hotwired.dev) :
 
 - Server side :
+
 ```php
 //...
 		$this->broadcaster->broadcast(
@@ -241,7 +242,7 @@ You can also subscribe to [turbo-streams](https://turbo.hotwired.dev) :
 //to activate "text/vnd.turbo-stream.html" content type and "turbo-stream" mercure event type to listen to, template name must end with ".stream.latte" / "Stream.latte" and have matching "action" blocks
 			template: 'test.stream.latte',
 			options: [
-/** @see Raneomik\NetteMercure\Core\Publish\Latte\TurboStream\Action for available action blocks */
+/** @see \Raneomik\NetteMercure\Core\Publish\Latte\TurboStreamAction for available action blocks */
 				'action' => Action::Update
 				'target' => 'stream-container' // target container id to update in client side. Default is "stream-container"
 			],

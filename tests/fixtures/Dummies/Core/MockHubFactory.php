@@ -8,6 +8,7 @@ use Nette\Utils\Json;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Jwt\StaticTokenProvider;
 use Symfony\Component\Mercure\MockHub;
+use Symfony\Component\Mercure\ProtocolVersion;
 use Symfony\Component\Mercure\Update;
 
 /**
@@ -20,6 +21,7 @@ final class MockHubFactory
         ?string $jwtSecret = null,
         ?string $jwtToken = null,
         bool $withoutJWTFactory = false,
+        ProtocolVersion $protocolVersion = ProtocolVersion::Legacy,
     ): HubInterface {
         return new MockHub(
             $url ?? 'http://hub.example.com',
@@ -31,6 +33,7 @@ final class MockHubFactory
                 'sse_type' => $update->getType(),
             ] : [])),
             $withoutJWTFactory ? null : new DummyJwtFactory($jwtSecret ?? 'secret'),
+            protocolVersion: $protocolVersion,
         );
     }
 }

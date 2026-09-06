@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Raneomik\NetteMercure\Bridge\Utils;
+namespace Raneomik\NetteMercure\Bridge\DI\Config;
 
 final readonly class ConfiguredDataRegistry
 {

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Raneomik\NetteMercure\Core\Publish\Latte\TurboStream;
+namespace Raneomik\NetteMercure\Core\Publish\Latte;
 
-enum Action: string
+enum TurboStreamAction: string
 {
     case Before = 'before';
     case Prepend = 'prepend';

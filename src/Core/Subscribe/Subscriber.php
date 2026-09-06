@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Raneomik\NetteMercure\Core\Subscribe;
 
-use Raneomik\NetteMercure\Bridge\Utils\ConfiguredDataRegistry;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
 use Raneomik\NetteMercure\Core\Subscribe\Value\SubscriptionData;
 use Raneomik\NetteMercure\SubscriberInterface;
 
@@ -19,7 +19,7 @@ final readonly class Subscriber implements SubscriberInterface
     #[\Override]
     public function subscribe(
         ?string $hubName = null,
-        array|string|null $topics = ['*'],
+        array|string $topics = ['*'],
         array $extraClaims = [],
     ): SubscriptionData {
         $hubData = $this->config->getConfiguration($hubName);

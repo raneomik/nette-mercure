@@ -6,17 +6,11 @@ namespace Raneomik\NetteMercure\Core\Publish\Latte;
 
 use Latte\Engine;
 use Raneomik\NetteMercure\BroadcasterInterface;
-use Raneomik\NetteMercure\Core\Publish\Latte\TurboStream\Action;
 use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
+use Symfony\Component\Mercure\HubInterface;
 
 final readonly class TemplatingBroadcaster implements BroadcasterInterface
 {
-    private const string DEFAULT_CONTENT_TYPE = 'text/html';
-
-    private const string JSON_CONTENT_TYPE = 'application/json';
-
-    private const string TURBO_STREAM_CONTENT_TYPE = 'text/vnd.turbo-stream.html';
-
     /**
      * @param PlainBroadcaster $decorated
      */
@@ -25,6 +19,12 @@ final readonly class TemplatingBroadcaster implements BroadcasterInterface
         private TemplatePathResolver $templatePathResolver,
         private Engine $latte,
     ) {
+    }
+
+    #[\Override]
+    public function broadcasterHub(): HubInterface
+    {
+        return $this->decorated->broadcasterHub();
     }
 
     #[\Override]
@@ -63,13 +63,13 @@ final readonly class TemplatingBroadcaster implements BroadcasterInterface
         $options['rendered_data'] = $renderedData = $this->latte->renderToString(
             $options['template'] = $this->templatePathResolver->resolve($template),
             $data + [
-                'contentType' => $contentType,
+                'contentType' => $contentType->value,
                 'target' => $options['target'] ?? null,
             ],
-            $action,
+            $action?->value,
         );
 
-        if ($this->isTurbo($contentType)) {
+        if (ContentType::TurboStream === $contentType) {
             $options['sse_type'] = 'turbo-stream';
         }
 
@@ -80,32 +80,27 @@ final readonly class TemplatingBroadcaster implements BroadcasterInterface
         );
     }
 
-    private function isTurbo(string $contentType): bool
-    {
-        return self::TURBO_STREAM_CONTENT_TYPE === $contentType;
-    }
-
-    private function resolveContentType(string $template): string
+    private function resolveContentType(string $template): ContentType
     {
         if (
             str_ends_with($template, 'Stream.latte')
             || str_ends_with($template, '.stream.latte')
         ) {
-            return self::TURBO_STREAM_CONTENT_TYPE;
+            return ContentType::TurboStream;
         }
 
         if (str_ends_with($template, '.json.latte')) {
-            return self::JSON_CONTENT_TYPE;
+            return ContentType::Json;
         }
 
-        return self::DEFAULT_CONTENT_TYPE;
+        return ContentType::Html;
     }
 
-    private function resolveAction(Action|string|null $action): ?string
+    private function resolveAction(string|TurboStreamAction|null $action): ?TurboStreamAction
     {
         return match (true) {
-            \is_string($action) => Action::from($action)->value,
-            $action instanceof Action => $action->value,
+            \is_string($action) => TurboStreamAction::from($action),
+            $action instanceof TurboStreamAction => $action,
             default => null,
         };
     }

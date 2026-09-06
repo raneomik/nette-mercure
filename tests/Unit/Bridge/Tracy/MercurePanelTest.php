@@ -27,6 +27,9 @@ final class MercurePanelTest extends TestCase
 
     public function testPanelComponents(): void
     {
+        $testFile = 'test.js';
+        Assert::false(file_exists($testFile));
+
         $broadcaster = new PlainBroadcaster(
             MockHubFactory::create('http://hub.example.com'),
         );
@@ -38,7 +41,7 @@ final class MercurePanelTest extends TestCase
             ...$params = [
                 new BroadcastersLoader(static fn (): Broadcasters => $broadcasters),
                 'https://hot-reload.example.com',
-                $testFile = 'test.js',
+                $testFile,
             ]
         );
 
@@ -50,6 +53,7 @@ final class MercurePanelTest extends TestCase
 
         $panel = new MercurePanel(...$params);
         Assert::type('string', $panel->getTab(), 'test HR file existence');
+        Assert::true(file_exists($testFile));
 
         unlink($testFile);
     }

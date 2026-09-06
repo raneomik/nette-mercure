@@ -5,6 +5,7 @@ declare(strict_types=1);
 use PhpCsFixer\Fixer\Basic\SingleLineEmptyBodyFixer;
 use PhpCsFixer\Fixer\ControlStructure\YodaStyleFixer;
 use PhpCsFixer\Fixer\Phpdoc\PhpdocAlignFixer;
+use PhpCsFixer\Fixer\Phpdoc\PhpdocToCommentFixer;
 use PhpCsFixer\Fixer\PhpUnit\PhpUnitInternalClassFixer;
 use PhpCsFixer\Fixer\PhpUnit\PhpUnitTestAnnotationFixer;
 use PhpCsFixer\Fixer\PhpUnit\PhpUnitTestClassRequiresCoversFixer;
@@ -26,7 +27,6 @@ return ECSConfig::configure()
         spaces: true,
         namespaces: true,
         controlStructures: true,
-        strict: true,
         cleanCode: true,
     )
 
@@ -47,6 +47,12 @@ return ECSConfig::configure()
         PhpdocAlignFixer::class, // @phpstan-ignore-line
         [
             'align' => 'left',
+        ],
+    )
+    ->withConfiguredRule(
+        PhpdocToCommentFixer::class, // @phpstan-ignore-line
+        [
+            'ignored_tags' => ['todo', 'var'],
         ],
     )
 

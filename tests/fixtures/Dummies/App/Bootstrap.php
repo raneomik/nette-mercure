@@ -11,10 +11,12 @@ use Raneomik\NetteMercure\Bridge\DI\MercureExtension;
 
 class Bootstrap
 {
+    public static string $config = 'functional.test.neon';
+
     private readonly Configurator $configurator;
 
-    public function __construct()
-    {
+    public function __construct(
+    ) {
         $this->configurator = new Configurator();
 
         $this->configurator->setTempDirectory(self::varDir().'/temp');
@@ -35,8 +37,6 @@ class Bootstrap
 
     public function initializeEnvironment(): void
     {
-        $this->configurator->enableTracy(self::varDir().'/log');
-
         $this->configurator->createRobotLoader()
             ->addDirectory(__DIR__)
             ->register()
@@ -52,9 +52,7 @@ class Bootstrap
             $compiler->addExtension('mercure', new MercureExtension(true));
         };
 
-        $this->configurator
-            ->addConfig(__DIR__.'/functional.test.neon')
-        ;
+        $this->configurator->addConfig(__DIR__.\DIRECTORY_SEPARATOR.self::$config);
 
         $this->configurator->addServices(
             [

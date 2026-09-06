@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 namespace Raneomik\NetteMercure;
 
-use Raneomik\NetteMercure\Core\Publish\Latte\TurboStream\Action;
+use Raneomik\NetteMercure\Core\Publish\Latte\TurboStreamAction;
+use Symfony\Component\Mercure\HubInterface;
 
 interface BroadcasterInterface
 {
+    public function broadcasterHub(
+        // ?string $hub = null
+    ): HubInterface;
+
     public function broadcasterUrl(
         // ?string $hub = null
     ): string;
@@ -20,7 +25,7 @@ interface BroadcasterInterface
      *     contentType?: string,
      *     template?: string,
      *     rendered_data?: string,
-     *     action?: Action|string,
+     *     action?: string|TurboStreamAction,
      *     sse_id?: string,
      *     sse_type?: string,
      *     sse_retry?: int,
@@ -40,7 +45,7 @@ interface BroadcasterInterface
      *     contentType?: string,
      *     template?: string,
      *     rendered_data?: string,
-     *     action?: Action|string,
+     *     action?: string|TurboStreamAction,
      *     target?: string,
      *     sse_id?: string,
      *     sse_type?: string,

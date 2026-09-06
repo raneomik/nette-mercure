@@ -8,14 +8,14 @@ use Nette;
 use Nette\DI\Definitions\ServiceDefinition;
 use Nette\DI\Definitions\Statement;
 use Nette\Schema\Expect;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredData;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
 use Raneomik\NetteMercure\Bridge\DI\Dependency\BroadcastersDefiner;
 use Raneomik\NetteMercure\Bridge\DI\Dependency\MercureHubsDefiner;
 use Raneomik\NetteMercure\Bridge\DI\Dependency\SubscribersDefiner;
 use Raneomik\NetteMercure\Bridge\Latte\MercureExtension as LatteMercureExtension;
 use Raneomik\NetteMercure\Bridge\Tracy\MercurePanel;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
-use Raneomik\NetteMercure\Bridge\Utils\ConfiguredData;
-use Raneomik\NetteMercure\Bridge\Utils\ConfiguredDataRegistry;
 use Symfony\Component\Mercure\Jwt\LcobucciFactory;
 
 final class MercureExtension extends Nette\DI\CompilerExtension
@@ -73,8 +73,8 @@ final class MercureExtension extends Nette\DI\CompilerExtension
 
         /** @var false|ServiceDefinition $latteDefinition */
         $latteDefinition = $builder->hasDefinition('latte.latteFactory')
-            // @phpstan-ignore-next-line
-            ? $builder->getDefinition('latte.latteFactory')->getResultDefinition()
+            ? $builder->getDefinition('latte.latteFactory')
+                ->getResultDefinition() // @phpstan-ignore method.notFound
             : false;
 
         $debug = false;
@@ -86,17 +86,17 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                 [
                     $hubName,
                     $config->url,
-                    $config->jwt->subscribe ?? [],
-                    $config->jwt->publish ?? [],
-                    $config->jwt->useQueryParam ?? false,
-                    $config->useCookie ?? false,
-                    $config->autoDiscovery ?? false,
+                    $config->jwt->subscribe,
+                    $config->jwt->publish,
+                    $config->jwt->useQueryParam,
+                    $config->useCookie,
+                    $config->autoDiscovery,
                 ]
             );
 
             $broadcasterDefinitions[$hubName] = $broadcastersLoader->broadcasterDefinition($config, $hubName, $latteDefinition);
 
-            $debug |= $config->debugger;
+            $debug = $debug || $config->debugger;
         }
 
         $builder->addDefinition($this->prefix('hubsConfiguration'))
@@ -141,8 +141,8 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                 ->setAutowired(false)
             ;
 
-            // @phpstan-ignore-next-line
             $builder->getDefinition('tracy.bar')
+                // @phpstan-ignore-next-line
                 ->addSetup('?->addPanel(?, ?)', [
                     '@self',
                     $panelDef,

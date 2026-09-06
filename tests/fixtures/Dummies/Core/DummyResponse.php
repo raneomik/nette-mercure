@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace Tests\Fixtures\Dummies\Core;
 
 use Nette\Http\IResponse;
+use Nette\Http\SameSite;
 
-/**
- * @testCase
- */
 final class DummyResponse implements IResponse
 {
     /**
@@ -100,7 +98,7 @@ final class DummyResponse implements IResponse
             'domain' => $domain,
             'secure' => $secure,
             'httpOnly' => $httpOnly,
-            'sameSite' => $sameSite ?? self::SameSiteLax,
+            'sameSite' => $sameSite ?? SameSite::Lax->value,
         ];
 
         return $this;

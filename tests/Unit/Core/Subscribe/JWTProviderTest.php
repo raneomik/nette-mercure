@@ -7,7 +7,9 @@ namespace Tests\Unit\Raneomik\NetteMercure\Core\Subscribe;
 require \dirname(__DIR__, 3).'/bootstrap.php';
 
 use Raneomik\NetteMercure\Core\Subscribe\JWTProvider;
+use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\HubRegistry;
+use Symfony\Component\Mercure\Jwt\Grant;
 use Tester\Assert;
 use Tester\TestCase;
 use Tests\Fixtures\Dummies\Core\MockHubFactory;
@@ -17,6 +19,13 @@ use Tests\Fixtures\Dummies\Core\MockHubFactory;
  */
 final class JWTProviderTest extends TestCase
 {
+    private static HubInterface $defaultHub;
+
+    protected function setUp(): void
+    {
+        self::$defaultHub ??= MockHubFactory::create('http://hub.example.com', jwtToken: '?token?');
+    }
+
     public function testMissingJWTFactoryException(): void
     {
         $jwtProvider = new JWTProvider(
@@ -50,33 +59,30 @@ final class JWTProviderTest extends TestCase
     public function testMinimalisticProvision(): void
     {
         $jwtProvider = new JWTProvider(
-            new HubRegistry(
-                MockHubFactory::create('http://hub.example.com', jwtSecret: 'secret?', jwtToken: '?token?'),
-            ),
+            new HubRegistry(self::$defaultHub),
         );
 
         Assert::same(
-            'dummy-jwt-token-secret?-test-',
+            'dummy-jwt-token-secret-test-',
             $jwtProvider->provide(
                 subscribedTopics: 'test',
             ),
         );
         Assert::same(
             (new \DateTime('+1hour'))->format('Y-m-d H:i:s'),
-            $jwtProvider->ttl()->format('Y-m-d H:i:s'),
+            $jwtProvider->ttl()
+                ->format('Y-m-d H:i:s'),
         );
     }
 
     public function testCustomCookieLifetime(): void
     {
         $jwtProvider = new JWTProvider(
-            new HubRegistry(
-                MockHubFactory::create('http://hub.example.com', jwtSecret: 'secret?'),
-            ),
+            new HubRegistry(self::$defaultHub),
         );
 
         Assert::same(
-            'dummy-jwt-token-secret?-test-',
+            'dummy-jwt-token-secret-test-',
             $jwtProvider->provide(
                 subscribedTopics: 'test',
                 additionalClaims: [
@@ -86,7 +92,63 @@ final class JWTProviderTest extends TestCase
         );
         Assert::same(
             (new \DateTime('+ 30 minutes'))->format('Y-m-d H:i:s'),
-            $jwtProvider->ttl()->format('Y-m-d H:i:s'),
+            $jwtProvider->ttl()
+                ->format('Y-m-d H:i:s'),
+        );
+    }
+
+    public function testV1MercureProtocolProvisions(): void
+    {
+        $jwtProvider = new JWTProvider(
+            new HubRegistry(self::$defaultHub),
+        );
+
+        Assert::same(
+            'dummy-jwt-token-secret--',
+            $jwtProvider->provide(),
+        );
+
+        Assert::same(
+            'dummy-jwt-token-secret-test-',
+            $jwtProvider->provide(
+                subscribedTopics: [
+                    'urlpattern' => 'test',
+                ],
+                additionalClaims: [
+                    'exp' => 1800,
+                ],
+            ),
+        );
+
+        Assert::same(
+            'dummy-jwt-token-secret-test-',
+            $jwtProvider->provide(
+                subscribedTopics: [
+                    new Grant(
+                        actions: [Grant::ACTION_SUBSCRIBE],
+                        topics: [
+                            'urlpattern' => 'test',
+                        ],
+                    ),
+                ],
+                additionalClaims: [
+                    'exp' => 1800,
+                ],
+            ),
+        );
+
+        Assert::same(
+            'dummy-jwt-token-secret-test-',
+            $jwtProvider->provide(
+                subscribedTopics: [[
+                    'topics' => [
+                        'urlpattern' => 'test',
+                    ],
+                ]],
+                additionalClaims: [
+                    'exp' => 1800,
+                ],
+            ),
         );
     }
 
@@ -94,23 +156,24 @@ final class JWTProviderTest extends TestCase
     {
         $jwtProvider = new JWTProvider(
             new HubRegistry(
-                $defaultHub = MockHubFactory::create('http://hub.example.com', jwtSecret: 'secret?'),
+                self::$defaultHub,
                 [
-                    'h1' => $defaultHub,
+                    'h1' => self::$defaultHub,
                     'h2' => MockHubFactory::create('http://hub2.example.com', jwtSecret: 'secret2?'),
                 ]
             ),
         );
 
         Assert::same(
-            'dummy-jwt-token-secret?-test-',
+            'dummy-jwt-token-secret-test-',
             $jwtProvider->provide(
                 subscribedTopics: 'test',
             ),
         );
         Assert::same(
             (new \DateTime('+1hour'))->format('Y-m-d H:i:s'),
-            $jwtProvider->ttl()->format('Y-m-d H:i:s'),
+            $jwtProvider->ttl()
+                ->format('Y-m-d H:i:s'),
         );
 
         Assert::same(
@@ -122,7 +185,8 @@ final class JWTProviderTest extends TestCase
         );
         Assert::same(
             (new \DateTime('+1hour'))->format('Y-m-d H:i:s'),
-            $jwtProvider->ttl()->format('Y-m-d H:i:s'),
+            $jwtProvider->ttl()
+                ->format('Y-m-d H:i:s'),
         );
     }
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Raneomik\NetteMercure\Core\Subscribe;
 
+use Lcobucci\JWT\Token\RegisteredClaims;
+use Raneomik\NetteMercure\Bridge\Utils\GrantTopicNormalizer;
 use Symfony\Component\Mercure\HubRegistry;
 use Symfony\Component\Mercure\Jwt\TokenFactoryInterface;
 
@@ -21,8 +23,11 @@ final class JWTProvider implements JWTProviderInterface
     }
 
     #[\Override]
-    public function provide(?string $hubName = null, array|string|null $subscribedTopics = [], array $additionalClaims = []): string
-    {
+    public function provide(
+        ?string $hubName = null,
+        array|string $subscribedTopics = [],
+        array $additionalClaims = [],
+    ): string {
         $hubInstance = $this->registry->getHub($hubName);
         $tokenFactory = $hubInstance->getFactory();
 
@@ -34,7 +39,10 @@ final class JWTProvider implements JWTProviderInterface
 
         $this->setCookieLifeDateTime($additionalClaims);
 
-        return $tokenFactory->create((array) $subscribedTopics, null, $additionalClaims);
+        return $tokenFactory->create(
+            GrantTopicNormalizer::normalizeGrants($subscribedTopics),
+            $additionalClaims,
+        );
     }
 
     public function ttl(): \DateTimeInterface
@@ -48,14 +56,14 @@ final class JWTProvider implements JWTProviderInterface
     private function setCookieLifeDateTime(array &$additionalClaims): void
     {
         $cookieLifetime = $this->cookieLifetimeInSeconds;
-        if (null !== ($additionalClaims['exp'] ?? null)) {
-            $cookieLifetime = $additionalClaims['exp'];
+        if (null !== ($additionalClaims[RegisteredClaims::EXPIRATION_TIME] ?? null)) {
+            $cookieLifetime = $additionalClaims[RegisteredClaims::EXPIRATION_TIME];
             $this->cookieDateTimeTtl = new \DateTimeImmutable(\sprintf('+%s seconds', $cookieLifetime));
 
             return;
         }
 
-        $this->cookieDateTimeTtl = $additionalClaims['exp'] = new \DateTimeImmutable(
+        $this->cookieDateTimeTtl = $additionalClaims[RegisteredClaims::EXPIRATION_TIME] = new \DateTimeImmutable(
             0 === $this->cookieLifetimeInSeconds
                 ? '+1 hour'
                 : \sprintf('+%s seconds', $cookieLifetime)
