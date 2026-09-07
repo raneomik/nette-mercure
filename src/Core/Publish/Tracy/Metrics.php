@@ -43,11 +43,11 @@ final class Metrics
 
     public function formatMemory(string $key): string
     {
-        return number_format($this->pool['memory'][$key] / 1000000, 2, '.', "\u{202f}")."\u{202f}MB";
+        return number_format($this->pool['memory'][$key] / 1000000, 2, '.', "\u{202f}") . "\u{202f}MB";
     }
 
     public function formatDuration(string $key): string
     {
-        return number_format($this->pool['time'][$key], 2, '.', "\u{202f}")."\u{202f}ms";
+        return number_format($this->pool['time'][$key], 2, '.', "\u{202f}") . "\u{202f}ms";
     }
 }

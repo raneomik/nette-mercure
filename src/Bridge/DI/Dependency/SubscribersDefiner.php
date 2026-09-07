@@ -57,7 +57,7 @@ final readonly class SubscribersDefiner
                 $jwtProviderDef,
                 $requestDef,
                 $responseDef,
-                '@'.$this->extension->prefix('hubsConfiguration'),
+                '@' . $this->extension->prefix('hubsConfiguration'),
             ])
             ->setAutowired()
         ;
@@ -69,7 +69,7 @@ final readonly class SubscribersDefiner
                 $this->builder->getDefinition($this->extension->prefix('symfony.links.headerSerializer')),
                 $requestDef,
                 $responseDef,
-                '@'.$this->extension->prefix('hubsConfiguration'),
+                '@' . $this->extension->prefix('hubsConfiguration'),
             ])
             ->setAutowired()
         ;
@@ -79,7 +79,7 @@ final readonly class SubscribersDefiner
             ->setFactory(Subscriber::class)
             ->setArguments([
                 $jwtProviderDef,
-                '@'.$this->extension->prefix('hubsConfiguration'),
+                '@' . $this->extension->prefix('hubsConfiguration'),
             ])
             ->setAutowired()
         ;

@@ -116,13 +116,13 @@ final class MercureExtension extends Nette\DI\CompilerExtension
             $latteDefinition
                 ->addSetup('addExtension', [
                     new Statement(LatteMercureExtension::class, [
-                        '@'.$this->prefix('jwtProvider'),
+                        '@' . $this->prefix('jwtProvider'),
                         new Statement(BroadcastersLoader::class, [
                             $builder::literal('fn() => $this->getService(?)', [
                                 $this->prefix('broadcasters'),
                             ]),
                         ]),
-                        '@'.$this->prefix('hubsConfiguration'),
+                        '@' . $this->prefix('hubsConfiguration'),
                     ]),
                 ])
             ;

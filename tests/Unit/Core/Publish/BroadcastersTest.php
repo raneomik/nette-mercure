@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Raneomik\NetteMercure\Core\Publish;
 
-require \dirname(__DIR__, 3).'/bootstrap.php';
+require \dirname(__DIR__, 3) . '/bootstrap.php';
 
 use Nette\Utils\Json;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;

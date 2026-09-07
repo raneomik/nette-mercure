@@ -31,7 +31,7 @@ final readonly class BroadcastersDefiner
         $plainBroadcasterDef = $this->builder->addDefinition($this->extension->prefix(\sprintf('broadcaster.%s.plain', $hubName)))
             ->setType(PlainBroadcaster::class)
             ->setFactory(PlainBroadcaster::class, [
-                $this->builder->getDefinition($this->extension->prefix('sf.hub.'.$hubName)),
+                $this->builder->getDefinition($this->extension->prefix('sf.hub.' . $hubName)),
             ])
             ->setAutowired(false)
         ;

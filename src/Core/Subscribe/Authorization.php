@@ -83,14 +83,14 @@ final readonly class Authorization implements AuthorizationInterface
             return null;
         }
 
-        if (str_ends_with($hubDomain, '.'.$host)) {
+        if (str_ends_with($hubDomain, '.' . $host)) {
             return $host;
         }
 
         $hostSegments = explode('.', $host);
         for ($i = 0, $length = \count($hostSegments) - 1; $i < $length; ++$i) {
             $currentDomain = implode('.', \array_slice($hostSegments, $i));
-            $target = '.'.$currentDomain;
+            $target = '.' . $currentDomain;
             if ($currentDomain === $hubDomain || str_ends_with($hubDomain, $target)) {
                 return $target;
             }

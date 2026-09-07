@@ -62,13 +62,13 @@ final readonly class MercureHubsDefiner
             $config->jwt->secret,
         ];
 
-        $tokenFactoryDefinition = $this->builder->addDefinition($this->extension->prefix('token.factory.'.$name))
+        $tokenFactoryDefinition = $this->builder->addDefinition($this->extension->prefix('token.factory.' . $name))
             ->setType(TokenFactoryInterface::class)
             ->setFactory(new Statement($config->jwt->factory, $factoryArguments))
             ->setAutowired(false)
         ;
 
-        $hubAlias = $this->extension->prefix('sf.hub.'.$name);
+        $hubAlias = $this->extension->prefix('sf.hub.' . $name);
         if (getenv('FRANKENPHP_CONFIG') ?: false) {
             return $this->builder->addDefinition($hubAlias)
                 ->setType($this->debugMode ? FrankenPhpHub::class : HubInterface::class)
@@ -80,7 +80,7 @@ final readonly class MercureHubsDefiner
             ;
         }
 
-        $factoryProviderDefinition = $this->builder->addDefinition($this->extension->prefix('token.provider.'.$name))
+        $factoryProviderDefinition = $this->builder->addDefinition($this->extension->prefix('token.provider.' . $name))
             ->setType(TokenProviderInterface::class)
             ->setFactory(new Statement(FactoryTokenProvider::class, [
                 $tokenFactoryDefinition,

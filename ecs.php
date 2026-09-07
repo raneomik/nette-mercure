@@ -14,10 +14,10 @@ use Symplify\EasyCodingStandard\Config\ECSConfig;
 
 return ECSConfig::configure()
     ->withPaths([
-        __DIR__.'/src',
-        __DIR__.'/tests',
-        __DIR__.'/ecs.php',
-        __DIR__.'/rector.php',
+        __DIR__ . '/src',
+        __DIR__ . '/tests',
+        __DIR__ . '/ecs.php',
+        __DIR__ . '/rector.php',
     ])
 
     ->withPreparedSets(
@@ -28,11 +28,6 @@ return ECSConfig::configure()
         namespaces: true,
         controlStructures: true,
         cleanCode: true,
-    )
-
-    ->withPhpCsFixerSets(
-        phpCsFixer: true,
-        phpCsFixerRisky: true,
     )
 
     ->withConfiguredRule(

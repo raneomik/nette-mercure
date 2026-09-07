@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Raneomik\NetteMercure\Core\Subscribe;
 
-require \dirname(__DIR__, 3).'/bootstrap.php';
+require \dirname(__DIR__, 3) . '/bootstrap.php';
 
 use Raneomik\NetteMercure\Core\Subscribe\JWTProvider;
 use Symfony\Component\Mercure\HubInterface;

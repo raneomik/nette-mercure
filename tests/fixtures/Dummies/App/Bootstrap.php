@@ -19,12 +19,12 @@ class Bootstrap
     ) {
         $this->configurator = new Configurator();
 
-        $this->configurator->setTempDirectory(self::varDir().'/temp');
+        $this->configurator->setTempDirectory(self::varDir() . '/temp');
     }
 
     public static function varDir(): string
     {
-        return __DIR__.'/var';
+        return __DIR__ . '/var';
     }
 
     public function bootWebApplication(): Nette\DI\Container
@@ -52,7 +52,7 @@ class Bootstrap
             $compiler->addExtension('mercure', new MercureExtension(true));
         };
 
-        $this->configurator->addConfig(__DIR__.\DIRECTORY_SEPARATOR.self::$config);
+        $this->configurator->addConfig(__DIR__ . \DIRECTORY_SEPARATOR . self::$config);
 
         $this->configurator->addServices(
             [

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Raneomik\NetteMercure\Core\Publish\Tracy;
 
-require \dirname(__DIR__, 4).'/bootstrap.php';
+require \dirname(__DIR__, 4) . '/bootstrap.php';
 
 use Raneomik\NetteMercure\Core\Publish\Tracy\Metrics;
 use Tester\Assert;
@@ -30,11 +30,11 @@ final class MetricsTest extends TestCase
         Assert::notSame($currentDuration, $stoppedDuration = $metrics->getDuration('test'));
 
         Assert::same(
-            number_format($stoppedMemory / 1000000, 2, '.', "\u{202f}")."\u{202f}MB",
+            number_format($stoppedMemory / 1000000, 2, '.', "\u{202f}") . "\u{202f}MB",
             $metrics->formatMemory('test'),
         );
         Assert::same(
-            number_format($stoppedDuration, 2, '.', "\u{202f}")."\u{202f}ms",
+            number_format($stoppedDuration, 2, '.', "\u{202f}") . "\u{202f}ms",
             $metrics->formatDuration('test'),
         );
     }

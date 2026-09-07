@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Raneomik\NetteMercure\Bridge\Tracy;
 
-require \dirname(__DIR__, 3).'/bootstrap.php';
+require \dirname(__DIR__, 3) . '/bootstrap.php';
 
 use Raneomik\NetteMercure\Bridge\Tracy\MercurePanel;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
@@ -22,7 +22,7 @@ final class MercurePanelTest extends TestCase
 {
     protected function tearDown(): void
     {
-        @unlink(__DIR__.'/test.js');
+        @unlink(__DIR__ . '/test.js');
     }
 
     public function testPanelComponents(): void

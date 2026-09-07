@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Raneomik\NetteMercure\Bridge\Tracy\Model;
 
-require \dirname(__DIR__, 4).'/bootstrap.php';
+require \dirname(__DIR__, 4) . '/bootstrap.php';
 
 use Raneomik\NetteMercure\Bridge\Tracy\Value\HubData;
 use Raneomik\NetteMercure\Bridge\Tracy\Value\HubDatum;

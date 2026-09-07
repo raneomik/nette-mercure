@@ -22,10 +22,10 @@ final readonly class MercurePanel implements Tracy\IBarPanel
         private ?string $hotReloadUrl = null,
         ?string $jsFilename = null,
     ) {
-        $this->icon = file_get_contents(__DIR__.'/dist/mercure.svg') ?: '';
+        $this->icon = file_get_contents(__DIR__ . '/dist/mercure.svg') ?: '';
 
         if (null !== $hotReloadUrl) {
-            $this->jsFilename = $jsFilename ?? __DIR__.'/dist/hotReload.js';
+            $this->jsFilename = $jsFilename ?? __DIR__ . '/dist/hotReload.js';
             Tracy\Debugger::$customJsFiles[] = $this->hotReloadScript();
         }
     }
@@ -39,7 +39,7 @@ final readonly class MercurePanel implements Tracy\IBarPanel
                 ->count()
             ;
 
-            require_once __DIR__.'/dist/tab.phtml';
+            require_once __DIR__ . '/dist/tab.phtml';
         });
     }
 
@@ -49,7 +49,7 @@ final readonly class MercurePanel implements Tracy\IBarPanel
             $hubData = new HubData($this->broadcasters());
             $icon = $this->icon;
 
-            require __DIR__.'/dist/panel.phtml';
+            require __DIR__ . '/dist/panel.phtml';
         });
     }
 
@@ -67,7 +67,7 @@ final readonly class MercurePanel implements Tracy\IBarPanel
         file_put_contents($this->jsFilename, Tracy\Helpers::capture(function (): void {
             $hotReloadUrl = $this->hotReloadUrl;
 
-            require_once __DIR__.'/dist/hotReload.js.phtml';
+            require_once __DIR__ . '/dist/hotReload.js.phtml';
         }));
 
         return $this->jsFilename;

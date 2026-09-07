@@ -25,7 +25,7 @@ final class TemplatePathResolver
         }
 
         if (file_exists($templatePath)) {
-            $this->resolvedDir = \dirname($templatePath, 1).'/';
+            $this->resolvedDir = \dirname($templatePath, 1) . '/';
 
             return $templatePath;
         }
@@ -34,15 +34,15 @@ final class TemplatePathResolver
         foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 4) as $trace) {
             $file = $trace['file'] ?? '';
 
-            $this->resolvedDir = \dirname($file, 1).'/';
-            $templateCandidates[] = $templateCandidate = $this->resolvedDir.ltrim($templatePath, '/');
+            $this->resolvedDir = \dirname($file, 1) . '/';
+            $templateCandidates[] = $templateCandidate = $this->resolvedDir . ltrim($templatePath, '/');
 
             if (file_exists($templateCandidate)) {
                 return $templateCandidate;
             }
 
-            $this->resolvedDir = \dirname($file, 2).'/';
-            $templateCandidates[] = $templateCandidate = $this->resolvedDir.ltrim($templatePath, '/');
+            $this->resolvedDir = \dirname($file, 2) . '/';
+            $templateCandidates[] = $templateCandidate = $this->resolvedDir . ltrim($templatePath, '/');
 
             if (file_exists($templateCandidate)) {
                 return $templateCandidate;
@@ -74,7 +74,7 @@ final class TemplatePathResolver
             return null;
         }
 
-        $fromConfiguredPath = rtrim($this->basePath, '/').'/'.ltrim($templatePath, '/');
+        $fromConfiguredPath = rtrim($this->basePath, '/') . '/' . ltrim($templatePath, '/');
         if (file_exists($fromConfiguredPath)) {
             return $fromConfiguredPath;
         }

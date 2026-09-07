@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Raneomik\NetteMercure\Core\Subscribe;
 
-require \dirname(__DIR__, 3).'/bootstrap.php';
+require \dirname(__DIR__, 3) . '/bootstrap.php';
 
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredData;
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;

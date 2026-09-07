@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Raneomik\NetteMercure\Core;
 
-require \dirname(__DIR__, 2).'/bootstrap.php';
+require \dirname(__DIR__, 2) . '/bootstrap.php';
 
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredData;
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
@@ -117,7 +117,7 @@ final class DiscoveryTest extends TestCase
 
         $discovery = new Discovery(
             new HttpHeaderSerializer(),
-            new DummyRequest(fromUrl: '/?hubName=test2&'.Discovery::NO_LINK_DISCOVER.'=1'),
+            new DummyRequest(fromUrl: '/?hubName=test2&' . Discovery::NO_LINK_DISCOVER . '=1'),
             $response = new DummyResponse(),
             new ConfiguredDataRegistry([
                 'test' => new ConfiguredData(

@@ -48,7 +48,7 @@ final readonly class Mercure
             ->broadcasterUrl($options['hub'] ?? $hub)
         ;
 
-        return $url.$this->buildQuery(
+        return $url . $this->buildQuery(
             \is_string($topics) ? [$topics] : ($topics ?? []),
             $options,
             $hub,
@@ -83,31 +83,31 @@ final readonly class Mercure
         if (ProtocolVersion::V1 === $hubInstance->getProtocolVersion()) {
             $normalized = GrantTopicNormalizer::normalize($topics);
             foreach ($normalized as $matcherType => $patterns) {
-                $paramName = 'exact' === $matcherType ? 'match' : 'match_'.rawurlencode($matcherType);
+                $paramName = 'exact' === $matcherType ? 'match' : 'match_' . rawurlencode($matcherType);
                 $patterns = \is_array($patterns) ? $patterns : [$patterns];
 
                 foreach ($patterns as $pattern) {
-                    $query .= $separator.$paramName.'='.rawurlencode($pattern);
+                    $query .= $separator . $paramName . '=' . rawurlencode($pattern);
                     $separator = '&';
                 }
             }
         } else {
             foreach (GrantTopicNormalizer::flattenToExactOrFail($topics) as $topic) {
-                $query .= $separator.'topic='.rawurlencode($topic);
+                $query .= $separator . 'topic=' . rawurlencode($topic);
                 $separator = '&';
             }
         }
 
         if ('' !== ($options['lastEventId'] ?? '')) {
             $encodedLastEventId = rawurlencode($options['lastEventId']);
-            $query .= $separator.'lastEventID='.$encodedLastEventId;
+            $query .= $separator . 'lastEventID=' . $encodedLastEventId;
             $separator = '&';
         }
 
         $hubData = $this->configuredData->getConfiguration($hub);
 
         if ($hubData->jwtInQueryParam || true === ($options['addJwt'] ?? false)) {
-            $query .= $separator.'authorization='.$this->jwtProvider->provide(
+            $query .= $separator . 'authorization=' . $this->jwtProvider->provide(
                 $hub,
                 $options['subscribe'] ?? $hubData->subscribe,
                 $options['additionalClaims'] ?? [],

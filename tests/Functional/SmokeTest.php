@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Functional\Raneomik\NetteMercure;
 
-require \dirname(__DIR__).'/bootstrap.php';
+require \dirname(__DIR__) . '/bootstrap.php';
 
 use Tester\Assert;
 use Tester\Helpers;
@@ -30,7 +30,7 @@ final class SmokeTest extends TestCase
             \sprintf('php -S %s -t www', self::DOMAIN),
             [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']],
             $pipes,
-            \dirname(__DIR__).'/fixtures/Dummies/App',
+            \dirname(__DIR__) . '/fixtures/Dummies/App',
         );
 
         if (! \is_resource($process)) {
@@ -41,8 +41,8 @@ final class SmokeTest extends TestCase
 
         $this->serverProcess ??= $process;
 
-        mkdir(Bootstrap::varDir().'/tmp', recursive: true);
-        mkdir(Bootstrap::varDir().'/log', recursive: true);
+        mkdir(Bootstrap::varDir() . '/tmp', recursive: true);
+        mkdir(Bootstrap::varDir() . '/log', recursive: true);
     }
 
     protected function tearDown(): void

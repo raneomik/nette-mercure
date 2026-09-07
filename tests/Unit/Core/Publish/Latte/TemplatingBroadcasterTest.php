@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Raneomik\NetteMercure\Core\Publish\Latte;
 
-require \dirname(__DIR__, 4).'/bootstrap.php';
+require \dirname(__DIR__, 4) . '/bootstrap.php';
 
 use Latte\Engine;
 use Latte\RuntimeException;
@@ -36,7 +36,7 @@ final class TemplatingBroadcasterTest extends TestCase
             new PlainBroadcaster(
                 $this->broadcasterHub = MockHubFactory::create('http://example.com/hub'),
             ),
-            $this->templatePathResolver = new TemplatePathResolver(\dirname(__DIR__, 4).'/fixtures/templates'),
+            $this->templatePathResolver = new TemplatePathResolver(\dirname(__DIR__, 4) . '/fixtures/templates'),
             new Engine(),
         );
     }
@@ -86,8 +86,8 @@ final class TemplatingBroadcasterTest extends TestCase
         Assert::same($this->broadcasterHub, $this->broadcaster->broadcasterHub());
         Assert::same('http://example.com/hub', $this->broadcaster->broadcasterUrl());
         Assert::same([
-            'template' => $this->templatePathResolver->resolvedDir().'/example.latte',
-            'rendered_data' => 'Hello Mercure!'.PHP_EOL,
+            'template' => $this->templatePathResolver->resolvedDir() . '/example.latte',
+            'rendered_data' => 'Hello Mercure!' . PHP_EOL,
         ], $this->broadcaster->broadcastOptions());
     }
 
@@ -98,7 +98,7 @@ final class TemplatingBroadcasterTest extends TestCase
                 'data' => Json::encode([
                     'id' => '1',
                     'title' => 'Mercure',
-                ], pretty: true).PHP_EOL,
+                ], pretty: true) . PHP_EOL,
                 'topics' => ['test'],
             ]),
             $this->broadcaster->broadcast(

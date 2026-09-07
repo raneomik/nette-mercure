@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Raneomik\NetteMercure\Bridge\DI;
 
-require \dirname(__DIR__, 3).'/bootstrap.php';
+require \dirname(__DIR__, 3) . '/bootstrap.php';
 
 use Latte\Engine;
 use Latte\Extension;
@@ -53,7 +53,7 @@ final class MercureExtensionTest extends TestCase
 
         $this->configurator = (new Configurator())
             ->setTempDirectory($this->tmpDir())
-            ->addConfig(\dirname(__DIR__, 3).'/fixtures/config/test.neon')
+            ->addConfig(\dirname(__DIR__, 3) . '/fixtures/config/test.neon')
         ;
     }
 

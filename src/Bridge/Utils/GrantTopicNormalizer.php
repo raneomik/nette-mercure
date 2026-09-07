@@ -67,7 +67,7 @@ final class GrantTopicNormalizer
 
         $unsupported = array_diff(array_keys($normalized), ['exact']);
         if ([] !== $unsupported) {
-            throw new InvalidArgumentException(\sprintf('Topic matcher type(s) "%s" require the Mercure protocol 1.0 (see '.ProtocolVersion::class.'::V1); this factory only supports "exact" topic matching.', implode('", "', $unsupported)));
+            throw new InvalidArgumentException(\sprintf('Topic matcher type(s) "%s" require the Mercure protocol 1.0 (see ' . ProtocolVersion::class . '::V1); this factory only supports "exact" topic matching.', implode('", "', $unsupported)));
         }
 
         return $normalized['exact'] ?? [];

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Raneomik\NetteMercure\Core\Publish\Latte;
 
-require \dirname(__DIR__, 4).'/bootstrap.php';
+require \dirname(__DIR__, 4) . '/bootstrap.php';
 
 use Raneomik\NetteMercure\Core\Publish\Latte\TemplatePathResolver;
 use Raneomik\NetteMercure\Exception\BroadcastException;
@@ -18,10 +18,10 @@ final class TemplatePathResolverTest extends TestCase
 {
     public function testConfigured(): void
     {
-        $resolver = new TemplatePathResolver(\dirname(__DIR__, 4).'/fixtures/templates');
+        $resolver = new TemplatePathResolver(\dirname(__DIR__, 4) . '/fixtures/templates');
 
         Assert::same(
-            \dirname(__DIR__, 4).'/fixtures/templates/example.latte',
+            \dirname(__DIR__, 4) . '/fixtures/templates/example.latte',
             $resolver->resolve('/example.latte'),
         );
 
@@ -37,17 +37,17 @@ final class TemplatePathResolverTest extends TestCase
         $resolver = new TemplatePathResolver();
 
         Assert::same(
-            \dirname(__DIR__, 4).'/fixtures/templates/example.latte',
-            $resolver->resolve(\dirname(__DIR__, 4).'/fixtures/templates/example.latte'),
+            \dirname(__DIR__, 4) . '/fixtures/templates/example.latte',
+            $resolver->resolve(\dirname(__DIR__, 4) . '/fixtures/templates/example.latte'),
         );
 
         Assert::same(
-            \dirname(__DIR__).'/edge-fixture/example.latte',
+            \dirname(__DIR__) . '/edge-fixture/example.latte',
             $resolver->resolve('/edge-fixture/example.latte'),
         );
 
         Assert::same(
-            __DIR__.'/../../../../fixtures/templates/example.latte',
+            __DIR__ . '/../../../../fixtures/templates/example.latte',
             $resolver->resolve('/../../../../fixtures/templates/example.latte'),
         );
 

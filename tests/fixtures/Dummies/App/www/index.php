@@ -6,7 +6,7 @@ use Nette\Application\Application;
 use Tests\Fixtures\Dummies\App\Bootstrap;
 
 // Load the Composer autoloader
-if (@! include dirname(__DIR__, 5).'/vendor/autoload.php') {
+if (@! include dirname(__DIR__, 5) . '/vendor/autoload.php') {
     exit('Install Nette using `composer update`');
 }
 
