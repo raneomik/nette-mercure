@@ -11,6 +11,7 @@ permissions:
 env:
     tools: composer:v2
     cache-version: 1
+    CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
 jobs:
     coverage:
@@ -65,7 +66,6 @@ jobs:
                 uses: codecov/codecov-action@v7
                 if: ${{ matrix.php-version == '8.5' }}
                 with:
-                    token: ${{ secrets.CODECOV_TOKEN }}
                     files: tests/reports/junit.xml
                     fail_ci_if_error: true
                     report_type: test_results
@@ -74,7 +74,6 @@ jobs:
                 uses: codecov/codecov-action@v7
                 if: ${{ matrix.php-version == '8.5' }}
                 with:
-                    token: ${{ secrets.CODECOV_TOKEN }}
                     files: tests/reports/coverage.xml
                     fail_ci_if_error: true
                     report_type: coverage
