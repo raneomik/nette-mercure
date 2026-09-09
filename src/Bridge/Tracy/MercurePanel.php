@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Raneomik\NetteMercure\Bridge\Tracy;
 
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
 use Raneomik\NetteMercure\Bridge\Tracy\Value\HubData;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
+use Raneomik\NetteMercure\Core\Subscribe\JWTProviderInterface;
 use Tracy;
 
 final readonly class MercurePanel implements Tracy\IBarPanel
@@ -19,6 +21,8 @@ final readonly class MercurePanel implements Tracy\IBarPanel
 
     public function __construct(
         private BroadcastersLoader $broadcastersLoader,
+        private JWTProviderInterface $jwtProvider,
+        private ConfiguredDataRegistry $hubsConfig,
         private ?string $hotReloadUrl = null,
         ?string $jsFilename = null,
     ) {
@@ -48,6 +52,7 @@ final readonly class MercurePanel implements Tracy\IBarPanel
         return Tracy\Helpers::capture(function (): void {
             $hubData = new HubData($this->broadcasters());
             $icon = $this->icon;
+            $liveHubs = $this->liveEventsHubs();
 
             require __DIR__ . '/dist/panel.phtml';
         });
@@ -56,6 +61,27 @@ final readonly class MercurePanel implements Tracy\IBarPanel
     private function broadcasters(): Broadcasters
     {
         return $this->broadcasters ??= ($this->broadcastersLoader)();
+    }
+
+    /**
+     * @return list<array{name: string, url: string, jwt: string}>
+     */
+    private function liveEventsHubs(): array
+    {
+        $hubs = [];
+        foreach ($this->hubsConfig as $hubName => $config) {
+            try {
+                $hubs[] = [
+                    'name' => $hubName,
+                    'url' => $config->hubUrl,
+                    'jwt' => $this->jwtProvider->provide($hubName, ['*']),
+                ];
+            } catch (\Throwable) {
+                // skip hub if JWT generation fails
+            }
+        }
+
+        return $hubs;
     }
 
     private function hotReloadScript(): string
