@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Raneomik\NetteMercure\Bridge\DI\Config;
 
-final readonly class ConfigurationRegistry
+/**
+ * @implements \IteratorAggregate<string, Configuration>
+ */
+final readonly class ConfigurationRegistry implements \IteratorAggregate
 {
     /**
      * @param array<string, Configuration> $configuredData
@@ -23,5 +26,10 @@ final readonly class ConfigurationRegistry
         }
 
         return $this->configuredData[$hubName] ?? $defaultData;
+    }
+
+    public function getIterator(): \Traversable
+    {
+        return new \ArrayIterator($this->configuredData);
     }
 }
