@@ -129,15 +129,20 @@ final class MercureExtension extends Nette\DI\CompilerExtension
         }
 
         if ($debug && $builder->hasDefinition('tracy.bar')) {
-            $panelDef = $builder->addDefinition($this->prefix('tracy.panel'))
-                ->setFactory(MercurePanel::class, [
-                    new Statement(BroadcastersLoader::class, [
-                        $builder::literal('fn() => $this->getService(?)', [
-                            $this->prefix('broadcasters'),
-                        ]),
+            $panelArgs = [
+                new Statement(BroadcastersLoader::class, [
+                    $builder::literal('fn() => $this->getService(?)', [
+                        $this->prefix('broadcasters'),
                     ]),
-                    $this->hotReloadUrl,
-                ])
+                ]),
+                '@' . $this->prefix('jwtProvider'),
+                '@' . $this->prefix('hubsConfiguration'),
+                $this->hotReloadUrl,
+                null,
+            ];
+
+            $panelDef = $builder->addDefinition($this->prefix('tracy.panel'))
+                ->setFactory(MercurePanel::class, $panelArgs)
                 ->setAutowired(false)
             ;
 

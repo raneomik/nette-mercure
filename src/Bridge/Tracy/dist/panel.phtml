@@ -64,6 +64,42 @@ $formatData = fn(float $number, string $type): string => match($type) {
 	.mercure-panel details[open] summary::after {
 		transform: rotate(0deg);
 	}
+
+	.mercure-live-log {
+		max-height: 280px;
+		overflow-y: auto;
+		font-family: monospace;
+		font-size: 0.8rem;
+		background: #1e1e1e;
+		color: #d4d4d4;
+		padding: 0.5rem;
+		border-radius: 3px;
+	}
+
+	.mercure-live-log .mercure-live-entry {
+		padding: 0.2rem 0;
+		border-bottom: 1px solid #2d2d2d;
+		word-break: break-all;
+	}
+
+	.mercure-live-log .mercure-live-time {
+		color: #6a9955;
+		margin-right: 0.4rem;
+	}
+
+	.mercure-live-log .mercure-live-hub {
+		color: #9cdcfe;
+		margin-right: 0.4rem;
+	}
+
+	.mercure-live-log .mercure-live-error {
+		color: #f44747;
+	}
+
+	.mercure-live-log .mercure-live-placeholder {
+		color: #808080;
+		font-style: italic;
+	}
 </style>
 
 <h1 style="display: flex; align-items: center; gap: 1rem;">
@@ -146,4 +182,64 @@ $formatData = fn(float $number, string $type): string => match($type) {
 			</dl>
 		</div>
 	</div>
+
+	<?php if ([] !== $liveHubs): ?>
+	<details open>
+		<summary><h2>Live Events</h2></summary>
+		<div style="margin-top: 1rem;">
+			<div id="tracy-mercure-live" class="mercure-live-log">
+				<div class="mercure-live-placeholder">Waiting for events&hellip;</div>
+			</div>
+		</div>
+	</details>
+	<script>
+	(function () {
+		const container = document.getElementById('tracy-mercure-live');
+        const hubs = <?= json_encode($liveHubs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+        let initialized = false;
+
+		hubs.forEach(function (hub) {
+			const url = new URL(hub.url);
+			url.searchParams.append('topic', '*');
+			url.searchParams.append('authorization', hub.jwt);
+
+			const es = new EventSource(url.toString());
+
+			es.onmessage = function (event) {
+				if (!initialized) {
+					container.innerHTML = '';
+					initialized = true;
+				}
+
+				const entry = document.createElement('div');
+				entry.className = 'mercure-live-entry';
+
+				const time = document.createElement('span');
+				time.className = 'mercure-live-time';
+				time.textContent = new Date().toLocaleTimeString();
+
+				const hubLabel = document.createElement('span');
+				hubLabel.className = 'mercure-live-hub';
+				hubLabel.textContent = '[' + hub.name + ']';
+
+				const data = document.createElement('span');
+				data.textContent = event.data;
+
+				entry.appendChild(time);
+				entry.appendChild(hubLabel);
+				entry.appendChild(data);
+				container.insertBefore(entry, container.firstChild);
+			};
+
+			es.onerror = function () {
+				const err = document.createElement('div');
+				err.className = 'mercure-live-entry mercure-live-error';
+				err.textContent = 'Connection error — hub: ' + hub.name;
+				container.insertBefore(err, container.firstChild);
+				initialized = true;
+			};
+		});
+	})();
+	</script>
+	<?php endif ?>
 </div>
