@@ -73,6 +73,10 @@ mercure:
 	# ...
 ```
 
+_Hub implementation is picked at runtime: when the FrankenPHP built-in Mercure hub is available (`mercure_publish()` function),
+updates are published through it (`Symfony\Component\Mercure\FrankenPhpHub`), otherwise through HTTP to `url` (`Symfony\Component\Mercure\Hub`).
+The same compiled container thus works in FrankenPHP workers and in CLI commands, as long as `url` is reachable from the CLI._
+
 ### Publish messages
 
 ```php

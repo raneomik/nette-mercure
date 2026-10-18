@@ -10,8 +10,7 @@ use Nette\DI\Definitions\Statement;
 use Nette\DI\InvalidConfigurationException;
 use Raneomik\NetteMercure\Bridge\DI\Config\Claims;
 use Raneomik\NetteMercure\Bridge\DI\MercureExtension;
-use Symfony\Component\Mercure\FrankenPhpHub;
-use Symfony\Component\Mercure\Hub;
+use Raneomik\NetteMercure\Bridge\Utils\HubFactory;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\HubRegistry;
 use Symfony\Component\Mercure\Jwt\DefaultClaimsTokenFactory;
@@ -28,13 +27,10 @@ final readonly class MercureHubsDefiner
 {
     private ContainerBuilder $builder;
 
-    private bool $debugMode;
-
     public function __construct(
         private MercureExtension $extension,
     ) {
         $this->builder = $extension->getContainerBuilder();
-        $this->debugMode = $extension->getDebugMode();
     }
 
     /**
@@ -63,7 +59,9 @@ final readonly class MercureHubsDefiner
         $protocol = ProtocolVersion::from($config->protocolVersion);
         $publicUrl = $config->publicUrl ?? $config->url;
 
-        $decoratedFactoryDefinition = $this->builder->addDefinition($this->extension->prefix('token.factory.decorated.' . $name))
+        $decoratedFactoryDefinition = $this->builder->addDefinition(
+            $this->extension->prefix('token.factory.decorated.' . $name)
+        )
             ->setType(TokenFactoryInterface::class)
             ->setFactory($this->tokenFactoryStatement($config->jwt, $protocol, $name))
             ->setAutowired(false)
@@ -80,20 +78,9 @@ final readonly class MercureHubsDefiner
             ->setAutowired(false)
         ;
 
-        $hubAlias = $this->extension->prefix('sf.hub.' . $name);
-        if (getenv('FRANKENPHP_SITE_CONFIG') ?: getenv('FRANKENPHP_CONFIG') ?: false) {
-            return $this->builder->addDefinition($hubAlias)
-                ->setType($this->debugMode ? FrankenPhpHub::class : HubInterface::class)
-                ->setFactory(FrankenPhpHub::class, [
-                    'publicUrl' => $publicUrl,
-                    'jwtFactory' => $tokenFactoryDefinition,
-                    'protocolVersion' => $protocol,
-                ])
-                ->setAutowired(false)
-            ;
-        }
-
-        $factoryProviderDefinition = $this->builder->addDefinition($this->extension->prefix('token.provider.' . $name))
+        $factoryProviderDefinition = $this->builder->addDefinition(
+            $this->extension->prefix('token.provider.' . $name)
+        )
             ->setType(TokenProviderInterface::class)
             ->setFactory(new Statement(FactoryTokenProvider::class, [
                 $tokenFactoryDefinition,
@@ -111,9 +98,9 @@ final readonly class MercureHubsDefiner
             ->setAutowired(false)
         ;
 
-        return $this->builder->addDefinition($hubAlias)
-            ->setType($this->debugMode ? Hub::class : HubInterface::class)
-            ->setFactory(new Statement(Hub::class, [
+        return $this->builder->addDefinition($this->extension->prefix('sf.hub.' . $name))
+            ->setType(HubInterface::class)
+            ->setFactory(new Statement([HubFactory::class, 'create'], [
                 'url' => $config->url,
                 'jwtProvider' => $factoryProviderDefinition,
                 'jwtFactory' => $tokenFactoryDefinition,
@@ -126,7 +113,11 @@ final readonly class MercureHubsDefiner
 
     private function tokenFactoryStatement(\stdClass $jwt, ProtocolVersion $protocol, string $name): Statement
     {
-        $factory = $jwt->factory ?? (ProtocolVersion::V1 === $protocol ? WebTokenFactory::class : LcobucciFactory::class);
+        $factory = $jwt->factory ?? (
+            ProtocolVersion::V1 === $protocol
+            ? WebTokenFactory::class
+            : LcobucciFactory::class
+        );
 
         return match ($factory) {
             LcobucciFactory::class => new Statement(LcobucciFactory::class, [

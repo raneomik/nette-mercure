@@ -162,9 +162,4 @@ final class MercureExtension extends Nette\DI\CompilerExtension
 
         $mercureHubsLoader->postLoad($hubDefinitions);
     }
-
-    public function getDebugMode(): bool
-    {
-        return $this->debugMode;
-    }
 }

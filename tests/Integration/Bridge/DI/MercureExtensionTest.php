@@ -196,13 +196,10 @@ final class MercureExtensionTest extends TestCase
         }
     }
 
-    public function testSimulatedFrankenPhpCompilation(): void
+    public function testHubIsPickedAtRuntime(): void
     {
-        putenv('FRANKENPHP_CONFIG=1'); // simulate FrankenPHP environment
-
-        $this->configurator->setDebugMode(false);
         $this->configurator->onCompile[] = static function ($configurator, $compiler): void {
-            $compiler->addExtension('mercure', new MercureExtension(false, 'test-url'));
+            $compiler->addExtension('mercure', new MercureExtension(false));
         };
 
         $this->configurator->addConfig(FileMock::create('
@@ -212,41 +209,13 @@ final class MercureExtensionTest extends TestCase
                 secret: jwt-secret
         ', 'neon'));
 
+        // compiled outside FrankenPHP (e.g. by a CLI command) …
         $container = $this->configurator->createContainer();
-        $toTest = [
-            'mercure.sf.hub.default' => FrankenPhpHub::class,
-            'mercure.broadcaster.default.plain' => PlainBroadcaster::class,
-            'mercure.broadcasters' => Broadcasters::class,
-        ];
 
-        foreach ($toTest as $serviceAlias => $expectedType) {
-            $service = $container->getService($serviceAlias);
-            Assert::type($expectedType, $service);
-        }
+        // … then run in FrankenPHP, which provides mercure_publish()
+        require_once \dirname(__DIR__, 3) . '/fixtures/FrankenPhp/mercure_publish.php';
 
-        Assert::exception(
-            static fn (): object => $container->getByType(Hub::class),
-            MissingServiceException::class,
-            \sprintf('~Service of type %s not found~', preg_quote(Hub::class)),
-        );
-
-        Assert::exception(
-            static fn (): object => $container->getByType(TraceableBroadcaster::class),
-            MissingServiceException::class,
-            \sprintf('~Service of type %s not found~', preg_quote(TraceableBroadcaster::class)),
-        );
-        Assert::exception(
-            static fn (): object => $container->getService('mercure.broadcaster.default.traceable'),
-            MissingServiceException::class,
-            "Service 'mercure.broadcaster.default.traceable' not found.",
-        );
-        Assert::exception(
-            static fn (): object => $container->getByType(HubInterface::class),
-            MissingServiceException::class,
-            \sprintf('~Service of type %s is not autowired or is missing~', preg_quote(HubInterface::class)),
-        );
-
-        putenv('FRANKENPHP_CONFIG=0');
+        Assert::type(FrankenPhpHub::class, $container->getService('mercure.sf.hub.default'));
     }
 
     public function testMultiCompilationWithDebug(): void
@@ -297,7 +266,14 @@ final class MercureExtensionTest extends TestCase
             Assert::type($expectedType, $service);
         }
 
-        foreach (array_unique(array_values($toTest)) as $notAutowired) {
+        // the concrete hub class is only known at runtime, the declared type is HubInterface
+        Assert::exception(
+            static fn (): object => $container->getByType(Hub::class),
+            MissingServiceException::class,
+            \sprintf('~Service of type %s not found~', preg_quote(Hub::class)),
+        );
+
+        foreach (array_diff(array_unique(array_values($toTest)), [Hub::class]) as $notAutowired) {
             Assert::exception(
                 static fn (): object => $container->getByType($notAutowired),
                 MissingServiceException::class,
@@ -400,8 +376,7 @@ final class MercureExtensionTest extends TestCase
         ?string $factory,
         string $expectedFactory,
         callable $assertPayload,
-    ): void
-    {
+    ): void {
         $this->configurator->onCompile[] = static function ($configurator, $compiler): void {
             $compiler->addExtension('mercure', new MercureExtension(true));
         };
