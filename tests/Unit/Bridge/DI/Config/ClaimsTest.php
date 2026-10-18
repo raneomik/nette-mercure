@@ -50,20 +50,23 @@ final class ClaimsTest extends TestCase
 
     public function testWithDefaultsOnlyFillsMissingClaims(): void
     {
+        $hubUrl = 'https://hub.example.com/.well-known/mercure';
+
         $claims = (new Claims(iss: 'https://app.example.com', additional: [
             'tenant' => 'acme',
-        ]))->withDefaults();
+        ]))->withPublicUrl($hubUrl);
 
+        $defaults = Claims::fromPublicUrl($hubUrl);
         Assert::equal(new Claims(
             iss: 'https://app.example.com',
-            aud: Claims::defaults()->aud,
-            sub: Claims::defaults()->sub,
-            clientId: Claims::defaults()->clientId,
+            aud: $defaults->aud,
+            sub: $defaults->sub,
+            clientId: $defaults->clientId,
             additional: [
                 'tenant' => 'acme',
             ],
         ), $claims);
-        Assert::equal(Claims::defaults(), (new Claims())->withDefaults());
+        Assert::equal(Claims::fromPublicUrl($hubUrl), (new Claims())->withPublicUrl($hubUrl));
     }
 }
 

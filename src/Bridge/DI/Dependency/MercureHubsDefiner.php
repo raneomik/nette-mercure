@@ -42,7 +42,7 @@ final readonly class MercureHubsDefiner
     {
         $this->builder->addDefinition($this->extension->prefix('symfony.hub.registry'))
             ->setType(HubRegistry::class)
-            ->setFactory(HubRegistry::class, [
+            ->setCreator(HubRegistry::class, [
                 array_first($broadcasterDefinitions),
                 $broadcasterDefinitions,
             ])
@@ -51,7 +51,7 @@ final readonly class MercureHubsDefiner
 
         $this->builder->addDefinition($this->extension->prefix('symfony.links.headerSerializer'))
             ->setType(HttpHeaderSerializer::class)
-            ->setFactory(HttpHeaderSerializer::class, [])
+            ->setCreator(HttpHeaderSerializer::class, [])
             ->setAutowired(false)
         ;
     }
@@ -65,13 +65,13 @@ final readonly class MercureHubsDefiner
             $this->extension->prefix('token.factory.decorated.' . $name)
         )
             ->setType(TokenFactoryInterface::class)
-            ->setFactory($this->tokenFactoryStatement($config->jwt, $protocol, $name))
+            ->setCreator($this->tokenFactoryStatement($config->jwt, $protocol, $name))
             ->setAutowired(false)
         ;
 
         $tokenFactoryDefinition = $this->builder->addDefinition($this->extension->prefix('token.factory.' . $name))
             ->setType(TokenFactoryInterface::class)
-            ->setFactory(new Statement(DefaultClaimsTokenFactory::class, [
+            ->setCreator(new Statement(DefaultClaimsTokenFactory::class, [
                 $decoratedFactoryDefinition,
                 new Statement([self::claimsStatement($config), 'toArray']),
             ]))
@@ -82,7 +82,7 @@ final readonly class MercureHubsDefiner
             $this->extension->prefix('token.provider.' . $name)
         )
             ->setType(TokenProviderInterface::class)
-            ->setFactory(new Statement(FactoryTokenProvider::class, [
+            ->setCreator(new Statement(FactoryTokenProvider::class, [
                 $tokenFactoryDefinition,
                 [
                     new Statement(Grant::class, [
@@ -100,7 +100,7 @@ final readonly class MercureHubsDefiner
 
         return $this->builder->addDefinition($this->extension->prefix('sf.hub.' . $name))
             ->setType(HubInterface::class)
-            ->setFactory(new Statement([HubFactory::class, 'create'], [
+            ->setCreator(new Statement([HubFactory::class, 'create'], [
                 'url' => $config->url,
                 'jwtProvider' => $factoryProviderDefinition,
                 'jwtFactory' => $tokenFactoryDefinition,
@@ -126,7 +126,7 @@ final readonly class MercureHubsDefiner
         ]);
 
         return ProtocolVersion::V1 === ProtocolVersion::from($config->protocolVersion)
-            ? new Statement([$claims, 'withDefaults'])
+            ? new Statement([$claims, 'withPublicUrl'], [$config->publicUrl ?? $config->url])
             : $claims;
     }
 

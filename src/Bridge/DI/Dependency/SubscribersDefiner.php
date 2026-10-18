@@ -40,7 +40,7 @@ final readonly class SubscribersDefiner
 
         $jwtProviderDef = $this->builder->addDefinition($this->extension->prefix('jwtProvider'))
             ->setType(JWTProviderInterface::class)
-            ->setFactory(JWTProvider::class)
+            ->setCreator(JWTProvider::class)
             ->setArguments([
                 $this->builder->getDefinition($this->extension->prefix('symfony.hub.registry')),
             ])
@@ -52,7 +52,7 @@ final readonly class SubscribersDefiner
 
         $authorizationDef = $this->builder->addDefinition($this->extension->prefix('authorization'))
             ->setType(AuthorizationInterface::class)
-            ->setFactory(Authorization::class)
+            ->setCreator(Authorization::class)
             ->setArguments([
                 $jwtProviderDef,
                 $requestDef,
@@ -64,7 +64,7 @@ final readonly class SubscribersDefiner
 
         $discoveryDef = $this->builder->addDefinition($this->extension->prefix('discovery'))
             ->setType(Discovery::class)
-            ->setFactory(Discovery::class)
+            ->setCreator(Discovery::class)
             ->setArguments([
                 $this->builder->getDefinition($this->extension->prefix('symfony.links.headerSerializer')),
                 $requestDef,
@@ -76,7 +76,7 @@ final readonly class SubscribersDefiner
 
         $this->builder->addDefinition($this->extension->prefix('subscriber'))
             ->setType(SubscriberInterface::class)
-            ->setFactory(Subscriber::class)
+            ->setCreator(Subscriber::class)
             ->setArguments([
                 $jwtProviderDef,
                 '@' . $this->extension->prefix('hubsConfiguration'),

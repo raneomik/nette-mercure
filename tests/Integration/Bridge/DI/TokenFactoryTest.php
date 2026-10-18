@@ -29,9 +29,9 @@ final class TokenFactoryTest extends ContainerTestCase
         $assertV1 = static function (array $payload): void {
             Assert::hasNotKey('mercure', $payload);
             Assert::same('https://app.example.com', $payload['iss']);
-            Assert::same('https://localhost/.well-known/mercure', $payload['aud']);
-            Assert::same('https://localhost', $payload['sub']);
-            Assert::same('https://localhost', $payload['client_id']);
+            Assert::same('https://hub.example.com/.well-known/mercure', $payload['aud']);
+            Assert::same('https://hub.example.com', $payload['sub']);
+            Assert::same('https://hub.example.com', $payload['client_id']);
             Assert::same([
                 [
                     'type' => 'https://mercure.rocks/authorization-detail',

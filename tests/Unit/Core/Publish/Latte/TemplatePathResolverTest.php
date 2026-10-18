@@ -42,7 +42,7 @@ final class TemplatePathResolverTest extends TestCase
         );
 
         Assert::same(
-            \dirname(__DIR__) . '/edge-fixture/example.latte',
+            \dirname(__DIR__, 1) . '/edge-fixture/example.latte',
             $resolver->resolve('/edge-fixture/example.latte'),
         );
 
