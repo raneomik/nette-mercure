@@ -4,6 +4,7 @@
 
 # Tester
 /tests/**/output/
+/tests/reports/
 /var
 
 # Others

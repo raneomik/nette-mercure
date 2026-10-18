@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Raneomik\NetteMercure\Bridge\Latte\Function;
 
-use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Raneomik\NetteMercure\Bridge\Utils\GrantTopicNormalizer;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
@@ -29,7 +29,7 @@ final readonly class Mercure
     private function __construct(
         private JWTProviderInterface $jwtProvider,
         private BroadcastersLoader $broadcastersLoader,
-        private ConfiguredDataRegistry $configuredData,
+        private ConfigurationRegistry $configuredData,
     ) {
     }
 
@@ -58,7 +58,7 @@ final readonly class Mercure
     public static function build(
         JWTProviderInterface $jwtProvider,
         BroadcastersLoader $broadcastersLoader,
-        ConfiguredDataRegistry $configuredData,
+        ConfigurationRegistry $configuredData,
     ): self {
         return new self($jwtProvider, $broadcastersLoader, $configuredData);
     }

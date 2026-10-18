@@ -6,8 +6,8 @@ namespace Tests\Unit\Raneomik\NetteMercure\Core;
 
 require \dirname(__DIR__, 2) . '/bootstrap.php';
 
-use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredData;
-use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
+use Raneomik\NetteMercure\Bridge\DI\Config\Configuration;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Core\Discovery;
 use Symfony\Component\WebLink\HttpHeaderSerializer;
 use Tester\Assert;
@@ -31,10 +31,11 @@ final class DiscoveryTest extends TestCase
                 'OPTIONS'
             ),
             $response = new DummyResponse(),
-            new ConfiguredDataRegistry([
-                'test' => new ConfiguredData(
+            new ConfigurationRegistry([
+                'test' => new Configuration(
                     hubName: 'test',
                     hubUrl: 'http://hub.example.com',
+                    publicUrl: 'http://hub.example.com',
                     subscribe: ['*'],
                     publish: ['*'],
                 ),
@@ -52,10 +53,11 @@ final class DiscoveryTest extends TestCase
             new HttpHeaderSerializer(),
             new DummyRequest(),
             $response = new DummyResponse(),
-            new ConfiguredDataRegistry([
-                'test' => new ConfiguredData(
+            new ConfigurationRegistry([
+                'test' => new Configuration(
                     hubName: 'test',
                     hubUrl: 'http://hub.example.com',
+                    publicUrl: 'http://hub.example.com',
                     subscribe: ['*'],
                     publish: ['*'],
                 ),
@@ -75,16 +77,18 @@ final class DiscoveryTest extends TestCase
             new HttpHeaderSerializer(),
             new DummyRequest(fromUrl: '/?hubName=test2'),
             $response = new DummyResponse(),
-            new ConfiguredDataRegistry([
-                'test' => new ConfiguredData(
+            new ConfigurationRegistry([
+                'test' => new Configuration(
                     hubName: 'test',
                     hubUrl: 'http://hub.example.com',
+                    publicUrl: 'http://hub.example.com',
                     subscribe: ['*'],
                     publish: ['*'],
                 ),
-                'test2' => new ConfiguredData(
+                'test2' => new Configuration(
                     hubName: 'test',
                     hubUrl: 'http://hub2.example.com',
+                    publicUrl: 'http://hub2.example.com',
                     subscribe: ['*'],
                     publish: ['*'],
                     autoDiscovery: true,
@@ -102,10 +106,11 @@ final class DiscoveryTest extends TestCase
             new HttpHeaderSerializer(),
             new DummyRequest(fromUrl: '/?hubName=test2'),
             $response = new DummyResponse(),
-            new ConfiguredDataRegistry([
-                'test' => new ConfiguredData(
+            new ConfigurationRegistry([
+                'test' => new Configuration(
                     hubName: 'test',
                     hubUrl: 'http://hub.example.com',
+                    publicUrl: 'http://hub.example.com',
                     subscribe: ['*'],
                     publish: ['*'],
                 ),
@@ -119,10 +124,11 @@ final class DiscoveryTest extends TestCase
             new HttpHeaderSerializer(),
             new DummyRequest(fromUrl: '/?hubName=test2&' . Discovery::NO_LINK_DISCOVER . '=1'),
             $response = new DummyResponse(),
-            new ConfiguredDataRegistry([
-                'test' => new ConfiguredData(
+            new ConfigurationRegistry([
+                'test' => new Configuration(
                     hubName: 'test',
                     hubUrl: 'http://hub.example.com',
+                    publicUrl: 'http://hub.example.com',
                     subscribe: ['*'],
                     publish: ['*'],
                     autoDiscovery: true,
@@ -135,10 +141,11 @@ final class DiscoveryTest extends TestCase
                 Discovery::NO_LINK_DISCOVER => '1',
             ], fromUrl: '/?hubName=test2&'),
             $response = new DummyResponse(),
-            new ConfiguredDataRegistry([
-                'test' => new ConfiguredData(
+            new ConfigurationRegistry([
+                'test' => new Configuration(
                     hubName: 'test',
                     hubUrl: 'http://hub.example.com',
+                    publicUrl: 'http://hub.example.com',
                     subscribe: ['*'],
                     publish: ['*'],
                     autoDiscovery: true,

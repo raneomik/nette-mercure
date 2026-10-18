@@ -8,18 +8,20 @@ use Nette;
 use Nette\DI\Definitions\ServiceDefinition;
 use Nette\DI\Definitions\Statement;
 use Nette\Schema\Expect;
-use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredData;
-use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
+use Raneomik\NetteMercure\Bridge\DI\Config\Configuration;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Bridge\DI\Dependency\BroadcastersDefiner;
 use Raneomik\NetteMercure\Bridge\DI\Dependency\MercureHubsDefiner;
 use Raneomik\NetteMercure\Bridge\DI\Dependency\SubscribersDefiner;
 use Raneomik\NetteMercure\Bridge\Latte\MercureExtension as LatteMercureExtension;
 use Raneomik\NetteMercure\Bridge\Tracy\MercurePanel;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
-use Symfony\Component\Mercure\Jwt\LcobucciFactory;
+use Symfony\Component\Mercure\ProtocolVersion;
 
 final class MercureExtension extends Nette\DI\CompilerExtension
 {
+    private const array HUB_OPTIONS = ['url', 'publicUrl', 'protocolVersion', 'jwt', 'useCookie', 'autoDiscovery', 'debugger'];
+
     public function __construct(
         private readonly bool $debugMode = false,
         private ?string $hotReloadUrl = null,
@@ -33,36 +35,45 @@ final class MercureExtension extends Nette\DI\CompilerExtension
         return Expect::arrayOf(
             Expect::structure([
                 'url' => Expect::string()->default('%baseUrl%/.well-known/mercure')->dynamic(),
+                'publicUrl' => Expect::string()->nullable()->dynamic(),
+                'protocolVersion' => Expect::anyOf(...array_map(
+                    static fn (ProtocolVersion $version): string => $version->value,
+                    ProtocolVersion::cases(),
+                ))
+                    ->default(ProtocolVersion::V1->value),
                 'jwt' => Expect::structure([
-                    'secret' => Expect::string()->required()->dynamic(),
-                    'publish' => Expect::arrayOf('string')->default(['*'])->dynamic(),
-                    'subscribe' => Expect::arrayOf('string')->default(['*'])->dynamic(),
-                    'algorithm' => Expect::string('hmac.sha256'),
-                    'factory' => Expect::string(LcobucciFactory::class),
-                    'lifetime' => Expect::int()->dynamic(),
+                    // "key: <secret>" is a shorthand for "key: {secret: <secret>}"
+                    'key' => Expect::structure([
+                        'secret' => Expect::string()->required()->dynamic(),
+                        'passphrase' => Expect::string()->nullable()->dynamic(),
+                        'algorithm' => Expect::string()->nullable(),
+                    ])->required()
+                        ->before(static fn (mixed $key): mixed => \is_array($key) ? $key : [
+                            'secret' => $key,
+                        ]),
+                    'publish' => Expect::arrayOf('string|string[]')->default(['*'])->mergeDefaults(false),
+                    'subscribe' => Expect::arrayOf('string|string[]')->default(['*'])->mergeDefaults(false),
+                    'factory' => Expect::string()->nullable(),
+                    'lifetime' => Expect::int(0)->nullable()->dynamic(),
                     'useQueryParam' => Expect::bool(false),
+                    'claims' => Expect::structure([
+                        'iss' => Expect::string()->nullable()->dynamic(),
+                        'aud' => Expect::string()->nullable()->dynamic(),
+                        'sub' => Expect::string()->nullable()->dynamic(),
+                        'clientId' => Expect::string()->nullable()->dynamic(),
+                        'additional' => Expect::arrayOf('mixed', 'string')->default([]),
+                    ]),
                 ])->required(),
                 'useCookie' => Expect::bool(true),
                 'autoDiscovery' => Expect::bool(true),
                 'debugger' => Expect::bool($this->debugMode),
             ]),
-        )->before(static fn ($val): mixed => \is_array(reset($val)) || null === reset($val)
-            ? $val
-            : [
+        )->before(static fn (mixed $val): mixed => \is_array($val) && [] !== array_intersect_key($val, array_flip(self::HUB_OPTIONS))
+            // a single hub configuration, rather than a list of named hubs
+            ? [
                 'default' => $val,
-            ]);
-    }
-
-    public function loadConfiguration(): void
-    {
-        $mercureHubsLoader = new MercureHubsDefiner($this);
-
-        $hubDefinitions = [];
-        foreach ((array) $this->getConfig() as $name => $config) {
-            $hubDefinitions[$name] = $mercureHubsLoader->hubDefinition($config, $name);
-        }
-
-        $mercureHubsLoader->postLoad($hubDefinitions);
+            ]
+            : $val);
     }
 
     public function beforeCompile(): void
@@ -82,13 +93,16 @@ final class MercureExtension extends Nette\DI\CompilerExtension
         $broadcasterDefinitions = [];
         foreach ((array) $this->getConfig() as $hubName => $config) {
             $configDefinitions[$hubName] = new Statement(
-                ConfiguredData::class,
+                Configuration::class,
                 [
                     $hubName,
                     $config->url,
+                    $config->publicUrl ?? $config->url,
                     $config->jwt->subscribe,
                     $config->jwt->publish,
                     $config->jwt->useQueryParam,
+                    ProtocolVersion::from($config->protocolVersion),
+                    MercureHubsDefiner::claimsStatement($config),
                     $config->useCookie,
                     $config->autoDiscovery,
                 ]
@@ -100,8 +114,8 @@ final class MercureExtension extends Nette\DI\CompilerExtension
         }
 
         $builder->addDefinition($this->prefix('hubsConfiguration'))
-            ->setType(ConfiguredDataRegistry::class)
-            ->setFactory(ConfiguredDataRegistry::class, [
+            ->setType(ConfigurationRegistry::class)
+            ->setFactory(ConfigurationRegistry::class, [
                 $configDefinitions,
             ])
             ->setAutowired(false)
@@ -152,8 +166,15 @@ final class MercureExtension extends Nette\DI\CompilerExtension
         }
     }
 
-    public function getDebugMode(): bool
+    public function loadConfiguration(): void
     {
-        return $this->debugMode;
+        $mercureHubsLoader = new MercureHubsDefiner($this);
+
+        $hubDefinitions = [];
+        foreach ((array) $this->getConfig() as $name => $config) {
+            $hubDefinitions[$name] = $mercureHubsLoader->hubDefinition($config, $name);
+        }
+
+        $mercureHubsLoader->postLoad($hubDefinitions);
     }
 }

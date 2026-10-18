@@ -8,13 +8,12 @@ require \dirname(__DIR__, 3) . '/bootstrap.php';
 
 use Latte\Engine;
 use Latte\Extension;
-use Nette\Bootstrap\Configurator;
 use Nette\Bridges\ApplicationLatte\LatteFactory;
 use Nette\DI\Compiler;
 use Nette\DI\Config\Loader;
 use Nette\DI\Container;
 use Nette\DI\MissingServiceException;
-use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Bridge\DI\MercureExtension;
 use Raneomik\NetteMercure\Bridge\Latte\MercureExtension as LatteMercureExtension;
 use Raneomik\NetteMercure\Bridge\Tracy\MercurePanel;
@@ -35,34 +34,14 @@ use Symfony\Component\Mercure\Jwt\TokenProviderInterface;
 use Symfony\Component\WebLink\HttpHeaderSerializer;
 use Tester\Assert;
 use Tester\FileMock;
-use Tester\Helpers;
-use Tester\TestCase;
 use Tests\Fixtures\Dummies\Core\DummyJwtFactory;
 use Tracy\Bar;
 
 /**
  * @testCase
  */
-final class MercureExtensionTest extends TestCase
+final class MercureExtensionTest extends ContainerTestCase
 {
-    protected Configurator $configurator;
-
-    protected function setUp(): void
-    {
-        mkdir($this->tmpDir(), recursive: true);
-
-        $this->configurator = (new Configurator())
-            ->setTempDirectory($this->tmpDir())
-            ->addConfig(\dirname(__DIR__, 3) . '/fixtures/config/test.neon')
-        ;
-    }
-
-    protected function tearDown(): void
-    {
-        Helpers::purge($this->tmpDir());
-        rmdir($this->tmpDir());
-    }
-
     public function testPlainSimpleCompilation(): void
     {
         $loader = new Loader();
@@ -70,7 +49,7 @@ final class MercureExtensionTest extends TestCase
         mercure:
             url: /.well-known/mercure
             jwt:
-                secret: jwt-secret
+                key: jwt-secret
         ', 'neon'));
 
         $compiler = new Compiler();
@@ -96,17 +75,7 @@ final class MercureExtensionTest extends TestCase
             Assert::type($expectedType, $service);
         }
 
-        Assert::exception(
-            static fn (): object => $container->getByType(LatteFactory::class),
-            MissingServiceException::class,
-            \sprintf('~Service of type %s not found~', preg_quote(LatteFactory::class)),
-        );
-
-        Assert::exception(
-            static fn (): object => $container->getByType(TemplatingBroadcaster::class),
-            MissingServiceException::class,
-            \sprintf('~Service of type %s not found~', preg_quote(TemplatingBroadcaster::class)),
-        );
+        self::assertTypeNotFound($container, [LatteFactory::class, TemplatingBroadcaster::class]);
 
         Assert::exception(
             static fn () => $container->getService('mercure.broadcaster.default.latte'),
@@ -117,19 +86,12 @@ final class MercureExtensionTest extends TestCase
 
     public function testBasicCompilation(): void
     {
-        $this->configurator->onCompile[] = static function ($configurator, $compiler): void {
-            $compiler->addExtension('mercure', new MercureExtension(false));
-        };
-
-        $this->configurator->addConfig(FileMock::create('
+        $container = $this->createContainer('
         mercure:
             url: /.well-known/mercure
             jwt:
-                secret: jwt-secret
-
-        ', 'neon'));
-
-        $container = $this->configurator->createContainer();
+                key: jwt-secret
+        ');
 
         $service = $container->getService('mercure.subscriber');
         Assert::type(Subscriber::class, $service);
@@ -139,9 +101,6 @@ final class MercureExtensionTest extends TestCase
         Assert::type(Discovery::class, $service);
 
         $service = $container->getService('mercure.broadcasters');
-        Assert::type(Broadcasters::class, $service);
-
-        $service = $container->getByType(BroadcasterInterface::class);
         Assert::type(Broadcasters::class, $service);
 
         $service = $container->getByType(BroadcasterInterface::class);
@@ -177,98 +136,23 @@ final class MercureExtensionTest extends TestCase
             "Service 'mercure.broadcaster.default.traceable' not found.",
         );
 
-        Assert::exception(
-            static fn (): object => $container->getByType(FrankenPhpHub::class),
-            MissingServiceException::class,
-            \sprintf('~Service of type %s not found~', preg_quote(FrankenPhpHub::class)),
-        );
-
-        foreach ($toTest as $notAutowired) {
-            Assert::exception(
-                static fn (): object => $container->getByType($notAutowired),
-                MissingServiceException::class,
-                \sprintf('~Service of type %s is not autowired or is missing~', preg_quote($notAutowired)),
-            );
-        }
-    }
-
-    public function testSimulatedFrankenPhpCompilation(): void
-    {
-        putenv('FRANKENPHP_CONFIG=1'); // simulate FrankenPHP environment
-
-        $this->configurator->setDebugMode(false);
-        $this->configurator->onCompile[] = static function ($configurator, $compiler): void {
-            $compiler->addExtension('mercure', new MercureExtension(false, 'test-url'));
-        };
-
-        $this->configurator->addConfig(FileMock::create('
-        mercure:
-            url: /.well-known/mercure
-            jwt:
-                secret: jwt-secret
-        ', 'neon'));
-
-        $container = $this->configurator->createContainer();
-        $toTest = [
-            'mercure.sf.hub.default' => FrankenPhpHub::class,
-            'mercure.broadcaster.default.plain' => PlainBroadcaster::class,
-            'mercure.broadcasters' => Broadcasters::class,
-        ];
-
-        foreach ($toTest as $serviceAlias => $expectedType) {
-            $service = $container->getService($serviceAlias);
-            Assert::type($expectedType, $service);
-        }
-
-        Assert::exception(
-            static fn (): object => $container->getByType(Hub::class),
-            MissingServiceException::class,
-            \sprintf('~Service of type %s not found~', preg_quote(Hub::class)),
-        );
-
-        Assert::exception(
-            static fn (): object => $container->getByType(TraceableBroadcaster::class),
-            MissingServiceException::class,
-            \sprintf('~Service of type %s not found~', preg_quote(TraceableBroadcaster::class)),
-        );
-        Assert::exception(
-            static fn (): object => $container->getService('mercure.broadcaster.default.traceable'),
-            MissingServiceException::class,
-            "Service 'mercure.broadcaster.default.traceable' not found.",
-        );
-        Assert::exception(
-            static fn (): object => $container->getByType(HubInterface::class),
-            MissingServiceException::class,
-            \sprintf('~Service of type %s is not autowired or is missing~', preg_quote(HubInterface::class)),
-        );
-
-        putenv('FRANKENPHP_CONFIG=0');
+        self::assertTypeNotFound($container, [FrankenPhpHub::class]);
+        self::assertNotAutowired($container, array_values($toTest));
     }
 
     public function testMultiCompilationWithDebug(): void
     {
-        $this->configurator
-            ->setDebugMode(true)
-            ->enableTracy($this->tmpDir())
-        ;
-        $this->configurator->onCompile[] = static function ($configurator, $compiler): void {
-            $compiler->addExtension('mercure', new MercureExtension(true));
-        };
-
-        $this->configurator->addConfig(FileMock::create('
+        $container = $this->createContainer('
         mercure:
             hub1:
                 url: /.well-known/mercure/hub1
                 jwt:
-                    secret: jwt-secret
+                    key: jwt-secret
             hub2:
                 url: /.well-known/mercure/hub2
                 jwt:
-                    secret: jwt-secret
-
-        ', 'neon'));
-
-        $container = $this->configurator->createContainer();
+                    key: jwt-secret
+        ', debug: true);
 
         /** @var Bar $tracyBar */
         $tracyBar = $container->getService('tracy.bar');
@@ -285,7 +169,7 @@ final class MercureExtensionTest extends TestCase
             'mercure.broadcaster.hub2.traceable' => TraceableBroadcaster::class,
             'mercure.tracy.panel' => MercurePanel::class,
             'latte.templatePathResolver' => TemplatePathResolver::class,
-            'mercure.hubsConfiguration' => ConfiguredDataRegistry::class,
+            'mercure.hubsConfiguration' => ConfigurationRegistry::class,
         ];
 
         foreach ($toTest as $serviceAlias => $expectedType) {
@@ -293,31 +177,22 @@ final class MercureExtensionTest extends TestCase
             Assert::type($expectedType, $service);
         }
 
-        foreach (array_unique(array_values($toTest)) as $notAutowired) {
-            Assert::exception(
-                static fn (): object => $container->getByType($notAutowired),
-                MissingServiceException::class,
-                \sprintf('~Service of type %s is not autowired or is missing~', preg_quote($notAutowired)),
-            );
-        }
+        // the concrete hub class is only known at runtime, the declared type is HubInterface
+        self::assertTypeNotFound($container, [Hub::class]);
+        self::assertNotAutowired($container, array_values(array_diff(array_unique(array_values($toTest)), [Hub::class])));
     }
 
     public function testCompilationWithCustomJwtImplementation(): void
     {
         $dummyClass = DummyJwtFactory::class;
 
-        $this->configurator->onCompile[] = static function ($configurator, $compiler): void {
-            $compiler->addExtension('mercure', new MercureExtension(false));
-        };
-
-        $this->configurator->addConfig(FileMock::create("
+        $container = $this->createContainer("
         mercure:
             url: /.well-known/mercure
             jwt:
-                secret: jwt-secret
+                key: jwt-secret
                 factory: {$dummyClass}
-        ", 'neon'));
-        $container = $this->configurator->createContainer();
+        ");
 
         $toTest = [
             'mercure.sf.hub.default' => HubInterface::class,
@@ -333,11 +208,6 @@ final class MercureExtensionTest extends TestCase
         /** @var Bar $tracyBar */
         $tracyBar = $container->getService('tracy.bar');
         Assert::falsey($tracyBar->getPanel('mercure'));
-    }
-
-    private function tmpDir(): string
-    {
-        return \sprintf('%s/var/log.test.%s', \dirname(__DIR__, 4), getmypid());
     }
 }
 

@@ -6,8 +6,8 @@ namespace Tests\Unit\Raneomik\NetteMercure\Bridge\Latte;
 
 require \dirname(__DIR__, 3) . '/bootstrap.php';
 
-use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredData;
-use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
+use Raneomik\NetteMercure\Bridge\DI\Config\Configuration;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Bridge\Latte\Function\Mercure;
 use Raneomik\NetteMercure\Bridge\Latte\Function\MercureJWTToken;
 use Raneomik\NetteMercure\Bridge\Latte\MercureExtension;
@@ -47,24 +47,22 @@ final class MercureExtensionTest extends TestCase
         self::$extension ??= new MercureExtension(
             new DummyJwtProvider(),
             new BroadcastersLoader(static fn (): Broadcasters => self::$broadcasters),
-            new ConfiguredDataRegistry([
-                'test' => new ConfiguredData(
-                    'test',
-                    'http://hub.example.com',
-                    ['*'],
-                    ['*'],
-                    false,
-                    false,
-                    false,
+            new ConfigurationRegistry([
+                'test' => new Configuration(
+                    hubName: 'test',
+                    hubUrl: 'http://hub.example.com',
+                    publicUrl: 'http://hub.example.com',
+                    subscribe: ['*'],
+                    publish: ['*'],
+                    protocolVersion: ProtocolVersion::Legacy,
                 ),
-                'v1' => new ConfiguredData(
-                    'test',
-                    'http://hub.example.com',
-                    ['*'],
-                    ['*'],
-                    true,
-                    false,
-                    false,
+                'v1' => new Configuration(
+                    hubName: 'v1',
+                    hubUrl: 'http://v1.example.com',
+                    publicUrl: 'http://v1.example.com',
+                    subscribe: ['*'],
+                    publish: ['*'],
+                    jwtInQueryParam: true,
                 ),
             ]),
         );

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Raneomik\NetteMercure\Core\Subscribe;
 
-use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Core\Subscribe\Value\SubscriptionData;
 use Raneomik\NetteMercure\SubscriberInterface;
 
@@ -12,7 +12,7 @@ final readonly class Subscriber implements SubscriberInterface
 {
     public function __construct(
         private JWTProviderInterface $jwtProvider,
-        private ConfiguredDataRegistry $config,
+        private ConfigurationRegistry $config,
     ) {
     }
 
@@ -26,7 +26,7 @@ final readonly class Subscriber implements SubscriberInterface
 
         return new SubscriptionData(
             $this->jwtProvider->provide($hubName, $topics, $extraClaims),
-            $hubData->hubUrl,
+            $hubData->publicUrl,
             $this->jwtProvider->ttl(),
             $extraClaims,
         );

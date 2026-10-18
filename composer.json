@@ -17,7 +17,8 @@
     "ext-tokenizer": "*",
     "lcobucci/jwt": "^5.6",
     "nette/http": "^2.0|^3.4",
-    "symfony/mercure": "^0.8"
+    "symfony/mercure": "^0.8",
+    "web-token/jwt-library": "^4.2"
   },
   "require-dev": {
     "infection/infection": "^0.35.4",

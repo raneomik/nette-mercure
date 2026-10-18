@@ -6,8 +6,8 @@ namespace Tests\Unit\Raneomik\NetteMercure\Core\Subscribe;
 
 require \dirname(__DIR__, 3) . '/bootstrap.php';
 
-use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredData;
-use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
+use Raneomik\NetteMercure\Bridge\DI\Config\Configuration;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Core\Subscribe\Subscriber;
 use Tester\Assert;
 use Tester\TestCase;
@@ -22,10 +22,11 @@ final class SubscriberTest extends TestCase
     {
         $subscriber = new Subscriber(
             new DummyJwtProvider(),
-            new ConfiguredDataRegistry([
-                'test' => new ConfiguredData(
+            new ConfigurationRegistry([
+                'test' => new Configuration(
                     hubName: 'test',
                     hubUrl: 'http://hub.example.com',
+                    publicUrl: 'http://hub.example.com',
                     subscribe: ['*'],
                     publish: ['*'],
                 ),

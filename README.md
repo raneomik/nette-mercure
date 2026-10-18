@@ -30,21 +30,37 @@ _JWT options to set. Secret, publish & subscribe can be configured at [jwt.io](h
 ```neon
 # Configure one default Mercure hub (e.g.:  hub is confgigured to be on same host in frankenphp environment)
 mercure:
-	url: '%baseUrl%/.well-known/mercure'
+	url: '%baseUrl%/.well-known/mercure' # URL used by the server to publish updates
+	publicUrl: 'https://example.com/.well-known/mercure' # Optional, defaults to "url". URL used by browsers (discovery, subscription, cookie)
+	protocolVersion: '1.0' # Optional, '1.0' (default) or '0.x' (legacy). @see Symfony\Component\Mercure\ProtocolVersion
 	jwt:
-		secret: n3tt3-m3rcµr3-fr4nk3nphP-jwT-s3cr3t-k3y # Must be at least 32 characters long
+		# Signing key, never part of the token. "key: <secret>" is a shorthand for "key: {secret: <secret>}"
+		key:
+			secret: n3tt3-m3rcµr3-fr4nk3nphP-jwT-s3cr3t-k3y # HMAC secret (at least 32 characters long) or asymmetric private key
+			passphrase: # Optional, for an encrypted asymmetric private key
+			algorithm: HS256 # Optional, defaults to HS256 with WebTokenFactory, hmac.sha256 with LcobucciFactory
 		publish: ['test-topic'] # Optional, default is ['*']. Topics to narrow in JWT validation.
-		subscribe: ['test-topic'] # Optional, default is ['*']. Topics to narrow in JWT validation.
-		algorithm: HS256 # Optional, default is HS256. @see Symfony\Component\Mercure\Jwt\LcobucciFactory::SIGN_ALGORITHMS
+		subscribe: ['test-topic'] # Optional, default is ['*']. Topics to narrow in JWT validation (1.0 also accepts matchers, e.g. {urlpattern: ['/books/:id']}).
+		# Optional, defaults to Symfony\Component\Mercure\Jwt\WebTokenFactory with protocol 1.0 (1.0 only),
+		# and to Symfony\Component\Mercure\Jwt\LcobucciFactory with legacy protocol (supports both).
 		# You can implement your own Symfony\Component\Mercure\Jwt\TokenFactoryInterface
-		factory:  # Optional, default is Symfony\Component\Mercure\Jwt\LcobucciFactory
-        useQueryParam: # false by default, to use JWT token in "authorization" query parameter when using {mercure()} function (https://mercure.rocks/spec#uri-query-parameter)
-        lifetime: # Optional, default is 3600 (1 hour).
+		factory:
+		# Optional, claims added to every token. With protocol 1.0, the RFC 9068 "iss", "aud", "sub" and "client_id" claims are required
+		# and default to "https://localhost" values: set them for production.
+		claims:
+			iss: https://example.com
+			aud: https://example.com/.well-known/mercure
+			sub: https://example.com
+			clientId: nette-app # "client_id" claim
+			additional: # Optional, any other claim
+				tenant: acme
+		useQueryParam: # false by default, to use JWT token in "authorization" query parameter when using {mercure()} function (https://mercure.rocks/spec#uri-query-parameter)
+		lifetime: # Optional, 0 by default (session.cookie_lifetime, or 3600 seconds), null for non expiring tokens.
     # following options depends on request parameters
     # - "hub" or "hubName" if several hubs are defined in configuration, 
     # - "topics" 
     # [- "claims" to pass addtional data to cookie, e.g.: "claims=[exp=1800]" to specificaly set cookie lifetime to 30 minutes]
-    useCookie: # true by default, to set JWT token in cookie (https://mercure.rocks/spec#cookie). SSL/Https required client-side
+    useCookie: # true by default, to set JWT token in cookie (https://mercure.rocks/spec#cookie). SSL/Https required client-side ("__Secure-mercure_access_token" cookie with protocol 1.0, "mercureAuthorization" with legacy)
     autoDiscovery: # true by default, to add Link header for Mercure hub discovery (https://mercure.rocks/spec#discovery)
 
 # several Mercure hubs
@@ -52,15 +68,19 @@ mercure:
 	one
 		url: 'https://hub1.mercure.dev/.well-known/mercure'
 		jwt:
-			secret: n3tt3-m3rcµr3-fr4nk3nphP-jwT-s3cr3t-k3y
+			key: n3tt3-m3rcµr3-fr4nk3nphP-jwT-s3cr3t-k3y
 
 	two
 		url: 'https://hub2.mercure.dev/.well-known/mercure'
 		jwt:
-			secret: n3tt3-m3rcµr3-fr4nk3nphP-jwT-s3cr3t-k3y
+			key: n3tt3-m3rcµr3-fr4nk3nphP-jwT-s3cr3t-k3y
 
 	# ...
 ```
+
+_Hub implementation is picked at runtime: when the FrankenPHP built-in Mercure hub is available (`mercure_publish()` function),
+updates are published through it (`Symfony\Component\Mercure\FrankenPhpHub`), otherwise through HTTP to `url` (`Symfony\Component\Mercure\Hub`).
+The same compiled container thus works in FrankenPHP workers and in CLI commands, as long as `url` is reachable from the CLI._
 
 ### Publish messages
 
