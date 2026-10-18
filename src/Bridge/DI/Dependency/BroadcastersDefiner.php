@@ -30,7 +30,7 @@ final readonly class BroadcastersDefiner
     {
         $plainBroadcasterDef = $this->builder->addDefinition($this->extension->prefix(\sprintf('broadcaster.%s.plain', $hubName)))
             ->setType(PlainBroadcaster::class)
-            ->setFactory(PlainBroadcaster::class, [
+            ->setCreator(PlainBroadcaster::class, [
                 $this->builder->getDefinition($this->extension->prefix('sf.hub.' . $hubName)),
             ])
             ->setAutowired(false)
@@ -40,7 +40,7 @@ final readonly class BroadcastersDefiner
         if (false !== $latteDefinition) {
             $latteBroadcasterDef = $this->builder->addDefinition($this->extension->prefix(\sprintf('broadcaster.%s.latte', $hubName)))
                 ->setType(TemplatingBroadcaster::class)
-                ->setFactory(TemplatingBroadcaster::class)
+                ->setCreator(TemplatingBroadcaster::class)
                 ->setArguments([
                     $plainBroadcasterDef,
                     '@latte.templatePathResolver',
@@ -56,7 +56,7 @@ final readonly class BroadcastersDefiner
                 $this->extension->prefix(\sprintf('broadcaster.%s.traceable', $hubName))
             )
                 ->setType(TraceableBroadcaster::class)
-                ->setFactory(TraceableBroadcaster::class, [
+                ->setCreator(TraceableBroadcaster::class, [
                     $latteBroadcasterDef ?? $plainBroadcasterDef,
                 ])
                 ->setAutowired(false)
@@ -73,13 +73,13 @@ final readonly class BroadcastersDefiner
     {
         $this->builder->addDefinition('latte.templatePathResolver')
             ->setType(TemplatePathResolver::class)
-            ->setFactory(TemplatePathResolver::class)
+            ->setCreator(TemplatePathResolver::class)
             ->setAutowired(false)
         ;
 
         $this->builder->addDefinition($this->extension->prefix('broadcasters'))
             ->setType(BroadcasterInterface::class)
-            ->setFactory(Broadcasters::class, [
+            ->setCreator(Broadcasters::class, [
                 $broadcasterDefinitions,
             ])
             ->setAutowired()

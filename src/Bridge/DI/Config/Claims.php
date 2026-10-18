@@ -24,22 +24,28 @@ final readonly class Claims
     /**
      * Placeholder RFC 9068 claims: set real ones for production.
      */
-    public static function defaults(): self
+    public static function fromPublicUrl(string $publicUrl): self
     {
+        $baseUrl = sprintf(
+            '%s://%s',
+            parse_url($publicUrl, PHP_URL_SCHEME),
+            parse_url($publicUrl, PHP_URL_HOST),
+        );
+
         return new self(
-            iss: 'https://localhost',
-            aud: 'https://localhost/.well-known/mercure',
-            sub: 'https://localhost',
-            clientId: 'https://localhost',
+            iss: $baseUrl,
+            aud: $publicUrl,
+            sub: $baseUrl,
+            clientId: $baseUrl,
         );
     }
 
     /**
      * Fills the missing RFC 9068 claims with the defaults.
      */
-    public function withDefaults(): self
+    public function withPublicUrl(string $publicUrl): self
     {
-        $defaults = self::defaults();
+        $defaults = self::fromPublicUrl($publicUrl);
 
         return new self(
             $this->iss ?? $defaults->iss,

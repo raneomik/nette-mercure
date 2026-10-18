@@ -26,6 +26,13 @@ $ composer require raneomik/nette-mercure
 
 ### Configuration
 
+Register the extension in your config file:
+
+````neon
+extensions:
+    mercure: Raneomik\NetteMercure\Bridge\DI\MercureExtension(%debugMode%)
+````
+
 _JWT options to set. Secret, publish & subscribe can be configured at [jwt.io](https://www.jwt.io/#token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZXJjdXJlIjp7InB1Ymxpc2giOlsiKiJdfX0.iHLdpAEjX4BqCsHJEegxRmO-Y6sMxXwNATrQyRNt3GY)_
 ```neon
 # Configure one default Mercure hub (e.g.:  hub is confgigured to be on same host in frankenphp environment)
