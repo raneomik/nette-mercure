@@ -7,6 +7,7 @@ namespace Raneomik\NetteMercure\Core\Subscribe;
 use Nette\Http\FetchSite;
 use Nette\Http\IRequest;
 use Nette\Http\IResponse;
+use Nette\Http\Response;
 use Nette\Http\SameSite;
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Symfony\Component\Mercure\ProtocolVersion;
@@ -56,16 +57,22 @@ final readonly class Authorization implements AuthorizationInterface
         $urlComponents = parse_url($hubConfig->publicUrl);
         $secure = 'http' !== strtolower($urlComponents['scheme'] ?? 'https');
 
-        $this->response->setCookie(
-            name: $this->getCookieName($hubConfig->protocolVersion, $secure),
-            value: $token,
-            expire: $this->jwtProvider->ttl(),
-            path: $urlComponents['path'] ?? '/',
-            domain: $this->getCookieDomain($urlComponents['host'] ?? null),
-            secure: $secure,
-            httpOnly: true,
-            sameSite: $this->cookieSameSite->value,  // @phpstan-ignore-line
-        );
+        $name = $this->getCookieName($hubConfig->protocolVersion, $secure);
+        $expire = $this->jwtProvider->ttl();
+        $path = $urlComponents['path'] ?? '/';
+        $domain = $this->getCookieDomain($urlComponents['host'] ?? null);
+
+        // IResponse::setCookie() has no "sameSite" parameter, only Nette\Http\Response does
+        if (
+            $this->response instanceof Response
+            && $this->cookieSameSite instanceof SameSite
+        ) {
+            $this->response->setCookie($name, $token, $expire, $path, $domain, $secure, true, $this->cookieSameSite->value);
+
+            return;
+        }
+
+        $this->response->setCookie($name, $token, $expire, $path, $domain, $secure, true);
     }
 
     private function getCookieName(ProtocolVersion $protocolVersion, bool $secure): string

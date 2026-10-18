@@ -6,6 +6,8 @@ namespace Tests\Unit\Raneomik\NetteMercure\Core\Subscribe;
 
 require \dirname(__DIR__, 3) . '/bootstrap.php';
 
+use Nette\Http\Response;
+use Nette\Http\SameSite;
 use Raneomik\NetteMercure\Bridge\DI\Config\Configuration;
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Core\Subscribe\Authorization;
@@ -330,6 +332,56 @@ final class AuthorizationTest extends TestCase
             \InvalidArgumentException::class,
             '~"__Secure-mercure_access_token" cookie name requires a hub public URL served over HTTPS~',
         );
+    }
+
+    public function testCookieSameSiteIsOnlyPassedToNetteResponse(): void
+    {
+        foreach ([SameSite::Strict, null] as $sameSite) {
+            $authorization = new Authorization(
+                new DummyJwtProvider(),
+                new DummyRequest(),
+                $response = new DummyResponse(),
+                new ConfigurationRegistry([
+                    'test' => new Configuration(
+                        hubName: 'test',
+                        hubUrl: 'http://hub.example.com',
+                        publicUrl: 'http://hub.example.com',
+                        subscribe: ['*'],
+                        publish: ['*'],
+                        protocolVersion: ProtocolVersion::Legacy,
+                    ),
+                ]),
+                $sameSite,
+            );
+
+            $authorization->createCookie(subscribedTopics: ['test']);
+
+            Assert::null($response->cookie[ProtocolVersion::Legacy->getDefaultCookieName()]['sameSite']);
+        }
+    }
+
+    public function testCookieWithNetteResponse(): void
+    {
+        foreach ([SameSite::Lax, null] as $sameSite) {
+            $authorization = new Authorization(
+                new DummyJwtProvider(),
+                new DummyRequest(),
+                new Response(),
+                new ConfigurationRegistry([
+                    'test' => new Configuration(
+                        hubName: 'test',
+                        hubUrl: 'http://hub.example.com',
+                        publicUrl: 'http://hub.example.com',
+                        subscribe: ['*'],
+                        publish: ['*'],
+                        protocolVersion: ProtocolVersion::Legacy,
+                    ),
+                ]),
+                $sameSite,
+            );
+
+            Assert::noError(static fn () => $authorization->createCookie(subscribedTopics: ['test']));
+        }
     }
 }
 
