@@ -13,8 +13,9 @@ use Nette\Bridges\ApplicationLatte\LatteFactory;
 use Nette\DI\Compiler;
 use Nette\DI\Config\Loader;
 use Nette\DI\Container;
+use Nette\DI\InvalidConfigurationException;
 use Nette\DI\MissingServiceException;
-use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Bridge\DI\MercureExtension;
 use Raneomik\NetteMercure\Bridge\Latte\MercureExtension as LatteMercureExtension;
 use Raneomik\NetteMercure\Bridge\Tracy\MercurePanel;
@@ -30,8 +31,11 @@ use Symfony\Component\Mercure\FrankenPhpHub;
 use Symfony\Component\Mercure\Hub;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\HubRegistry;
+use Symfony\Component\Mercure\Jwt\LcobucciFactory;
 use Symfony\Component\Mercure\Jwt\TokenFactoryInterface;
 use Symfony\Component\Mercure\Jwt\TokenProviderInterface;
+use Symfony\Component\Mercure\Jwt\WebTokenFactory;
+use Symfony\Component\Mercure\ProtocolVersion;
 use Symfony\Component\WebLink\HttpHeaderSerializer;
 use Tester\Assert;
 use Tester\FileMock;
@@ -285,7 +289,7 @@ final class MercureExtensionTest extends TestCase
             'mercure.broadcaster.hub2.traceable' => TraceableBroadcaster::class,
             'mercure.tracy.panel' => MercurePanel::class,
             'latte.templatePathResolver' => TemplatePathResolver::class,
-            'mercure.hubsConfiguration' => ConfiguredDataRegistry::class,
+            'mercure.hubsConfiguration' => ConfigurationRegistry::class,
         ];
 
         foreach ($toTest as $serviceAlias => $expectedType) {
@@ -333,6 +337,156 @@ final class MercureExtensionTest extends TestCase
         /** @var Bar $tracyBar */
         $tracyBar = $container->getService('tracy.bar');
         Assert::falsey($tracyBar->getPanel('mercure'));
+    }
+
+    /**
+     * @return iterable<string, array{string, ?class-string<TokenFactoryInterface>, class-string<TokenFactoryInterface>, callable(array<string, mixed>): void}>
+     */
+    public function provideRealTokenFactories(): iterable
+    {
+        $assertV1 = static function (array $payload): void {
+            Assert::hasNotKey('mercure', $payload);
+            Assert::same('https://app.example.com', $payload['iss']);
+            Assert::same('https://localhost/.well-known/mercure', $payload['aud']);
+            Assert::same('https://localhost', $payload['sub']);
+            Assert::same('https://localhost', $payload['client_id']);
+            Assert::same([
+                [
+                    'type' => 'https://mercure.rocks/authorization-detail',
+                    'actions' => ['subscribe'],
+                    'topics' => [[
+                        'match' => 'books',
+                    ]],
+                ],
+                [
+                    'type' => 'https://mercure.rocks/authorization-detail',
+                    'actions' => ['publish'],
+                    'topics' => [[
+                        'match' => 'books',
+                    ], [
+                        'match' => 'authors',
+                    ]],
+                ],
+            ], $payload['authorization_details']);
+        };
+
+        yield 'v1 default factory' => ['1.0', null, WebTokenFactory::class, $assertV1];
+        yield 'v1 lcobucci' => ['1.0', LcobucciFactory::class, LcobucciFactory::class, $assertV1];
+        yield 'legacy default factory' => [
+            '0.x',
+            null,
+            LcobucciFactory::class,
+            static function (array $payload): void {
+                Assert::hasNotKey('authorization_details', $payload);
+                Assert::hasNotKey('aud', $payload);
+                Assert::same('https://app.example.com', $payload['iss']);
+                Assert::equal([
+                    'publish' => ['books', 'authors'],
+                    'subscribe' => ['books'],
+                ], $payload['mercure']);
+            },
+        ];
+    }
+
+    /**
+     * @dataProvider provideRealTokenFactories
+     *
+     * @param ?class-string<TokenFactoryInterface> $factory
+     * @param class-string<TokenFactoryInterface> $expectedFactory
+     * @param callable(array<string, mixed>): void $assertPayload
+     */
+    public function testRealTokenFactories(
+        string $protocolVersion,
+        ?string $factory,
+        string $expectedFactory,
+        callable $assertPayload,
+    ): void
+    {
+        $this->configurator->onCompile[] = static function ($configurator, $compiler): void {
+            $compiler->addExtension('mercure', new MercureExtension(true));
+        };
+
+        $this->configurator->addConfig(FileMock::create('
+        mercure:
+            url: https://hub.example.com/.well-known/mercure
+            protocolVersion: "' . $protocolVersion . '"
+            jwt:
+                secret: n3tt3-m3rcur3-t3st-jwt-s3cr3t-k3y-32
+                ' . (null === $factory ? '' : 'factory: ' . $factory) . '
+                subscribe: [books]
+                publish: [books, authors]
+                claims:
+                    iss: https://app.example.com
+        ', 'neon'));
+
+        $container = $this->configurator->createContainer();
+
+        Assert::type($expectedFactory, $container->getService('mercure.token.factory.decorated.default'));
+
+        /** @var Hub $hub */
+        $hub = $container->getService('mercure.sf.hub.default');
+        $assertPayload($this->decodeJwtPayload($hub->getProvider()->getJwt()));
+    }
+
+    public function testWebTokenFactoryRejectsLegacyProtocol(): void
+    {
+        $this->configurator->onCompile[] = static function ($configurator, $compiler): void {
+            $compiler->addExtension('mercure', new MercureExtension(false));
+        };
+
+        $webTokenFactory = WebTokenFactory::class;
+        $this->configurator->addConfig(FileMock::create("
+        mercure:
+            protocolVersion: '0.x'
+            jwt:
+                secret: jwt-secret
+                factory: {$webTokenFactory}
+        ", 'neon'));
+
+        Assert::exception(
+            fn (): Container => $this->configurator->createContainer(),
+            InvalidConfigurationException::class,
+            '~only supports the Mercure protocol 1.0~',
+        );
+    }
+
+    public function testPublicUrlConfiguration(): void
+    {
+        $this->configurator->onCompile[] = static function ($configurator, $compiler): void {
+            $compiler->addExtension('mercure', new MercureExtension(true));
+        };
+
+        $this->configurator->addConfig(FileMock::create('
+        mercure:
+            url: http://mercure:3000/.well-known/mercure
+            publicUrl: https://hub.example.com/.well-known/mercure
+            jwt:
+                secret: n3tt3-m3rcur3-t3st-jwt-s3cr3t-k3y-32
+        ', 'neon'));
+
+        $container = $this->configurator->createContainer();
+
+        /** @var Hub $hub */
+        $hub = $container->getService('mercure.sf.hub.default');
+        Assert::same('http://mercure:3000/.well-known/mercure', $hub->getUrl());
+        Assert::same('https://hub.example.com/.well-known/mercure', $hub->getPublicUrl());
+        Assert::same(ProtocolVersion::V1, $hub->getProtocolVersion());
+
+        /** @var ConfigurationRegistry $registry */
+        $registry = $container->getService('mercure.hubsConfiguration');
+        Assert::same('https://hub.example.com/.well-known/mercure', $registry->getConfiguration()->publicUrl);
+        Assert::same(ProtocolVersion::V1, $registry->getConfiguration()->protocolVersion);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function decodeJwtPayload(string $jwt): array
+    {
+        $payload = explode('.', $jwt)[1] ?? '';
+
+        /** @var array<string, mixed> */
+        return json_decode(base64_decode(strtr($payload, '-_', '+/'), true) ?: '', true, flags: \JSON_THROW_ON_ERROR);
     }
 
     private function tmpDir(): string

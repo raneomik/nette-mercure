@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace Raneomik\NetteMercure\Bridge\DI\Config;
 
-final readonly class ConfiguredDataRegistry
+final readonly class ConfigurationRegistry
 {
     /**
-     * @param array<string, ConfiguredData> $configuredData
+     * @param array<string, Configuration> $configuredData
      */
     public function __construct(
         private iterable $configuredData,
     ) {
     }
 
-    public function getConfiguration(?string $hubName = null): ConfiguredData
+    public function getConfiguration(?string $hubName = null): Configuration
     {
-        /** @var ConfiguredData $defaultData */
+        /** @var Configuration $defaultData */
         $defaultData = array_first($this->configuredData);
         if (null === $hubName) {
             return $defaultData;

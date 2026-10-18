@@ -8,17 +8,16 @@ use Nette\Http\FetchSite;
 use Nette\Http\IRequest;
 use Nette\Http\IResponse;
 use Nette\Http\SameSite;
-use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
+use Symfony\Component\Mercure\ProtocolVersion;
 
 final readonly class Authorization implements AuthorizationInterface
 {
-    public const string COOKIE_NAME = 'mercureAuthorization';
-
     public function __construct(
         private JWTProviderInterface $jwtProvider,
         private IRequest $request,
         private IResponse $response,
-        private ConfiguredDataRegistry $config,
+        private ConfigurationRegistry $config,
         private ?SameSite $cookieSameSite = SameSite::Lax,
     ) {
     }
@@ -54,18 +53,29 @@ final readonly class Authorization implements AuthorizationInterface
          * port?: int,
          * path?: string,
          * } $urlComponents */
-        $urlComponents = parse_url($hubConfig->hubUrl);
+        $urlComponents = parse_url($hubConfig->publicUrl);
+        $secure = 'http' !== strtolower($urlComponents['scheme'] ?? 'https');
 
         $this->response->setCookie(
-            name: self::COOKIE_NAME,
+            name: $this->getCookieName($hubConfig->protocolVersion, $secure),
             value: $token,
             expire: $this->jwtProvider->ttl(),
             path: $urlComponents['path'] ?? '/',
             domain: $this->getCookieDomain($urlComponents['host'] ?? null),
-            secure: 'http' !== strtolower($urlComponents['scheme'] ?? 'https'),
+            secure: $secure,
             httpOnly: true,
             sameSite: $this->cookieSameSite->value,  // @phpstan-ignore-line
         );
+    }
+
+    private function getCookieName(ProtocolVersion $protocolVersion, bool $secure): string
+    {
+        $cookieName = $protocolVersion->getDefaultCookieName();
+        if (! $secure && (str_starts_with($cookieName, '__Secure-') || str_starts_with($cookieName, '__Host-'))) {
+            throw new \InvalidArgumentException(\sprintf('The "%s" cookie name requires a hub public URL served over HTTPS.', $cookieName));
+        }
+
+        return $cookieName;
     }
 
     private function getCookieDomain(?string $hubDomain = null): ?string

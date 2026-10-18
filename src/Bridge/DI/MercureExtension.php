@@ -8,15 +8,15 @@ use Nette;
 use Nette\DI\Definitions\ServiceDefinition;
 use Nette\DI\Definitions\Statement;
 use Nette\Schema\Expect;
-use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredData;
-use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
+use Raneomik\NetteMercure\Bridge\DI\Config\Configuration;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Bridge\DI\Dependency\BroadcastersDefiner;
 use Raneomik\NetteMercure\Bridge\DI\Dependency\MercureHubsDefiner;
 use Raneomik\NetteMercure\Bridge\DI\Dependency\SubscribersDefiner;
 use Raneomik\NetteMercure\Bridge\Latte\MercureExtension as LatteMercureExtension;
 use Raneomik\NetteMercure\Bridge\Tracy\MercurePanel;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
-use Symfony\Component\Mercure\Jwt\LcobucciFactory;
+use Symfony\Component\Mercure\ProtocolVersion;
 
 final class MercureExtension extends Nette\DI\CompilerExtension
 {
@@ -33,14 +33,22 @@ final class MercureExtension extends Nette\DI\CompilerExtension
         return Expect::arrayOf(
             Expect::structure([
                 'url' => Expect::string()->default('%baseUrl%/.well-known/mercure')->dynamic(),
+                'publicUrl' => Expect::string()->nullable()->dynamic(),
+                'protocolVersion' => Expect::anyOf(...array_map(
+                    static fn (ProtocolVersion $version): string => $version->value,
+                    ProtocolVersion::cases(),
+                ))
+                    ->default(ProtocolVersion::V1->value),
                 'jwt' => Expect::structure([
                     'secret' => Expect::string()->required()->dynamic(),
-                    'publish' => Expect::arrayOf('string')->default(['*'])->dynamic(),
-                    'subscribe' => Expect::arrayOf('string')->default(['*'])->dynamic(),
-                    'algorithm' => Expect::string('hmac.sha256'),
-                    'factory' => Expect::string(LcobucciFactory::class),
-                    'lifetime' => Expect::int()->dynamic(),
+                    'passphrase' => Expect::string('')->dynamic(),
+                    'publish' => Expect::arrayOf('string|string[]')->default(['*'])->mergeDefaults(false),
+                    'subscribe' => Expect::arrayOf('string|string[]')->default(['*'])->mergeDefaults(false),
+                    'algorithm' => Expect::string()->nullable(),
+                    'factory' => Expect::string()->nullable(),
+                    'lifetime' => Expect::int(0)->nullable()->dynamic(),
                     'useQueryParam' => Expect::bool(false),
+                    'claims' => Expect::arrayOf('mixed', 'string')->default([]),
                 ])->required(),
                 'useCookie' => Expect::bool(true),
                 'autoDiscovery' => Expect::bool(true),
@@ -51,18 +59,6 @@ final class MercureExtension extends Nette\DI\CompilerExtension
             : [
                 'default' => $val,
             ]);
-    }
-
-    public function loadConfiguration(): void
-    {
-        $mercureHubsLoader = new MercureHubsDefiner($this);
-
-        $hubDefinitions = [];
-        foreach ((array) $this->getConfig() as $name => $config) {
-            $hubDefinitions[$name] = $mercureHubsLoader->hubDefinition($config, $name);
-        }
-
-        $mercureHubsLoader->postLoad($hubDefinitions);
     }
 
     public function beforeCompile(): void
@@ -82,13 +78,16 @@ final class MercureExtension extends Nette\DI\CompilerExtension
         $broadcasterDefinitions = [];
         foreach ((array) $this->getConfig() as $hubName => $config) {
             $configDefinitions[$hubName] = new Statement(
-                ConfiguredData::class,
+                Configuration::class,
                 [
                     $hubName,
                     $config->url,
+                    $config->publicUrl ?? $config->url,
                     $config->jwt->subscribe,
                     $config->jwt->publish,
                     $config->jwt->useQueryParam,
+                    ProtocolVersion::from($config->protocolVersion),
+                    $config->jwt->claims,
                     $config->useCookie,
                     $config->autoDiscovery,
                 ]
@@ -100,8 +99,8 @@ final class MercureExtension extends Nette\DI\CompilerExtension
         }
 
         $builder->addDefinition($this->prefix('hubsConfiguration'))
-            ->setType(ConfiguredDataRegistry::class)
-            ->setFactory(ConfiguredDataRegistry::class, [
+            ->setType(ConfigurationRegistry::class)
+            ->setFactory(ConfigurationRegistry::class, [
                 $configDefinitions,
             ])
             ->setAutowired(false)
@@ -150,6 +149,18 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                 ])
             ;
         }
+    }
+
+    public function loadConfiguration(): void
+    {
+        $mercureHubsLoader = new MercureHubsDefiner($this);
+
+        $hubDefinitions = [];
+        foreach ((array) $this->getConfig() as $name => $config) {
+            $hubDefinitions[$name] = $mercureHubsLoader->hubDefinition($config, $name);
+        }
+
+        $mercureHubsLoader->postLoad($hubDefinitions);
     }
 
     public function getDebugMode(): bool

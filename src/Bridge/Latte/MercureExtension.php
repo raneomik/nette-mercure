@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Raneomik\NetteMercure\Bridge\Latte;
 
 use Latte\Extension;
-use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Bridge\Latte\Function\Mercure;
 use Raneomik\NetteMercure\Bridge\Latte\Function\MercureJWTToken;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
@@ -20,7 +20,7 @@ final class MercureExtension extends Extension
     public function __construct(
         JWTProviderInterface $jwtProvider,
         BroadcastersLoader $broadcastersLoader,
-        ConfiguredDataRegistry $configuredData,
+        ConfigurationRegistry $configuredData,
     ) {
         $this->mercureFunction = Mercure::build($jwtProvider, $broadcastersLoader, $configuredData);
         $this->JWTTokenFunction = MercureJWTToken::build($jwtProvider);

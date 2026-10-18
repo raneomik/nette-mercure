@@ -6,7 +6,7 @@ namespace Raneomik\NetteMercure\Core;
 
 use Nette\Http\IRequest;
 use Nette\Http\IResponse;
-use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Symfony\Component\WebLink\HttpHeaderSerializer;
 use Symfony\Component\WebLink\Link;
 
@@ -21,7 +21,7 @@ final readonly class Discovery
         private HttpHeaderSerializer $header,
         private IRequest $request,
         private IResponse $response,
-        private ConfiguredDataRegistry $config,
+        private ConfigurationRegistry $config,
     ) {
     }
 
@@ -38,7 +38,7 @@ final readonly class Discovery
             return;
         }
 
-        $this->addLink($hubData->hubUrl);
+        $this->addLink($hubData->publicUrl);
     }
 
     public function addLink(string $hubLink): void
