@@ -11,7 +11,6 @@ final readonly class Configuration
     /**
      * @param string[] $subscribe
      * @param string[] $publish
-     * @param array<string, mixed> $claims
      */
     public function __construct(
         public string $hubName,
@@ -21,7 +20,7 @@ final readonly class Configuration
         public array $publish,
         public bool $jwtInQueryParam = false,
         public ProtocolVersion $protocolVersion = ProtocolVersion::V1,
-        public array $claims = [],
+        public Claims $claims = new Claims(),
         public bool $useCookie = false,
         public bool $autoDiscovery = false,
     ) {

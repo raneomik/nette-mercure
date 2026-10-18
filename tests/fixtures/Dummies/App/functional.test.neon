@@ -7,7 +7,7 @@ application:
 mercure:
     url: /.well-known/mercure
     jwt:
-        secret: jwt-secret
+        key: jwt-secret
         factory: Tests\Fixtures\Dummies\Core\DummyJwtFactory
 
 services:

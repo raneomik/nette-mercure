@@ -49,7 +49,7 @@ final class MercureExtensionTest extends ContainerTestCase
         mercure:
             url: /.well-known/mercure
             jwt:
-                secret: jwt-secret
+                key: jwt-secret
         ', 'neon'));
 
         $compiler = new Compiler();
@@ -90,7 +90,7 @@ final class MercureExtensionTest extends ContainerTestCase
         mercure:
             url: /.well-known/mercure
             jwt:
-                secret: jwt-secret
+                key: jwt-secret
         ');
 
         $service = $container->getService('mercure.subscriber');
@@ -147,11 +147,11 @@ final class MercureExtensionTest extends ContainerTestCase
             hub1:
                 url: /.well-known/mercure/hub1
                 jwt:
-                    secret: jwt-secret
+                    key: jwt-secret
             hub2:
                 url: /.well-known/mercure/hub2
                 jwt:
-                    secret: jwt-secret
+                    key: jwt-secret
         ', debug: true);
 
         /** @var Bar $tracyBar */
@@ -190,7 +190,7 @@ final class MercureExtensionTest extends ContainerTestCase
         mercure:
             url: /.well-known/mercure
             jwt:
-                secret: jwt-secret
+                key: jwt-secret
                 factory: {$dummyClass}
         ");
 

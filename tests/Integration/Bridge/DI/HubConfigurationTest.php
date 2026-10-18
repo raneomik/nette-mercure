@@ -27,7 +27,7 @@ final class HubConfigurationTest extends ContainerTestCase
             url: http://mercure:3000/.well-known/mercure
             publicUrl: https://hub.example.com/.well-known/mercure
             jwt:
-                secret: n3tt3-m3rcur3-t3st-jwt-s3cr3t-k3y-32
+                key: n3tt3-m3rcur3-t3st-jwt-s3cr3t-k3y-32
         ');
 
         /** @var Hub $hub */
@@ -49,13 +49,26 @@ final class HubConfigurationTest extends ContainerTestCase
         mercure:
             url: /.well-known/mercure
             jwt:
-                secret: jwt-secret
+                key: jwt-secret
         ');
 
         // … then run in FrankenPHP, which provides mercure_publish()
         require_once \dirname(__DIR__, 3) . '/fixtures/FrankenPhp/mercure_publish.php';
 
         Assert::type(FrankenPhpHub::class, $container->getService('mercure.sf.hub.default'));
+    }
+
+    public function testSingleHubConfigurationWithoutUrl(): void
+    {
+        // "url" has a default value: "jwt" must not be mistaken for a hub name
+        $container = $this->createContainer('
+        mercure:
+            jwt:
+                key: jwt-secret
+        ');
+
+        Assert::type(Hub::class, $container->getService('mercure.sf.hub.default'));
+        Assert::false($container->hasService('mercure.sf.hub.jwt'));
     }
 }
 

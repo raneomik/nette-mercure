@@ -34,12 +34,13 @@ mercure:
 	publicUrl: 'https://example.com/.well-known/mercure' # Optional, defaults to "url". URL used by browsers (discovery, subscription, cookie)
 	protocolVersion: '1.0' # Optional, '1.0' (default) or '0.x' (legacy). @see Symfony\Component\Mercure\ProtocolVersion
 	jwt:
-		secret: n3tt3-m3rcµr3-fr4nk3nphP-jwT-s3cr3t-k3y # Must be at least 32 characters long
-		passphrase: '' # Optional, for asymmetric keys
+		# Signing key, never part of the token. "key: <secret>" is a shorthand for "key: {secret: <secret>}"
+		key:
+			secret: n3tt3-m3rcµr3-fr4nk3nphP-jwT-s3cr3t-k3y # HMAC secret (at least 32 characters long) or asymmetric private key
+			passphrase: # Optional, for an encrypted asymmetric private key
+			algorithm: HS256 # Optional, defaults to HS256 with WebTokenFactory, hmac.sha256 with LcobucciFactory
 		publish: ['test-topic'] # Optional, default is ['*']. Topics to narrow in JWT validation.
 		subscribe: ['test-topic'] # Optional, default is ['*']. Topics to narrow in JWT validation (1.0 also accepts matchers, e.g. {urlpattern: ['/books/:id']}).
-		# Optional, defaults to HS256 with WebTokenFactory, hmac.sha256 with LcobucciFactory
-		algorithm: HS256
 		# Optional, defaults to Symfony\Component\Mercure\Jwt\WebTokenFactory with protocol 1.0 (1.0 only),
 		# and to Symfony\Component\Mercure\Jwt\LcobucciFactory with legacy protocol (supports both).
 		# You can implement your own Symfony\Component\Mercure\Jwt\TokenFactoryInterface
@@ -49,6 +50,10 @@ mercure:
 		claims:
 			iss: https://example.com
 			aud: https://example.com/.well-known/mercure
+			sub: https://example.com
+			clientId: nette-app # "client_id" claim
+			additional: # Optional, any other claim
+				tenant: acme
 		useQueryParam: # false by default, to use JWT token in "authorization" query parameter when using {mercure()} function (https://mercure.rocks/spec#uri-query-parameter)
 		lifetime: # Optional, 0 by default (session.cookie_lifetime, or 3600 seconds), null for non expiring tokens.
     # following options depends on request parameters
@@ -63,12 +68,12 @@ mercure:
 	one
 		url: 'https://hub1.mercure.dev/.well-known/mercure'
 		jwt:
-			secret: n3tt3-m3rcµr3-fr4nk3nphP-jwT-s3cr3t-k3y
+			key: n3tt3-m3rcµr3-fr4nk3nphP-jwT-s3cr3t-k3y
 
 	two
 		url: 'https://hub2.mercure.dev/.well-known/mercure'
 		jwt:
-			secret: n3tt3-m3rcµr3-fr4nk3nphP-jwT-s3cr3t-k3y
+			key: n3tt3-m3rcµr3-fr4nk3nphP-jwT-s3cr3t-k3y
 
 	# ...
 ```

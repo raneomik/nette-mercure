@@ -8,6 +8,8 @@ require \dirname(__DIR__, 3) . '/bootstrap.php';
 
 use Nette\DI\Container;
 use Nette\DI\InvalidConfigurationException;
+use Raneomik\NetteMercure\Bridge\DI\Config\Claims;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Symfony\Component\Mercure\Hub;
 use Symfony\Component\Mercure\Jwt\LcobucciFactory;
 use Symfony\Component\Mercure\Jwt\TokenFactoryInterface;
@@ -86,7 +88,7 @@ final class TokenFactoryTest extends ContainerTestCase
             url: https://hub.example.com/.well-known/mercure
             protocolVersion: "' . $protocolVersion . '"
             jwt:
-                secret: n3tt3-m3rcur3-t3st-jwt-s3cr3t-k3y-32
+                key: n3tt3-m3rcur3-t3st-jwt-s3cr3t-k3y-32
                 ' . (null === $factory ? '' : 'factory: ' . $factory) . '
                 subscribe: [books]
                 publish: [books, authors]
@@ -110,11 +112,75 @@ final class TokenFactoryTest extends ContainerTestCase
             mercure:
                 protocolVersion: '0.x'
                 jwt:
-                    secret: jwt-secret
+                    key: jwt-secret
                     factory: {$webTokenFactory}
             "),
             InvalidConfigurationException::class,
             '~only supports the Mercure protocol 1.0~',
+        );
+    }
+
+    public function testFullSigningKeyAndClaimsConfiguration(): void
+    {
+        $container = $this->createContainer('
+        mercure:
+            url: https://hub.example.com/.well-known/mercure
+            jwt:
+                key:
+                    secret: n3tt3-m3rcur3-t3st-jwt-s3cr3t-k3y-48-n3tt3-m3rcur3
+                    algorithm: HS384
+                claims:
+                    iss: https://app.example.com
+                    aud: https://hub.example.com/.well-known/mercure
+                    sub: user-42
+                    clientId: nette-app
+                    additional:
+                        tenant: acme
+                        sub: overridden-by-named-claim
+        ');
+
+        /** @var Hub $hub */
+        $hub = $container->getService('mercure.sf.hub.default');
+        $jwt = $hub->getProvider()
+            ->getJwt();
+
+        Assert::same('HS384', $this->decodeJwtPart($jwt, 0)['alg']);
+
+        $payload = $this->decodeJwtPart($jwt, 1);
+        Assert::same('https://app.example.com', $payload['iss']);
+        Assert::same('https://hub.example.com/.well-known/mercure', $payload['aud']);
+        Assert::same('user-42', $payload['sub']);
+        Assert::same('nette-app', $payload['client_id']);
+        Assert::same('acme', $payload['tenant']);
+        Assert::hasNotKey('secret', $payload);
+
+        /** @var ConfigurationRegistry $registry */
+        $registry = $container->getService('mercure.hubsConfiguration');
+        Assert::equal(new Claims(
+            iss: 'https://app.example.com',
+            aud: 'https://hub.example.com/.well-known/mercure',
+            sub: 'user-42',
+            clientId: 'nette-app',
+            additional: [
+                'tenant' => 'acme',
+                'sub' => 'overridden-by-named-claim',
+            ],
+        ), $registry->getConfiguration()
+            ->claims);
+    }
+
+    public function testEmptySecretIsRejected(): void
+    {
+        $container = $this->createContainer('
+        mercure:
+            jwt:
+                key: ""
+        ');
+
+        Assert::exception(
+            static fn (): object => $container->getService('mercure.token.factory.decorated.default'),
+            \InvalidArgumentException::class,
+            'The JWT signing key secret must not be empty.',
         );
     }
 
@@ -123,10 +189,18 @@ final class TokenFactoryTest extends ContainerTestCase
      */
     private function decodeJwtPayload(string $jwt): array
     {
-        $payload = explode('.', $jwt)[1] ?? '';
+        return $this->decodeJwtPart($jwt, 1);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function decodeJwtPart(string $jwt, int $part): array
+    {
+        $encoded = explode('.', $jwt)[$part] ?? '';
 
         /** @var array<string, mixed> */
-        return json_decode(base64_decode(strtr($payload, '-_', '+/'), true) ?: '', true, flags: \JSON_THROW_ON_ERROR);
+        return json_decode(base64_decode(strtr($encoded, '-_', '+/'), true) ?: '', true, flags: \JSON_THROW_ON_ERROR);
     }
 }
 

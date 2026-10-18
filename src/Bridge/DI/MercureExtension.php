@@ -20,6 +20,8 @@ use Symfony\Component\Mercure\ProtocolVersion;
 
 final class MercureExtension extends Nette\DI\CompilerExtension
 {
+    private const array HUB_OPTIONS = ['url', 'publicUrl', 'protocolVersion', 'jwt', 'useCookie', 'autoDiscovery', 'debugger'];
+
     public function __construct(
         private readonly bool $debugMode = false,
         private ?string $hotReloadUrl = null,
@@ -40,25 +42,38 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                 ))
                     ->default(ProtocolVersion::V1->value),
                 'jwt' => Expect::structure([
-                    'secret' => Expect::string()->required()->dynamic(),
-                    'passphrase' => Expect::string('')->dynamic(),
+                    // "key: <secret>" is a shorthand for "key: {secret: <secret>}"
+                    'key' => Expect::structure([
+                        'secret' => Expect::string()->required()->dynamic(),
+                        'passphrase' => Expect::string()->nullable()->dynamic(),
+                        'algorithm' => Expect::string()->nullable(),
+                    ])->required()
+                        ->before(static fn (mixed $key): mixed => \is_array($key) ? $key : [
+                            'secret' => $key,
+                        ]),
                     'publish' => Expect::arrayOf('string|string[]')->default(['*'])->mergeDefaults(false),
                     'subscribe' => Expect::arrayOf('string|string[]')->default(['*'])->mergeDefaults(false),
-                    'algorithm' => Expect::string()->nullable(),
                     'factory' => Expect::string()->nullable(),
                     'lifetime' => Expect::int(0)->nullable()->dynamic(),
                     'useQueryParam' => Expect::bool(false),
-                    'claims' => Expect::arrayOf('mixed', 'string')->default([]),
+                    'claims' => Expect::structure([
+                        'iss' => Expect::string()->nullable()->dynamic(),
+                        'aud' => Expect::string()->nullable()->dynamic(),
+                        'sub' => Expect::string()->nullable()->dynamic(),
+                        'clientId' => Expect::string()->nullable()->dynamic(),
+                        'additional' => Expect::arrayOf('mixed', 'string')->default([]),
+                    ]),
                 ])->required(),
                 'useCookie' => Expect::bool(true),
                 'autoDiscovery' => Expect::bool(true),
                 'debugger' => Expect::bool($this->debugMode),
             ]),
-        )->before(static fn ($val): mixed => \is_array(reset($val)) || null === reset($val)
-            ? $val
-            : [
+        )->before(static fn (mixed $val): mixed => \is_array($val) && [] !== array_intersect_key($val, array_flip(self::HUB_OPTIONS))
+            // a single hub configuration, rather than a list of named hubs
+            ? [
                 'default' => $val,
-            ]);
+            ]
+            : $val);
     }
 
     public function beforeCompile(): void
@@ -87,7 +102,7 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                     $config->jwt->publish,
                     $config->jwt->useQueryParam,
                     ProtocolVersion::from($config->protocolVersion),
-                    $config->jwt->claims,
+                    MercureHubsDefiner::claimsStatement($config),
                     $config->useCookie,
                     $config->autoDiscovery,
                 ]

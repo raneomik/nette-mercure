@@ -9,8 +9,10 @@ use Nette\DI\Definitions\Definition;
 use Nette\DI\Definitions\Statement;
 use Nette\DI\InvalidConfigurationException;
 use Raneomik\NetteMercure\Bridge\DI\Config\Claims;
+use Raneomik\NetteMercure\Bridge\DI\Config\SigningKey;
 use Raneomik\NetteMercure\Bridge\DI\MercureExtension;
 use Raneomik\NetteMercure\Bridge\Utils\HubFactory;
+use Raneomik\NetteMercure\Bridge\Utils\TokenFactoryFactory;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\HubRegistry;
 use Symfony\Component\Mercure\Jwt\DefaultClaimsTokenFactory;
@@ -71,9 +73,7 @@ final readonly class MercureHubsDefiner
             ->setType(TokenFactoryInterface::class)
             ->setFactory(new Statement(DefaultClaimsTokenFactory::class, [
                 $decoratedFactoryDefinition,
-                ProtocolVersion::V1 === $protocol
-                    ? $config->jwt->claims + Claims::defaults()
-                    : $config->jwt->claims,
+                new Statement([self::claimsStatement($config), 'toArray']),
             ]))
             ->setAutowired(false)
         ;
@@ -111,36 +111,47 @@ final readonly class MercureHubsDefiner
         ;
     }
 
+    /**
+     * Claims are built at runtime, as they may come from dynamic parameters.
+     * With the Mercure protocol 1.0, missing RFC 9068 claims fall back to defaults.
+     */
+    public static function claimsStatement(\stdClass $config): Statement
+    {
+        $claims = new Statement(Claims::class, [
+            'iss' => $config->jwt->claims->iss,
+            'aud' => $config->jwt->claims->aud,
+            'sub' => $config->jwt->claims->sub,
+            'clientId' => $config->jwt->claims->clientId,
+            'additional' => $config->jwt->claims->additional,
+        ]);
+
+        return ProtocolVersion::V1 === ProtocolVersion::from($config->protocolVersion)
+            ? new Statement([$claims, 'withDefaults'])
+            : $claims;
+    }
+
     private function tokenFactoryStatement(\stdClass $jwt, ProtocolVersion $protocol, string $name): Statement
     {
-        $factory = $jwt->factory ?? (
-            ProtocolVersion::V1 === $protocol
-            ? WebTokenFactory::class
-            : LcobucciFactory::class
-        );
+        $factory = $jwt->factory ?? (ProtocolVersion::V1 === $protocol ? WebTokenFactory::class : LcobucciFactory::class);
 
-        return match ($factory) {
-            LcobucciFactory::class => new Statement(LcobucciFactory::class, [
-                'secret' => $jwt->secret,
-                'algorithm' => $jwt->algorithm ?? 'hmac.sha256',
-                'jwtLifetime' => $jwt->lifetime,
-                'passphrase' => $jwt->passphrase,
-                'protocolVersion' => $protocol,
+        if (WebTokenFactory::class === $factory && ProtocolVersion::V1 !== $protocol) {
+            throw new InvalidConfigurationException(\sprintf(
+                'Hub "%s": %s only supports the Mercure protocol 1.0, use %s for the legacy protocol.',
+                $name,
+                WebTokenFactory::class,
+                LcobucciFactory::class,
+            ));
+        }
+
+        return new Statement([TokenFactoryFactory::class, 'create'], [
+            'key' => new Statement(SigningKey::class, [
+                'secret' => $jwt->key->secret,
+                'passphrase' => $jwt->key->passphrase,
+                'algorithm' => $jwt->key->algorithm,
             ]),
-            WebTokenFactory::class => ProtocolVersion::V1 === $protocol
-                ? new Statement([WebTokenFactory::class, 'fromSecret'], [
-                    'secret' => $jwt->secret,
-                    'algorithm' => $jwt->algorithm ?? 'HS256',
-                    'jwtLifetime' => $jwt->lifetime,
-                    'passphrase' => $jwt->passphrase,
-                ])
-                : throw new InvalidConfigurationException(\sprintf(
-                    'Hub "%s": %s only supports the Mercure protocol 1.0, use %s for the legacy protocol.',
-                    $name,
-                    WebTokenFactory::class,
-                    LcobucciFactory::class,
-                )),
-            default => new Statement($factory, [$jwt->secret]),
-        };
+            'factory' => $factory,
+            'lifetime' => $jwt->lifetime,
+            'protocolVersion' => $protocol,
+        ]);
     }
 }
