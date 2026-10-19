@@ -53,9 +53,9 @@ mercure:
 		# You can implement your own Symfony\Component\Mercure\Jwt\TokenFactoryInterface
 		factory:
 		# Optional, claims added to every token. With protocol 1.0, the RFC 9068 "iss", "aud", "sub" and "client_id" claims are required
-		# and default to "https://localhost" values: set them for production.
+		# and defaults on publicUrl, fallbacked on url, and derived values: set them for production.
 		claims:
-			iss: https://example.com
+			iss: https://example.com #
 			aud: https://example.com/.well-known/mercure
 			sub: https://example.com
 			clientId: nette-app # "client_id" claim
@@ -93,7 +93,8 @@ The same compiled container thus works in FrankenPHP workers and in CLI commands
 
 ```php
 
-use Raneomik\NetteMercure\BroadcasterInterface;use Raneomik\NetteMercure\Core\Publish\Latte\TurboStreamAction;
+use Raneomik\NetteMercure\BroadcasterInterface;
+use Raneomik\NetteMercure\Core\Publish\Latte\TurboStreamAction;
 
 final class SomeService
 {
