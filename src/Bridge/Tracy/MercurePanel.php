@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Raneomik\NetteMercure\Bridge\Tracy;
 
-use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Bridge\Tracy\Value\HubData;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
@@ -22,7 +22,7 @@ final readonly class MercurePanel implements Tracy\IBarPanel
     public function __construct(
         private BroadcastersLoader $broadcastersLoader,
         private JWTProviderInterface $jwtProvider,
-        private ConfiguredDataRegistry $hubsConfig,
+        private ConfigurationRegistry $hubsConfig,
         private ?string $hotReloadUrl = null,
         ?string $jsFilename = null,
     ) {
