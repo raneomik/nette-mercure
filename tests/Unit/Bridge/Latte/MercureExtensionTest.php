@@ -124,6 +124,10 @@ final class MercureExtensionTest extends TestCase
             (string) HotReload::build(self::HOT_RELOAD_URL)(),
             (string) $hotReloadHeadersFunction(),
         );
+        Assert::notSame(
+            '',
+            (string) $hotReloadHeadersFunction(),
+        );
     }
 
     public function testExtensionFunctionsV1ProtocolVersion(): void
@@ -191,6 +195,35 @@ final class MercureExtensionTest extends TestCase
                     'lastEventId' => '123',
                 ],
             ),
+        );
+    }
+
+    public function testExtensionWithoutHotReloadUrl(): void
+    {
+        $extension = new MercureExtension(
+            new DummyJwtProvider(),
+            new BroadcastersLoader(static fn (): Broadcasters => self::$broadcasters),
+            new ConfigurationRegistry(
+                [
+                    'test' => new Configuration(
+                        hubName: 'test',
+                        hubUrl: 'http://hub.example.com',
+                        publicUrl: 'http://hub.example.com',
+                        subscribe: ['*'],
+                        publish: ['*'],
+                        protocolVersion: ProtocolVersion::Legacy,
+                    ),
+                ],
+            ),
+        );
+
+        [
+            'hotReloadMetaHead' => $hotReloadHeadersFunction,
+        ] = $extension->getFunctions();
+
+        Assert::same(
+            '',
+            (string) $hotReloadHeadersFunction(),
         );
     }
 }
