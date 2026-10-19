@@ -6,8 +6,8 @@ namespace Tests\Unit\Raneomik\NetteMercure\Bridge\Tracy;
 
 require \dirname(__DIR__, 3) . '/bootstrap.php';
 
-use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredData;
-use Raneomik\NetteMercure\Bridge\DI\Config\ConfiguredDataRegistry;
+use Raneomik\NetteMercure\Bridge\DI\Config\Configuration;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Bridge\Tracy\MercurePanel;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
@@ -57,16 +57,18 @@ final class MercurePanelTest extends TestCase
                         ]
                     ),
                 ),
-                new ConfiguredDataRegistry([
-                    'test' => new ConfiguredData(
+                new ConfigurationRegistry([
+                    'test' => new Configuration(
                         hubName: 'test',
                         hubUrl: 'http://hub.example.com',
+                        publicUrl: 'http://hub.example.com',
                         subscribe: ['*'],
                         publish: ['*'],
                     ),
-                    'nullFactory' => new ConfiguredData(
+                    'nullFactory' => new Configuration(
                         hubName: 'test',
                         hubUrl: 'http://nullhub.example.com',
+                        publicUrl: 'http://nullhub.example.com',
                         subscribe: ['*'],
                         publish: ['*'],
                     ),
