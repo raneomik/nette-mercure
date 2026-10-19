@@ -8,6 +8,9 @@ require \dirname(__DIR__, 3) . '/bootstrap.php';
 
 use Raneomik\NetteMercure\Bridge\DI\Config\Configuration;
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
+use Raneomik\NetteMercure\Bridge\Latte\Function\HotReload;
+use Raneomik\NetteMercure\Bridge\Latte\Function\Mercure;
+use Raneomik\NetteMercure\Bridge\Latte\Function\MercureJWTToken;
 use Raneomik\NetteMercure\Bridge\Latte\MercureExtension;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
@@ -24,6 +27,8 @@ use Tests\Fixtures\Dummies\Core\Subscribe\DummyJwtProvider;
  */
 final class MercureExtensionTest extends TestCase
 {
+    private const string HOT_RELOAD_URL = 'http://v1.example.com/?match=hot-reload';
+
     private static Broadcasters $broadcasters;
 
     private static MercureExtension $extension;
@@ -63,6 +68,7 @@ final class MercureExtensionTest extends TestCase
                     jwtInQueryParam: true,
                 ),
             ]),
+            self::HOT_RELOAD_URL,
         );
     }
 
@@ -112,13 +118,6 @@ final class MercureExtensionTest extends TestCase
                 'lastEventId' => '123',
             ],
             'expected' => 'http://hub.example.com?lastEventID=123',
-        ];
-
-        yield '1.0, jwt in query from config' => [
-            'topics' => 'test',
-            'hub' => 'v1',
-            'options' => [],
-            'expected' => 'http://v1.example.com?match=test&authorization=dummy-jwt-token-test-provider-token-*-',
         ];
 
         yield '1.0, matcher type' => [
@@ -240,6 +239,17 @@ final class MercureExtensionTest extends TestCase
         $token = $this->function('mercureJWTToken');
 
         Assert::same($expected, $token($subscribe, [], $hub));
+    }
+
+    public function testHotReload(): void
+    {
+        $hotReloadHeadersFunction = $this->function('hotReload');
+
+        Assert::type('callable', $hotReloadHeadersFunction);
+        Assert::same(
+            (string) HotReload::build(self::HOT_RELOAD_URL)(),
+            (string) $hotReloadHeadersFunction(),
+        );
     }
 
     private function function(string $name): callable

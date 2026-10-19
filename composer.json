@@ -21,7 +21,7 @@
     "web-token/jwt-library": "^4.2"
   },
   "require-dev": {
-    "infection/infection": "^0.35.4",
+    "infection/infection": "^0.35.8",
     "latte/latte": "^3.1",
     "nette/application": "^3.3",
     "nette/bootstrap": "^3.3",

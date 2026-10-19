@@ -10,26 +10,25 @@ namespace Raneomik\NetteMercure\Bridge\DI\Config;
 final readonly class ConfigurationRegistry implements \IteratorAggregate
 {
     /**
-     * @param array<string, Configuration> $configuredData
+     * @param array<string, Configuration> $configurations
      */
     public function __construct(
-        private iterable $configuredData,
+        private iterable $configurations,
     ) {
     }
 
     public function getConfiguration(?string $hubName = null): Configuration
     {
-        /** @var Configuration $defaultData */
-        $defaultData = array_first($this->configuredData);
-        if (null === $hubName) {
-            return $defaultData;
-        }
+        /** @var string $first */
+        $first = array_key_first($this->configurations);
 
-        return $this->configuredData[$hubName] ?? $defaultData;
+        return $this->configurations[$hubName ?? $first]
+            ?? $this->configurations[$first]
+        ;
     }
 
     public function getIterator(): \Traversable
     {
-        return new \ArrayIterator($this->configuredData);
+        return new \ArrayIterator($this->configurations);
     }
 }
