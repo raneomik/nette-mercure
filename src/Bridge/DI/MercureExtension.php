@@ -137,6 +137,7 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                             ]),
                         ]),
                         '@' . $this->prefix('hubsConfiguration'),
+                        $this->hotReloadUrl,
                     ]),
                 ])
             ;
