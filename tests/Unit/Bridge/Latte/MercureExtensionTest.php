@@ -243,9 +243,8 @@ final class MercureExtensionTest extends TestCase
 
     public function testHotReload(): void
     {
-        $hotReloadHeadersFunction = $this->function('hotReload');
+        $hotReloadHeadersFunction = $this->function('hotReloadMetaHead');
 
-        Assert::type('callable', $hotReloadHeadersFunction);
         Assert::same(
             (string) HotReload::build(self::HOT_RELOAD_URL)(),
             (string) $hotReloadHeadersFunction(),
@@ -256,17 +255,9 @@ final class MercureExtensionTest extends TestCase
         );
     }
 
-    private function function(string $name): callable
-    {
-        $function = self::$extension->getFunctions()[$name];
-        Assert::type('callable', $function);
-
-        return $function;
-    }
-
     public function testExtensionWithoutHotReloadUrl(): void
     {
-        $extension = new MercureExtension(
+        self::$extension = new MercureExtension(
             new DummyJwtProvider(),
             new BroadcastersLoader(static fn (): Broadcasters => self::$broadcasters),
             new ConfigurationRegistry(
@@ -283,14 +274,19 @@ final class MercureExtensionTest extends TestCase
             ),
         );
 
-        [
-            'hotReloadMetaHead' => $hotReloadHeadersFunction,
-        ] = $extension->getFunctions();
-
+        $hotReloadHeadersFunction = $this->function('hotReloadMetaHead');
         Assert::same(
             '',
             (string) $hotReloadHeadersFunction(),
         );
+    }
+
+    private function function(string $name): callable
+    {
+        $function = self::$extension->getFunctions()[$name];
+        Assert::type('callable', $function);
+
+        return $function;
     }
 }
 

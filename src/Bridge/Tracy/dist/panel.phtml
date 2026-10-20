@@ -192,54 +192,6 @@ $formatData = fn(float $number, string $type): string => match($type) {
 			</div>
 		</div>
 	</details>
-	<script>
-	(function () {
-		const container = document.getElementById('tracy-mercure-live');
-        const hubs = <?= json_encode($liveHubs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-        let initialized = false;
-
-		hubs.forEach(function (hub) {
-			const url = new URL(hub.url);
-			url.searchParams.append('topic', '*');
-			url.searchParams.append('authorization', hub.jwt);
-
-			const es = new EventSource(url.toString());
-
-			es.onmessage = function (event) {
-				if (!initialized) {
-					container.innerHTML = '';
-					initialized = true;
-				}
-
-				const entry = document.createElement('div');
-				entry.className = 'mercure-live-entry';
-
-				const time = document.createElement('span');
-				time.className = 'mercure-live-time';
-				time.textContent = new Date().toLocaleTimeString();
-
-				const hubLabel = document.createElement('span');
-				hubLabel.className = 'mercure-live-hub';
-				hubLabel.textContent = '[' + hub.name + ']';
-
-				const data = document.createElement('span');
-				data.textContent = event.data;
-
-				entry.appendChild(time);
-				entry.appendChild(hubLabel);
-				entry.appendChild(data);
-				container.insertBefore(entry, container.firstChild);
-			};
-
-			es.onerror = function () {
-				const err = document.createElement('div');
-				err.className = 'mercure-live-entry mercure-live-error';
-				err.textContent = 'Connection error — hub: ' + hub.name;
-				container.insertBefore(err, container.firstChild);
-				initialized = true;
-			};
-		});
-	})();
-	</script>
+	<script><?php require __DIR__ . '/liveEvents.js.phtml'; ?></script>
 	<?php endif ?>
 </div>

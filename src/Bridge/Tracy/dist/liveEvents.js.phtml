@@ -1,0 +1,106 @@
+<?php
+
+declare(strict_types=1);
+
+/** @var list<array{name: string, url: string, jwt: string}> $liveHubs */
+
+?>
+(function () {
+	const container = document.getElementById('tracy-mercure-live');
+	const hubs = <?= json_encode($liveHubs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+	let initialized = false;
+	let mercureCounter = 0;
+
+	function escHtml(s) {
+		return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+	}
+
+	function escAttr(s) {
+		return String(s).replace(/&/g, '&amp;').replace(/'/g, '&#039;');
+	}
+
+	function addToTracyBar(hub, event) {
+		if (!window.Tracy || !Tracy.Debug) return;
+
+		const id = 'tracy-debug-panel-mercure-' + (++mercureCounter);
+		const time = new Date().toLocaleTimeString();
+
+		let dataPretty;
+		try {
+			dataPretty = JSON.stringify(JSON.parse(event.data), null, 2);
+		} catch (e) {
+			dataPretty = event.data;
+		}
+
+		const panelContent = '<h1>Mercure Event</h1>'
+			+ '<div class="tracy-inner">'
+			+ '<table><tbody>'
+			+ '<tr><th>Hub</th><td>' + escHtml(hub.name) + '</td></tr>'
+			+ '<tr><th>Time</th><td>' + escHtml(time) + '</td></tr>'
+			+ (event.lastEventId ? '<tr><th>ID</th><td>' + escHtml(event.lastEventId) + '</td></tr>' : '')
+			+ '<tr><th>Data</th><td><pre style="margin:0;white-space:pre-wrap">' + escHtml(dataPretty) + '</pre></td></tr>'
+			+ '</tbody></table>'
+			+ '</div>'
+			+ '<div class="tracy-icons">'
+			+ '<a href="#" data-tracy-action="window" title="open in window">&curren;</a>'
+			+ '<a href="#" data-tracy-action="close" title="close window">&times;</a>'
+			+ '</div>';
+
+		const panels = '<div itemscope>'
+			+ '<div class="tracy-panel tracy-panel-ajax" id="' + id + '" data-tracy-content=\'' + escAttr(panelContent) + '\'></div>'
+			+ '<meta itemprop=tracy-snapshot content=\'{}\'>'
+			+ '</div>';
+
+		const preview = event.data.length > 40 ? event.data.slice(0, 40) + '…' : event.data;
+		const bar = '<ul class="tracy-row" data-tracy-group="ajax">'
+			+ '<li>Mercure</li>'
+			+ '<li><a href="#" rel="' + id + '">[' + escHtml(hub.name) + '] ' + escHtml(preview) + '</a></li>'
+			+ '</ul>';
+
+		Tracy.Debug.loadAjax({ bar, panels });
+	}
+
+	hubs.forEach(function (hub) {
+		const url = new URL(hub.url);
+		url.searchParams.append('match', '*');
+		url.searchParams.append('authorization', hub.jwt);
+
+		const es = new EventSource(url.toString());
+
+		es.onmessage = function (event) {
+			if (!initialized) {
+				container.innerHTML = '';
+				initialized = true;
+			}
+
+			const entry = document.createElement('div');
+			entry.className = 'mercure-live-entry';
+
+			const time = document.createElement('span');
+			time.className = 'mercure-live-time';
+			time.textContent = new Date().toLocaleTimeString();
+
+			const hubLabel = document.createElement('span');
+			hubLabel.className = 'mercure-live-hub';
+			hubLabel.textContent = '[' + hub.name + ']';
+
+			const data = document.createElement('span');
+			data.textContent = event.data;
+
+			entry.appendChild(time);
+			entry.appendChild(hubLabel);
+			entry.appendChild(data);
+			container.insertBefore(entry, container.firstChild);
+
+			addToTracyBar(hub, event);
+		};
+
+		es.onerror = function () {
+			const err = document.createElement('div');
+			err.className = 'mercure-live-entry mercure-live-error';
+			err.textContent = 'Connection error — hub: ' + hub.name;
+			container.insertBefore(err, container.firstChild);
+			initialized = true;
+		};
+	});
+})();

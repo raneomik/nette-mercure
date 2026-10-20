@@ -45,6 +45,23 @@ final class MercurePanelTest extends TestCase
             'nullFactory' => $nullFactoryBroadcaster,
         ]);
 
+        $configs = new ConfigurationRegistry([
+            'test' => new Configuration(
+                hubName: 'test',
+                hubUrl: 'http://hub.example.com',
+                publicUrl: 'http://hub.example.com',
+                subscribe: ['*'],
+                publish: ['*'],
+            ),
+            'nullFactory' => new Configuration(
+                hubName: 'test',
+                hubUrl: 'http://nullhub.example.com',
+                publicUrl: 'http://nullhub.example.com',
+                subscribe: ['*'],
+                publish: ['*'],
+            ),
+        ]);
+
         $panel = new MercurePanel(
             ...$params = [
                 new BroadcastersLoader(static fn (): Broadcasters => $broadcasters),
@@ -56,23 +73,9 @@ final class MercurePanelTest extends TestCase
                             'nullFactory' => $nullFactoryHub,
                         ]
                     ),
+                    $configs,
                 ),
-                new ConfigurationRegistry([
-                    'test' => new Configuration(
-                        hubName: 'test',
-                        hubUrl: 'http://hub.example.com',
-                        publicUrl: 'http://hub.example.com',
-                        subscribe: ['*'],
-                        publish: ['*'],
-                    ),
-                    'nullFactory' => new Configuration(
-                        hubName: 'test',
-                        hubUrl: 'http://nullhub.example.com',
-                        publicUrl: 'http://nullhub.example.com',
-                        subscribe: ['*'],
-                        publish: ['*'],
-                    ),
-                ]),
+                $configs,
                 'https://hot-reload.example.com',
                 $testFile,
             ]
@@ -89,7 +92,14 @@ final class MercurePanelTest extends TestCase
         Assert::true(file_exists($testFile));
 
         // a changed URL rewrites the cached script, encoded for a JS string
-        new MercurePanel($params[0], "https://hr.example.com/?topic=a&b='c'", $testFile);
+        [$loader, $jwtProvider] = $params;
+        new MercurePanel(
+            $loader,
+            $jwtProvider,
+            $configs,
+            "https://hr.example.com/?topic=a&b='c'",
+            $testFile,
+        );
         Assert::contains('meta.content = "https://hr.example.com/?topic=a&b=\'c\'";', (string) file_get_contents($testFile));
 
         unlink($testFile);
