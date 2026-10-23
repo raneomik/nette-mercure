@@ -27,21 +27,27 @@ final readonly class Discovery
 
     public function addLinkFromCurrentRequest(): void
     {
-        $hub = $this->request->getQuery('hub') ?? $this->request->getQuery('hubName');
         $noDiscovery = $this->request->getQuery(self::NO_LINK_DISCOVER)
             ?? $this->request->getHeader(self::NO_LINK_DISCOVER)
             ?? false;
 
-        $hubData = $this->config->getConfiguration($hub);
+        if ($noDiscovery) {
+            return;
+        }
 
-        if ((false === $hubData->autoDiscovery) || $noDiscovery) {
+        $hub = $this->request->getQuery('hub')
+            ?? $this->request->getQuery('hubName')
+        ;
+
+        $hubData = $this->config->getConfiguration($hub);
+        if (false === $hubData->autoDiscovery) {
             return;
         }
 
         $this->addLink($hubData->publicUrl);
     }
 
-    public function addLink(string $hubLink): void
+    private function addLink(string $hubLink): void
     {
         // avoid nette errors - eg. does not accept OPTIONS requests
         if ($this->isPreflightRequest()) {

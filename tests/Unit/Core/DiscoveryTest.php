@@ -20,141 +20,204 @@ use Tests\Fixtures\Dummies\Core\DummyResponse;
  */
 final class DiscoveryTest extends TestCase
 {
-    public function testNoLinkAddition(): void
+    /**
+     * @return iterable<array{
+     *     discovery: Discovery,
+     *     response: DummyResponse,
+     *     expectedHeaders: array<string,string>
+     * }>
+     */
+    public function provideDiscoveries(): iterable
     {
-        $discovery = new Discovery(
-            new HttpHeaderSerializer(),
-            new DummyRequest(
-                [
-                    'Access-Control-Request-Method' => 'get',
-                ],
-                'OPTIONS'
+        $defaultNoDiscoveryConfig = new Configuration(
+            hubName: 'test',
+            hubUrl: 'http://hub.example.com',
+            publicUrl: 'http://hub.example.com',
+            subscribe: ['*'],
+            publish: ['*'],
+        );
+        $hub2Config = new Configuration(
+            hubName: 'test',
+            hubUrl: 'http://hub2.example.com',
+            publicUrl: 'http://hub2.example.com',
+            subscribe: ['*'],
+            publish: ['*'],
+            autoDiscovery: true,
+        );
+
+        yield 'minimalistic-default' => [
+            'discovery' => new Discovery(
+                new HttpHeaderSerializer(),
+                new DummyRequest(),
+                $response = new DummyResponse(),
+                new ConfigurationRegistry([
+                    'test' => $hub2Config,
+                ]),
             ),
-            $response = new DummyResponse(),
-            new ConfigurationRegistry([
-                'test' => new Configuration(
-                    hubName: 'test',
-                    hubUrl: 'http://hub.example.com',
-                    publicUrl: 'http://hub.example.com',
-                    subscribe: ['*'],
-                    publish: ['*'],
+            'response' => $response,
+            'expectedHeaders' => [
+                'Access-Control-Expose-Headers' => 'Link',
+                'Link' => '<http://hub2.example.com>; rel="mercure"',
+            ],
+        ];
+
+        yield 'hub-query-in-prior-of-hubMame' => [
+            'discovery' => new Discovery(
+                new HttpHeaderSerializer(),
+                new DummyRequest(fromUrl: '/?hubName=test&hub=test2'),
+                $response = new DummyResponse(),
+                new ConfigurationRegistry([
+                    'test' => $defaultNoDiscoveryConfig,
+                    'test2' => $hub2Config,
+                ])
+            ),
+            'response' => $response,
+            'expectedHeaders' => [
+                'Access-Control-Expose-Headers' => 'Link',
+                'Link' => '<http://hub2.example.com>; rel="mercure"',
+            ],
+        ];
+
+        yield 'hub-query' => [
+            'discovery' => new Discovery(
+                new HttpHeaderSerializer(),
+                new DummyRequest(fromUrl: '/?hub=test2'),
+                $response = new DummyResponse(),
+                new ConfigurationRegistry([
+                    'test' => $defaultNoDiscoveryConfig,
+                    'test2' => $hub2Config,
+                ])
+            ),
+            'response' => $response,
+            'expectedHeaders' => [
+                'Access-Control-Expose-Headers' => 'Link',
+                'Link' => '<http://hub2.example.com>; rel="mercure"',
+            ],
+        ];
+
+        yield 'hubName-query-but-fallback-on-no-discovery-hub' => [
+            'discovery' => new Discovery(
+                new HttpHeaderSerializer(),
+                new DummyRequest(fromUrl: '/?hubName=test2'),
+                $response = new DummyResponse(),
+                new ConfigurationRegistry([
+                    'test' => $defaultNoDiscoveryConfig,
+                ])
+            ),
+            'response' => $response,
+            'expectedHeaders' => [],
+        ];
+
+        yield 'hub-query-but-no-discovery-query' => [
+            'discovery' => new Discovery(
+                new HttpHeaderSerializer(),
+                new DummyRequest(fromUrl: '/?hub=test&' . Discovery::NO_LINK_DISCOVER . '=1'),
+                $response = new DummyResponse(),
+                new ConfigurationRegistry([
+                    'test' => $hub2Config,
+                ])
+            ),
+            'response' => $response,
+            'expectedHeaders' => [],
+        ];
+
+        yield 'hub-query-but-no-discovery-header' => [
+            'discovery' => new Discovery(
+                new HttpHeaderSerializer(),
+                new DummyRequest([
+                    Discovery::NO_LINK_DISCOVER => '1',
+                ], fromUrl: '/?hubName=test'),
+                $response = new DummyResponse(),
+                new ConfigurationRegistry([
+                    'test' => $hub2Config,
+                ])
+            ),
+            'response' => $response,
+            'expectedHeaders' => [],
+        ];
+
+        yield 'hub-query-but-no-discovery-header-and-query' => [
+            'discovery' => new Discovery(
+                new HttpHeaderSerializer(),
+                new DummyRequest([
+                    Discovery::NO_LINK_DISCOVER => '1',
+                ], fromUrl: '/?' . Discovery::NO_LINK_DISCOVER . '=1'),
+                $response = new DummyResponse(),
+                new ConfigurationRegistry([
+                    'test' => $hub2Config,
+                ])
+            ),
+            'response' => $response,
+            'expectedHeaders' => [],
+        ];
+
+        yield 'preflight-attempt-with-options-method-only' => [
+            'discovery' => new Discovery(
+                new HttpHeaderSerializer(),
+                new DummyRequest(method: 'OPTIONS'),
+                $response = new DummyResponse(),
+                new ConfigurationRegistry([
+                    'test' => $hub2Config,
+                ])
+            ),
+            'response' => $response,
+            'expectedHeaders' => [
+                'Access-Control-Expose-Headers' => 'Link',
+                'Link' => '<http://hub2.example.com>; rel="mercure"',
+            ],
+        ];
+
+        yield 'preflight-attempt-with-headers-only' => [
+            'discovery' => new Discovery(
+                new HttpHeaderSerializer(),
+                new DummyRequest(
+                    [
+                        'Access-Control-Request-Method' => 'get',
+                    ],
                 ),
-            ])
-        );
+                $response = new DummyResponse(),
+                new ConfigurationRegistry([
+                    'test' => $hub2Config,
+                ])
+            ),
+            'response' => $response,
+            'expectedHeaders' => [
+                'Access-Control-Expose-Headers' => 'Link',
+                'Link' => '<http://hub2.example.com>; rel="mercure"',
+            ],
+        ];
 
-        $discovery->addLink('http://example.com/hub');
-
-        Assert::null($response->getHeader('Link'));
+        yield 'preflight-with-method-and-headers' => [
+            'discovery' => new Discovery(
+                new HttpHeaderSerializer(),
+                new DummyRequest(
+                    [
+                        'Access-Control-Request-Method' => 'get',
+                    ],
+                    'OPTIONS'
+                ),
+                $response = new DummyResponse(),
+                new ConfigurationRegistry([
+                    'test' => $hub2Config,
+                ])
+            ),
+            'response' => $response,
+            'expectedHeaders' => [],
+        ];
     }
 
-    public function testMinimalisticDefaultBroadcast(): void
-    {
-        $discovery = new Discovery(
-            new HttpHeaderSerializer(),
-            new DummyRequest(),
-            $response = new DummyResponse(),
-            new ConfigurationRegistry([
-                'test' => new Configuration(
-                    hubName: 'test',
-                    hubUrl: 'http://hub.example.com',
-                    publicUrl: 'http://hub.example.com',
-                    subscribe: ['*'],
-                    publish: ['*'],
-                ),
-            ])
-        );
-
-        $discovery->addLink('http://example.com/hub');
-        Assert::Same(
-            '<http://example.com/hub>; rel="mercure"',
-            $response->getHeader('Link'),
-        );
-    }
-
-    public function testDiscoverySetFromRequest(): void
-    {
-        $discovery = new Discovery(
-            new HttpHeaderSerializer(),
-            new DummyRequest(fromUrl: '/?hubName=test2'),
-            $response = new DummyResponse(),
-            new ConfigurationRegistry([
-                'test' => new Configuration(
-                    hubName: 'test',
-                    hubUrl: 'http://hub.example.com',
-                    publicUrl: 'http://hub.example.com',
-                    subscribe: ['*'],
-                    publish: ['*'],
-                ),
-                'test2' => new Configuration(
-                    hubName: 'test',
-                    hubUrl: 'http://hub2.example.com',
-                    publicUrl: 'http://hub2.example.com',
-                    subscribe: ['*'],
-                    publish: ['*'],
-                    autoDiscovery: true,
-                ),
-            ])
-        );
-
+    /**
+     * @dataProvider provideDiscoveries
+     *
+     * @param array<string,string> $expectedHeaders
+     */
+    public function testDiscoverySetFromRequest(
+        Discovery $discovery,
+        DummyResponse $response,
+        array $expectedHeaders,
+    ): void {
         $discovery->addLinkFromCurrentRequest();
-        Assert::Same(
-            '<http://hub2.example.com>; rel="mercure"',
-            $response->getHeader('Link'),
-        );
-
-        $discovery = new Discovery(
-            new HttpHeaderSerializer(),
-            new DummyRequest(fromUrl: '/?hubName=test2'),
-            $response = new DummyResponse(),
-            new ConfigurationRegistry([
-                'test' => new Configuration(
-                    hubName: 'test',
-                    hubUrl: 'http://hub.example.com',
-                    publicUrl: 'http://hub.example.com',
-                    subscribe: ['*'],
-                    publish: ['*'],
-                ),
-            ])
-        );
-
-        $discovery->addLinkFromCurrentRequest();
-        Assert::hasNotKey('Link', $response->getHeaders());
-
-        $discovery = new Discovery(
-            new HttpHeaderSerializer(),
-            new DummyRequest(fromUrl: '/?hubName=test2&' . Discovery::NO_LINK_DISCOVER . '=1'),
-            $response = new DummyResponse(),
-            new ConfigurationRegistry([
-                'test' => new Configuration(
-                    hubName: 'test',
-                    hubUrl: 'http://hub.example.com',
-                    publicUrl: 'http://hub.example.com',
-                    subscribe: ['*'],
-                    publish: ['*'],
-                    autoDiscovery: true,
-                ),
-            ])
-        );
-        $discovery = new Discovery(
-            new HttpHeaderSerializer(),
-            new DummyRequest([
-                Discovery::NO_LINK_DISCOVER => '1',
-            ], fromUrl: '/?hubName=test2&'),
-            $response = new DummyResponse(),
-            new ConfigurationRegistry([
-                'test' => new Configuration(
-                    hubName: 'test',
-                    hubUrl: 'http://hub.example.com',
-                    publicUrl: 'http://hub.example.com',
-                    subscribe: ['*'],
-                    publish: ['*'],
-                    autoDiscovery: true,
-                ),
-            ])
-        );
-
-        $discovery->addLinkFromCurrentRequest();
-        Assert::hasNotKey('Link', $response->getHeaders());
+        Assert::same($expectedHeaders, $response->getHeaders());
     }
 }
 
