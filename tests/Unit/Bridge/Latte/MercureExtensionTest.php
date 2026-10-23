@@ -8,6 +8,7 @@ require \dirname(__DIR__, 3) . '/bootstrap.php';
 
 use Raneomik\NetteMercure\Bridge\DI\Config\Configuration;
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
+use Raneomik\NetteMercure\Bridge\Latte\Function\HotReload;
 use Raneomik\NetteMercure\Bridge\Latte\Function\Mercure;
 use Raneomik\NetteMercure\Bridge\Latte\Function\MercureJWTToken;
 use Raneomik\NetteMercure\Bridge\Latte\MercureExtension;
@@ -26,6 +27,8 @@ use Tests\Fixtures\Dummies\Core\Subscribe\DummyJwtProvider;
  */
 final class MercureExtensionTest extends TestCase
 {
+    private const string HOT_RELOAD_URL = 'http://v1.example.com/?match=hot-reload';
+
     private static Broadcasters $broadcasters;
 
     private static MercureExtension $extension;
@@ -65,6 +68,7 @@ final class MercureExtensionTest extends TestCase
                     jwtInQueryParam: true,
                 ),
             ]),
+            self::HOT_RELOAD_URL,
         );
     }
 
@@ -73,10 +77,12 @@ final class MercureExtensionTest extends TestCase
         /**
          * @var Mercure $mercureFunction
          * @var MercureJWTToken $JWTTokenFunction
+         * @var HotReload $hotReloadHeadersFunction
          */
         [
             'mercure' => $mercureFunction,
             'mercureJWTToken' => $JWTTokenFunction,
+            'hotReloadMetaHead' => $hotReloadHeadersFunction,
         ] = self::$extension->getFunctions();
 
         Assert::type('callable', $mercureFunction);
@@ -111,6 +117,16 @@ final class MercureExtensionTest extends TestCase
         Assert::same(
             'dummy-jwt-token-test-provider-token-*-',
             $JWTTokenFunction(),
+        );
+
+        Assert::type('callable', $hotReloadHeadersFunction);
+        Assert::same(
+            (string) HotReload::build(self::HOT_RELOAD_URL)(),
+            (string) $hotReloadHeadersFunction(),
+        );
+        Assert::notSame(
+            '',
+            (string) $hotReloadHeadersFunction(),
         );
     }
 
@@ -179,6 +195,35 @@ final class MercureExtensionTest extends TestCase
                     'lastEventId' => '123',
                 ],
             ),
+        );
+    }
+
+    public function testExtensionWithoutHotReloadUrl(): void
+    {
+        $extension = new MercureExtension(
+            new DummyJwtProvider(),
+            new BroadcastersLoader(static fn (): Broadcasters => self::$broadcasters),
+            new ConfigurationRegistry(
+                [
+                    'test' => new Configuration(
+                        hubName: 'test',
+                        hubUrl: 'http://hub.example.com',
+                        publicUrl: 'http://hub.example.com',
+                        subscribe: ['*'],
+                        publish: ['*'],
+                        protocolVersion: ProtocolVersion::Legacy,
+                    ),
+                ],
+            ),
+        );
+
+        [
+            'hotReloadMetaHead' => $hotReloadHeadersFunction,
+        ] = $extension->getFunctions();
+
+        Assert::same(
+            '',
+            (string) $hotReloadHeadersFunction(),
         );
     }
 }
