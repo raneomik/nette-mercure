@@ -3,12 +3,12 @@
 declare(strict_types=1);
 
 ?>
-'use strict'
+'use strict';
 
 (function() {
     const meta = document.createElement('meta');
     meta.name = 'frankenphp-hot-reload:url';
-    meta.content = '<?= Tracy\Helpers::escapeHtml($hotReloadUrl) ?>';
+    meta.content = <?= json_encode($hotReloadUrl, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_THROW_ON_ERROR) ?>;
 
     const script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/frankenphp-hot-reload/+esm';

@@ -19,48 +19,16 @@ final readonly class Authorization implements AuthorizationInterface
         private IRequest $request,
         private IResponse $response,
         private ConfigurationRegistry $config,
-        private ?SameSite $cookieSameSite = SameSite::Lax,
+        private ?SameSite $cookieSameSite = SameSite::Strict,
     ) {
     }
 
-    public function createCookieFromCurrentRequest(): void
+    #[\Override]
+    public function setCookie(array|string $grants = [], array $additionalClaims = [], ?string $hub = null): void
     {
-        $hub = $this->request->getQuery('hub') ?? $this->request->getQuery('hubName');
-        $hubConfig = $this->config->getConfiguration($hub);
-
-        if (false === $hubConfig->useCookie) {
-            return;
-        }
-
-        $topics = $this->request->getQuery('topics') ?? ['*'];
-        $additionalClaims = $this->request->getQuery('claims') ?? [];
-
-        $this->createCookie(
-            $topics,
-            $additionalClaims,
-            $hub,
-        );
-    }
-
-    public function createCookie(array|string $subscribedTopics = ['*'], array $additionalClaims = [], ?string $hub = null): void
-    {
-        $token = $this->jwtProvider->provide($hub, $subscribedTopics, $additionalClaims);
-
-        $hubConfig = $this->config->getConfiguration($hub);
-
-        /** @var array{
-         * scheme?: string,
-         * host?: string,
-         * port?: int,
-         * path?: string,
-         * } $urlComponents */
-        $urlComponents = parse_url($hubConfig->publicUrl);
-        $secure = 'http' !== strtolower($urlComponents['scheme'] ?? 'https');
-
-        $name = $this->getCookieName($hubConfig->protocolVersion, $secure);
-        $expire = $this->jwtProvider->ttl();
-        $path = $urlComponents['path'] ?? '/';
-        $domain = $this->getCookieDomain($urlComponents['host'] ?? null);
+        $token = $this->jwtProvider->provide($hub, $grants, $additionalClaims);
+        $expire = $this->jwtProvider->ttl() ?? 0; // 0: session cookie
+        [$name, $path, $domain, $secure] = $this->cookieParameters($hub);
 
         // IResponse::setCookie() has no "sameSite" parameter, only Nette\Http\Response does
         if (
@@ -73,6 +41,38 @@ final readonly class Authorization implements AuthorizationInterface
         }
 
         $this->response->setCookie($name, $token, $expire, $path, $domain, $secure, true);
+    }
+
+    #[\Override]
+    public function clearCookie(?string $hub = null): void
+    {
+        [$name, $path, $domain, $secure] = $this->cookieParameters($hub);
+
+        $this->response->deleteCookie($name, $path, $domain, $secure);
+    }
+
+    /**
+     * @return array{string, string, ?string, bool} name, path, domain, secure
+     */
+    private function cookieParameters(?string $hub): array
+    {
+        $hubConfig = $this->config->getConfiguration($hub);
+
+        /** @var array{
+         * scheme?: string,
+         * host?: string,
+         * port?: int,
+         * path?: string,
+         * } $urlComponents */
+        $urlComponents = parse_url($hubConfig->publicUrl);
+        $secure = 'http' !== strtolower($urlComponents['scheme'] ?? 'https');
+
+        return [
+            $this->getCookieName($hubConfig->protocolVersion, $secure),
+            $urlComponents['path'] ?? '/',
+            $this->getCookieDomain($urlComponents['host'] ?? null),
+            $secure,
+        ];
     }
 
     private function getCookieName(ProtocolVersion $protocolVersion, bool $secure): string

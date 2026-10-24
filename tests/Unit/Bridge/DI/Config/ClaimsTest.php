@@ -15,37 +15,61 @@ use Tester\TestCase;
  */
 final class ClaimsTest extends TestCase
 {
-    public function testToArray(): void
+    /**
+     * @return iterable<string, array{
+     *     claims: Claims,
+     *     expected: array<string, mixed>,
+     * }>
+     */
+    public function provideClaims(): iterable
     {
-        $claims = new Claims(
-            iss: 'https://app.example.com',
-            aud: 'https://hub.example.com/.well-known/mercure',
-            sub: 'user-42',
-            clientId: 'nette-app',
-            additional: [
+        yield 'all claims, named ones over additional' => [
+            'claims' => new Claims(
+                iss: 'https://app.example.com',
+                aud: 'https://hub.example.com/.well-known/mercure',
+                sub: 'user-42',
+                clientId: 'nette-app',
+                additional: [
+                    'tenant' => 'acme',
+                    'iss' => 'overridden',
+                ],
+            ),
+            'expected' => [
+                'iss' => 'https://app.example.com',
+                'aud' => 'https://hub.example.com/.well-known/mercure',
+                'sub' => 'user-42',
+                'client_id' => 'nette-app',
                 'tenant' => 'acme',
-                'iss' => 'overridden',
             ],
-        );
+        ];
 
-        Assert::same([
-            'iss' => 'https://app.example.com',
-            'aud' => 'https://hub.example.com/.well-known/mercure',
-            'sub' => 'user-42',
-            'client_id' => 'nette-app',
-            'tenant' => 'acme',
-        ], $claims->toArray());
+        yield 'no claim' => [
+            'claims' => new Claims(),
+            'expected' => [],
+        ];
+
+        yield 'unset claims are omitted' => [
+            'claims' => new Claims(
+                iss: 'https://app.example.com',
+                additional: [
+                    'tenant' => 'acme',
+                ],
+            ),
+            'expected' => [
+                'iss' => 'https://app.example.com',
+                'tenant' => 'acme',
+            ],
+        ];
     }
 
-    public function testUnsetClaimsAreOmitted(): void
+    /**
+     * @dataProvider provideClaims
+     *
+     * @param array<string, mixed> $expected
+     */
+    public function testToArray(Claims $claims, array $expected): void
     {
-        Assert::same([], (new Claims())->toArray());
-        Assert::same([
-            'iss' => 'https://app.example.com',
-            'tenant' => 'acme',
-        ], (new Claims(iss: 'https://app.example.com', additional: [
-            'tenant' => 'acme',
-        ]))->toArray());
+        Assert::same($expected, $claims->toArray());
     }
 
     public function testWithDefaultsOnlyFillsMissingClaims(): void

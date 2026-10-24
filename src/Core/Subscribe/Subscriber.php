@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Raneomik\NetteMercure\Core\Subscribe;
 
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
+use Raneomik\NetteMercure\Bridge\Utils\SubscriptionQuery;
 use Raneomik\NetteMercure\Core\Subscribe\Value\SubscriptionData;
 use Raneomik\NetteMercure\SubscriberInterface;
+use Symfony\Component\Mercure\Jwt\Grant;
 
 final readonly class Subscriber implements SubscriberInterface
 {
@@ -23,10 +25,15 @@ final readonly class Subscriber implements SubscriberInterface
         array $extraClaims = [],
     ): SubscriptionData {
         $hubData = $this->config->getConfiguration($hubName);
+        $topics = (array) $topics;
+        // built first: it rejects malformed topics before any token is issued
+        $subscribeUrl = $hubData->publicUrl . SubscriptionQuery::build(SubscriptionQuery::params($topics, $hubData->protocolVersion));
 
         return new SubscriptionData(
-            $this->jwtProvider->provide($hubName, $topics, $extraClaims),
+            // a single "subscribe" grant: $topics often comes from the request, it must not be able to add "publish"
+            $this->jwtProvider->provide($hubName, [new Grant([Grant::ACTION_SUBSCRIBE], $topics)], $extraClaims),
             $hubData->publicUrl,
+            $subscribeUrl,
             $this->jwtProvider->ttl(),
             $extraClaims,
         );

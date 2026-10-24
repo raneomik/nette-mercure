@@ -8,8 +8,6 @@ require \dirname(__DIR__, 3) . '/bootstrap.php';
 
 use Raneomik\NetteMercure\Bridge\DI\Config\Configuration;
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
-use Raneomik\NetteMercure\Bridge\Latte\Function\Mercure;
-use Raneomik\NetteMercure\Bridge\Latte\Function\MercureJWTToken;
 use Raneomik\NetteMercure\Bridge\Latte\MercureExtension;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
@@ -68,118 +66,188 @@ final class MercureExtensionTest extends TestCase
         );
     }
 
-    public function testExtensionFunctions(): void
+    /**
+     * @return iterable<string, array{
+     *     topics: mixed,
+     *     hub: ?string,
+     *     options: array<string, mixed>,
+     *     expected: string,
+     * }>
+     */
+    public function provideUrls(): iterable
     {
-        /**
-         * @var Mercure $mercureFunction
-         * @var MercureJWTToken $JWTTokenFunction
-         */
-        [
-            'mercure' => $mercureFunction,
-            'mercureJWTToken' => $JWTTokenFunction,
-        ] = self::$extension->getFunctions();
-
-        Assert::type('callable', $mercureFunction);
-        Assert::same(
-            'http://hub.example.com?topic=test&authorization=dummy-jwt-token-test-provider-token-*-',
-            $mercureFunction('test', options: [
+        yield 'legacy, forced jwt' => [
+            'topics' => 'test',
+            'hub' => null,
+            'options' => [
                 'addJwt' => true,
-            ]),
-        );
-        Assert::same(
-            'http://v1.example.com?match=test&authorization=dummy-jwt-token-test-provider-token-*-',
-            $mercureFunction('test', hub: 'v1'),
-        );
-        Assert::same(
-            'http://hub.example.com?topic=test&lastEventID=123',
-            $mercureFunction('test', hub: 'test', options: [
-                'lastEventId' => '123',
-            ]),
-        );
-        Assert::same(
-            'http://hub.example.com?lastEventID=123',
-            $mercureFunction(hub: 'test', options: [
-                'lastEventId' => '123',
-            ]),
-        );
+            ],
+            'expected' => 'http://hub.example.com?topic=test&authorization=dummy-jwt-token-test-provider-token-*-',
+        ];
 
-        Assert::type('callable', $JWTTokenFunction);
-        Assert::same(
-            'dummy-jwt-token-test-provider-token-foo|bar-',
-            $JWTTokenFunction(subscribe: ['foo', 'bar']),
-        );
-        Assert::same(
-            'dummy-jwt-token-test-provider-token-*-',
-            $JWTTokenFunction(),
-        );
+        yield 'legacy, lastEventId' => [
+            'topics' => 'test',
+            'hub' => 'test',
+            'options' => [
+                'lastEventId' => '123',
+            ],
+            'expected' => 'http://hub.example.com?topic=test&lastEventID=123',
+        ];
+
+        yield 'legacy, "exact" matcher' => [
+            'topics' => [
+                'exact' => ['test'],
+            ],
+            'hub' => 'test',
+            'options' => [
+                'lastEventId' => '123',
+            ],
+            'expected' => 'http://hub.example.com?topic=test&lastEventID=123',
+        ];
+
+        yield 'no topic' => [
+            'topics' => null,
+            'hub' => 'test',
+            'options' => [
+                'lastEventId' => '123',
+            ],
+            'expected' => 'http://hub.example.com?lastEventID=123',
+        ];
+
+        yield '1.0, jwt in query from config' => [
+            'topics' => 'test',
+            'hub' => 'v1',
+            'options' => [],
+            'expected' => 'http://v1.example.com?match=test&authorization=dummy-jwt-token-test-provider-token-*-',
+        ];
+
+        yield '1.0, matcher type' => [
+            'topics' => [
+                'urlpattern' => ['foo', 'bar'],
+            ],
+            'hub' => 'v1',
+            'options' => [
+                'lastEventId' => '987',
+            ],
+            'expected' => 'http://v1.example.com?match_urlpattern=foo&match_urlpattern=bar&lastEventID=987&authorization=dummy-jwt-token-test-provider-token-*-',
+        ];
+
+        yield 'hub from options' => [
+            'topics' => 'test',
+            'hub' => null,
+            'options' => [
+                'hub' => 'v1',
+            ],
+            'expected' => 'http://v1.example.com?match=test&authorization=dummy-jwt-token-test-provider-token-*-',
+        ];
     }
 
-    public function testExtensionFunctionsV1ProtocolVersion(): void
+    /**
+     * @dataProvider provideUrls
+     *
+     * @param array<string, mixed> $options
+     */
+    public function testMercure(mixed $topics, ?string $hub, array $options, string $expected): void
     {
-        /**
-         * @var Mercure $mercureFunction
-         * @var MercureJWTToken $JWTTokenFunction
-         */
-        [
-            'mercure' => $mercureFunction,
-            'mercureJWTToken' => $JWTTokenFunction,
-        ] = self::$extension->getFunctions();
+        Assert::same($expected, $this->function('mercure')($topics, $hub, $options));
+    }
 
-        Assert::same(
-            'http://v1.example.com?match=test&authorization=dummy-jwt-token-test-provider-token-*-',
-            $mercureFunction('test', hub: 'v1'),
-        );
-        Assert::same(
-            'http://v1.example.com?match_urlpattern=foo&match_urlpattern=bar&lastEventID=987&authorization=dummy-jwt-token-test-provider-token-*-',
-            $mercureFunction([
-                'urlpattern' => ['foo', 'bar'],
-            ], hub: 'v1', options: [
-                'lastEventId' => '987',
-            ]),
-        );
-
-        Assert::same(
-            'dummy-jwt-token-test-provider-token-foo|bar-',
-            $JWTTokenFunction(
-                [
-                    'test' => ['foo', 'bar'],
-                ],
-                hub: 'v1',
-            ),
-        );
-        Assert::same(
-            'dummy-jwt-token-test-provider-token-test-',
-            $JWTTokenFunction([
-                'urlpattern' => 'test',
-            ], hub: 'v1'),
-        );
-
-        Assert::exception(
-            static fn (): string => $mercureFunction([
+    /**
+     * @return iterable<string, array{
+     *     topics: mixed,
+     *     hub: string,
+     *     message: string,
+     * }>
+     */
+    public function provideInvalidTopics(): iterable
+    {
+        yield '1.0, integer matcher key' => [
+            'topics' => [
                 67 => ['foo', 'bar'],
-            ], hub: 'v1'),
-            InvalidArgumentException::class,
-            '~Topics must be either a flat list of exact topics or an associative array~',
-        );
+            ],
+            'hub' => 'v1',
+            'message' => '~Topics must be either a flat list of exact topics or an associative array~',
+        ];
 
-        Assert::exception(
-            static fn (): string => $mercureFunction([
+        yield 'legacy, non "exact" matcher' => [
+            'topics' => [
                 'test' => 'test',
-            ], hub: 'test'),
-            InvalidArgumentException::class,
-        );
-        Assert::same(
-            'http://hub.example.com?topic=test&lastEventID=123',
-            $mercureFunction(
-                [
-                    'exact' => ['test'],
-                ],
-                hub: 'test',
-                options: [
-                    'lastEventId' => '123',
-                ],
-            ),
-        );
+            ],
+            'hub' => 'test',
+            'message' => '~require the Mercure protocol 1.0~',
+        ];
+
+        yield 'nested topics' => [
+            'topics' => [['test']],
+            'hub' => 'v1',
+            'message' => '~Topics must be strings~',
+        ];
+    }
+
+    /**
+     * @dataProvider provideInvalidTopics
+     */
+    public function testMercureInvalidTopics(mixed $topics, string $hub, string $message): void
+    {
+        $mercure = $this->function('mercure');
+
+        Assert::exception(static fn () => $mercure($topics, $hub), InvalidArgumentException::class, $message);
+    }
+
+    /**
+     * @return iterable<string, array{
+     *     subscribe: mixed,
+     *     hub: ?string,
+     *     expected: string,
+     * }>
+     */
+    public function provideJwtTokens(): iterable
+    {
+        yield 'default grants' => [
+            'subscribe' => ['*'],
+            'hub' => null,
+            'expected' => 'dummy-jwt-token-test-provider-token-*-',
+        ];
+
+        yield 'topics' => [
+            'subscribe' => ['foo', 'bar'],
+            'hub' => null,
+            'expected' => 'dummy-jwt-token-test-provider-token-foo|bar-',
+        ];
+
+        yield '1.0, matcher map' => [
+            'subscribe' => [
+                'test' => ['foo', 'bar'],
+            ],
+            'hub' => 'v1',
+            'expected' => 'dummy-jwt-token-test-provider-token-foo|bar-',
+        ];
+
+        yield '1.0, matcher string' => [
+            'subscribe' => [
+                'urlpattern' => 'test',
+            ],
+            'hub' => 'v1',
+            'expected' => 'dummy-jwt-token-test-provider-token-test-',
+        ];
+    }
+
+    /**
+     * @dataProvider provideJwtTokens
+     */
+    public function testMercureJWTToken(mixed $subscribe, ?string $hub, string $expected): void
+    {
+        $token = $this->function('mercureJWTToken');
+
+        Assert::same($expected, $token($subscribe, [], $hub));
+    }
+
+    private function function(string $name): callable
+    {
+        $function = self::$extension->getFunctions()[$name];
+        Assert::type('callable', $function);
+
+        return $function;
     }
 }
 

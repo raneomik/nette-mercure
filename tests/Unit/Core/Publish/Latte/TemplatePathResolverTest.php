@@ -16,46 +16,92 @@ use Tester\TestCase;
  */
 final class TemplatePathResolverTest extends TestCase
 {
-    public function testConfigured(): void
-    {
-        $resolver = new TemplatePathResolver(\dirname(__DIR__, 4) . '/fixtures/templates');
+    private const string TEMPLATES = __DIR__ . '/../../../../fixtures/templates';
 
-        Assert::same(
-            \dirname(__DIR__, 4) . '/fixtures/templates/example.latte',
-            $resolver->resolve('/example.latte'),
-        );
+    /**
+     * @return iterable<string, array{
+     *     basePath: ?string,
+     *     template: string,
+     *     expected: string,
+     * }>
+     */
+    public function provideResolutions(): iterable
+    {
+        yield 'relative to the configured path' => [
+            'basePath' => self::TEMPLATES,
+            'template' => '/example.latte',
+            'expected' => self::TEMPLATES . '/example.latte',
+        ];
+
+        yield 'absolute path' => [
+            'basePath' => null,
+            'template' => self::TEMPLATES . '/example.latte',
+            'expected' => self::TEMPLATES . '/example.latte',
+        ];
+
+        yield 'relative to the caller' => [
+            'basePath' => null,
+            'template' => '/edge-fixture/example.latte',
+            'expected' => \dirname(__DIR__, 1) . '/edge-fixture/example.latte',
+        ];
+
+        yield 'parent directories' => [
+            'basePath' => null,
+            'template' => '/../../../../fixtures/templates/example.latte',
+            'expected' => __DIR__ . '/../../../../fixtures/templates/example.latte',
+        ];
+    }
+
+    /**
+     * @dataProvider provideResolutions
+     */
+    public function testResolution(?string $basePath, string $template, string $expected): void
+    {
+        Assert::same($expected, $this->resolver($basePath)->resolve($template));
+    }
+
+    /**
+     * @return iterable<string, array{
+     *     basePath: ?string,
+     *     template: string,
+     *     message: string,
+     * }>
+     */
+    public function provideMissingTemplates(): iterable
+    {
+        yield 'with a configured path' => [
+            'basePath' => self::TEMPLATES,
+            'template' => '/inexistent.latte',
+            'message' => \sprintf('Template file "%1$s/inexistent.latte" not found in "%1$s".', self::TEMPLATES),
+        ];
+
+        yield 'without configured path' => [
+            'basePath' => null,
+            'template' => '/../../inexistent.latte',
+            'message' => '~Template file "/../../inexistent\.latte" not found. Checked paths: ~',
+        ];
+    }
+
+    /**
+     * @dataProvider provideMissingTemplates
+     */
+    public function testMissingTemplate(?string $basePath, string $template, string $message): void
+    {
+        $resolver = $this->resolver($basePath);
 
         Assert::exception(
-            static fn (): string => $resolver->resolve('/inexistent.latte'),
+            static fn (): string => $resolver->resolve($template),
             BroadcastException::class,
-            \sprintf('Template file "%1$s/inexistent.latte" not found in "%1$s".', $resolver->basePath()),
+            $message,
         );
     }
 
-    public function testResolution(): void
+    /**
+     * null: the default base path
+     */
+    private function resolver(?string $basePath): TemplatePathResolver
     {
-        $resolver = new TemplatePathResolver();
-
-        Assert::same(
-            \dirname(__DIR__, 4) . '/fixtures/templates/example.latte',
-            $resolver->resolve(\dirname(__DIR__, 4) . '/fixtures/templates/example.latte'),
-        );
-
-        Assert::same(
-            \dirname(__DIR__, 1) . '/edge-fixture/example.latte',
-            $resolver->resolve('/edge-fixture/example.latte'),
-        );
-
-        Assert::same(
-            __DIR__ . '/../../../../fixtures/templates/example.latte',
-            $resolver->resolve('/../../../../fixtures/templates/example.latte'),
-        );
-
-        Assert::exception(
-            static fn (): string => $resolver->resolve('/../../inexistent.latte'),
-            BroadcastException::class,
-            '~Template file "/../../inexistent\.latte" not found. Checked paths: ~',
-        );
+        return null === $basePath ? new TemplatePathResolver() : new TemplatePathResolver($basePath);
     }
 }
 

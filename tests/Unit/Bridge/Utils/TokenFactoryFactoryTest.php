@@ -24,14 +24,42 @@ final class TokenFactoryFactoryTest extends TestCase
     private const string SECRET = 'n3tt3-m3rcur3-t3st-jwt-s3cr3t-k3y-48-n3tt3-m3rcur3';
 
     /**
-     * @return iterable<string, array{class-string<TokenFactoryInterface>, ProtocolVersion, ?string, string}>
+     * @return iterable<string, array{
+     *     factory: class-string<TokenFactoryInterface>,
+     *     protocolVersion: ProtocolVersion,
+     *     algorithm: ?string,
+     *     expectedAlgorithm: string,
+     * }>
      */
     public function provideFactories(): iterable
     {
-        yield 'web-token default algorithm' => [WebTokenFactory::class, ProtocolVersion::V1, null, 'HS256'];
-        yield 'web-token custom algorithm' => [WebTokenFactory::class, ProtocolVersion::V1, 'HS384', 'HS384'];
-        yield 'lcobucci default algorithm' => [LcobucciFactory::class, ProtocolVersion::Legacy, null, 'HS256'];
-        yield 'lcobucci custom algorithm' => [LcobucciFactory::class, ProtocolVersion::V1, 'hmac.sha384', 'HS384'];
+        yield 'web-token default algorithm' => [
+            'factory' => WebTokenFactory::class,
+            'protocolVersion' => ProtocolVersion::V1,
+            'algorithm' => null,
+            'expectedAlgorithm' => 'HS256',
+        ];
+
+        yield 'web-token custom algorithm' => [
+            'factory' => WebTokenFactory::class,
+            'protocolVersion' => ProtocolVersion::V1,
+            'algorithm' => 'HS384',
+            'expectedAlgorithm' => 'HS384',
+        ];
+
+        yield 'lcobucci default algorithm' => [
+            'factory' => LcobucciFactory::class,
+            'protocolVersion' => ProtocolVersion::Legacy,
+            'algorithm' => null,
+            'expectedAlgorithm' => 'HS256',
+        ];
+
+        yield 'lcobucci custom algorithm' => [
+            'factory' => LcobucciFactory::class,
+            'protocolVersion' => ProtocolVersion::V1,
+            'algorithm' => 'hmac.sha384',
+            'expectedAlgorithm' => 'HS384',
+        ];
     }
 
     /**

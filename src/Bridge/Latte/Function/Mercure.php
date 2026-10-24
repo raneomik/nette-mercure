@@ -6,10 +6,9 @@ namespace Raneomik\NetteMercure\Bridge\Latte\Function;
 
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
-use Raneomik\NetteMercure\Bridge\Utils\GrantTopicNormalizer;
+use Raneomik\NetteMercure\Bridge\Utils\SubscriptionQuery;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
 use Raneomik\NetteMercure\Core\Subscribe\JWTProviderInterface;
-use Symfony\Component\Mercure\ProtocolVersion;
 
 /**
  * @phpstan-type MercureOptions array{
@@ -45,7 +44,7 @@ final readonly class Mercure
         array $options = []
     ): string {
         $url = $this->broadcasters()
-            ->broadcasterUrl($options['hub'] ?? $hub)
+            ->broadcasterUrl($hub ??= $options['hub'] ?? null)
         ;
 
         return $url . $this->buildQuery(
@@ -74,46 +73,25 @@ final readonly class Mercure
      */
     private function buildQuery(array $topics, array $options, ?string $hub): string
     {
-        $hubInstance = $this->broadcasters()
-            ->broadcasterHub($hub)
-        ;
-
-        $query = '';
-        $separator = '?';
-        if (ProtocolVersion::V1 === $hubInstance->getProtocolVersion()) {
-            $normalized = GrantTopicNormalizer::normalize($topics);
-            foreach ($normalized as $matcherType => $patterns) {
-                $paramName = 'exact' === $matcherType ? 'match' : 'match_' . rawurlencode($matcherType);
-                $patterns = \is_array($patterns) ? $patterns : [$patterns];
-
-                foreach ($patterns as $pattern) {
-                    $query .= $separator . $paramName . '=' . rawurlencode($pattern);
-                    $separator = '&';
-                }
-            }
-        } else {
-            foreach (GrantTopicNormalizer::flattenToExactOrFail($topics) as $topic) {
-                $query .= $separator . 'topic=' . rawurlencode($topic);
-                $separator = '&';
-            }
-        }
+        $params = SubscriptionQuery::params(
+            $topics,
+            $this->broadcasters()->broadcasterHub($hub)->getProtocolVersion(),
+        );
 
         if ('' !== ($options['lastEventId'] ?? '')) {
-            $encodedLastEventId = rawurlencode($options['lastEventId']);
-            $query .= $separator . 'lastEventID=' . $encodedLastEventId;
-            $separator = '&';
+            $params[] = 'lastEventID=' . rawurlencode($options['lastEventId']);
         }
 
         $hubData = $this->configuredData->getConfiguration($hub);
 
         if ($hubData->jwtInQueryParam || true === ($options['addJwt'] ?? false)) {
-            $query .= $separator . 'authorization=' . $this->jwtProvider->provide(
+            $params[] = 'authorization=' . $this->jwtProvider->provide(
                 $hub,
                 $options['subscribe'] ?? $hubData->subscribe,
                 $options['additionalClaims'] ?? [],
             );
         }
 
-        return $query;
+        return SubscriptionQuery::build($params);
     }
 }

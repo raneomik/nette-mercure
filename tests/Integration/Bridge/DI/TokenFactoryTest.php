@@ -22,7 +22,12 @@ use Tester\Assert;
 final class TokenFactoryTest extends ContainerTestCase
 {
     /**
-     * @return iterable<string, array{string, ?class-string<TokenFactoryInterface>, class-string<TokenFactoryInterface>, callable(array<string, mixed>): void}>
+     * @return iterable<string, array{
+     *     protocolVersion: string,
+     *     factory: ?class-string<TokenFactoryInterface>,
+     *     expectedFactory: class-string<TokenFactoryInterface>,
+     *     assertPayload: callable(array<string, mixed>): void,
+     * }>
      */
     public function provideRealTokenFactories(): iterable
     {
@@ -52,13 +57,25 @@ final class TokenFactoryTest extends ContainerTestCase
             ], $payload['authorization_details']);
         };
 
-        yield 'v1 default factory' => ['1.0', null, WebTokenFactory::class, $assertV1];
-        yield 'v1 lcobucci' => ['1.0', LcobucciFactory::class, LcobucciFactory::class, $assertV1];
+        yield 'v1 default factory' => [
+            'protocolVersion' => '1.0',
+            'factory' => null,
+            'expectedFactory' => WebTokenFactory::class,
+            'assertPayload' => $assertV1,
+        ];
+
+        yield 'v1 lcobucci' => [
+            'protocolVersion' => '1.0',
+            'factory' => LcobucciFactory::class,
+            'expectedFactory' => LcobucciFactory::class,
+            'assertPayload' => $assertV1,
+        ];
+
         yield 'legacy default factory' => [
-            '0.x',
-            null,
-            LcobucciFactory::class,
-            static function (array $payload): void {
+            'protocolVersion' => '0.x',
+            'factory' => null,
+            'expectedFactory' => LcobucciFactory::class,
+            'assertPayload' => static function (array $payload): void {
                 Assert::hasNotKey('authorization_details', $payload);
                 Assert::hasNotKey('aud', $payload);
                 Assert::same('https://app.example.com', $payload['iss']);

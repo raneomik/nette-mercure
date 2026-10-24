@@ -43,6 +43,7 @@ final readonly class SubscribersDefiner
             ->setCreator(JWTProvider::class)
             ->setArguments([
                 $this->builder->getDefinition($this->extension->prefix('symfony.hub.registry')),
+                '@' . $this->extension->prefix('hubsConfiguration'),
             ])
             ->setAutowired()
         ;
@@ -50,7 +51,7 @@ final readonly class SubscribersDefiner
         $requestDef = $this->builder->getDefinitionByType(Request::class);
         $responseDef = $this->builder->getDefinitionByType(Response::class);
 
-        $authorizationDef = $this->builder->addDefinition($this->extension->prefix('authorization'))
+        $this->builder->addDefinition($this->extension->prefix('authorization'))
             ->setType(AuthorizationInterface::class)
             ->setCreator(Authorization::class)
             ->setArguments([
@@ -84,13 +85,9 @@ final readonly class SubscribersDefiner
             ->setAutowired()
         ;
 
-        $appDef->addSetup('?->onRequest[] = function() {
-            ?->addLinkFromCurrentRequest();
-            ?->createCookieFromCurrentRequest();
-        }', [
+        $appDef->addSetup('?->onRequest[] = fn() => ?->addLinkFromCurrentRequest()', [
             '@self',
             $discoveryDef,
-            $authorizationDef,
         ]);
     }
 }

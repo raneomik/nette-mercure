@@ -6,6 +6,7 @@ namespace Tests\Unit\Raneomik\NetteMercure\Core\Subscribe;
 
 require \dirname(__DIR__, 3) . '/bootstrap.php';
 
+use Nette\Http\IResponse;
 use Nette\Http\Response;
 use Nette\Http\SameSite;
 use Raneomik\NetteMercure\Bridge\DI\Config\Configuration;
@@ -23,338 +24,209 @@ use Tests\Fixtures\Dummies\Core\Subscribe\DummyJwtProvider;
  */
 final class AuthorizationTest extends TestCase
 {
-    public function testMinimalisticAuthorizationCookie(): void
+    /**
+     * @return iterable<string, array{
+     *     requestUrl: string,
+     *     publicUrl: string,
+     *     protocolVersion: ProtocolVersion,
+     *     expected: array{path: string, domain: ?string, secure: bool},
+     * }>
+     */
+    public function provideCookieParameters(): iterable
     {
-        $authorization = new Authorization(
-            new DummyJwtProvider(),
-            new DummyRequest(),
-            $response = new DummyResponse(),
-            new ConfigurationRegistry([
-                'test' => new Configuration(
-                    hubName: 'test',
-                    hubUrl: 'http://hub.example.com',
-                    publicUrl: 'http://hub.example.com',
-                    subscribe: ['*'],
-                    publish: ['*'],
-                    protocolVersion: ProtocolVersion::Legacy,
-                    useCookie: true,
-                ),
-            ])
-        );
+        yield 'hub on a subdomain, http' => [
+            'requestUrl' => 'http://example.com/',
+            'publicUrl' => 'http://hub2.example.com',
+            'protocolVersion' => ProtocolVersion::Legacy,
+            'expected' => [
+                'path' => '/',
+                'domain' => 'example.com',
+                'secure' => false,
+            ],
+        ];
 
-        $authorization->createCookie(subscribedTopics: ['test'], hub: 'null');
+        yield 'relative hub' => [
+            'requestUrl' => '/publish',
+            'publicUrl' => '/publish',
+            'protocolVersion' => ProtocolVersion::Legacy,
+            'expected' => [
+                'path' => '/publish',
+                'domain' => null,
+                'secure' => true,
+            ],
+        ];
 
-        Assert::same(
-            (new \DateTime('+1 hour'))->format('Y-m-d H:i:s'),
-            $response->cookie[ProtocolVersion::Legacy->getDefaultCookieName()]['expire']->format('Y-m-d H:i:s'),
-        );
-        Assert::same(
-            'dummy-jwt-token-test-provider-token-test-',
-            $response->cookie[ProtocolVersion::Legacy->getDefaultCookieName()]['value'],
-        );
+        yield 'relative root hub' => [
+            'requestUrl' => '/',
+            'publicUrl' => '/',
+            'protocolVersion' => ProtocolVersion::Legacy,
+            'expected' => [
+                'path' => '/',
+                'domain' => null,
+                'secure' => true,
+            ],
+        ];
+
+        yield 'request from a deeper subdomain' => [
+            'requestUrl' => 'https://hub.mercure.example.com',
+            'publicUrl' => 'http://hub.example.com',
+            'protocolVersion' => ProtocolVersion::Legacy,
+            'expected' => [
+                'path' => '/',
+                'domain' => '.example.com',
+                'secure' => false,
+            ],
+        ];
+
+        yield 'same host' => [
+            'requestUrl' => 'https://hub.example.com',
+            'publicUrl' => 'http://hub.example.com',
+            'protocolVersion' => ProtocolVersion::Legacy,
+            'expected' => [
+                'path' => '/',
+                'domain' => null,
+                'secure' => false,
+            ],
+        ];
+
+        yield 'protocol 1.0' => [
+            'requestUrl' => 'https://example.com',
+            'publicUrl' => 'https://hub.example.com/.well-known/mercure',
+            'protocolVersion' => ProtocolVersion::V1,
+            'expected' => [
+                'path' => '/.well-known/mercure',
+                'domain' => 'example.com',
+                'secure' => true,
+            ],
+        ];
     }
 
-    public function testAuthorizationCookieFromRequest(): void
-    {
-        $authorization = new Authorization(
-            new DummyJwtProvider(),
-            new DummyRequest(fromUrl: 'http://example.com/?topics=test&hub=test2'),
-            $response = new DummyResponse(),
-            new ConfigurationRegistry([
-                'test' => new Configuration(
-                    hubName: 'test',
-                    hubUrl: 'http://hub.example.com',
-                    publicUrl: 'http://hub.example.com',
-                    subscribe: ['*'],
-                    publish: ['*'],
-                    protocolVersion: ProtocolVersion::Legacy,
-                ),
-                'test2' => new Configuration(
-                    hubName: 'test2',
-                    hubUrl: 'http://hub2.example.com',
-                    publicUrl: 'http://hub2.example.com',
-                    subscribe: ['*'],
-                    publish: ['*'],
-                    protocolVersion: ProtocolVersion::Legacy,
-                    useCookie: true,
-                ),
-            ]),
-        );
+    /**
+     * @dataProvider provideCookieParameters
+     *
+     * @param array{path: string, domain: ?string, secure: bool} $expected
+     */
+    public function testCookieParameters(
+        string $requestUrl,
+        string $publicUrl,
+        ProtocolVersion $protocolVersion,
+        array $expected,
+    ): void {
+        $this->authorization($requestUrl, $publicUrl, $protocolVersion, $response = new DummyResponse())
+            ->setCookie(grants: ['test'], hub: 'test');
 
-        $authorization->createCookieFromCurrentRequest();
+        // only the cookie of the requested hub, named after its protocol
+        Assert::same([$protocolVersion->getDefaultCookieName()], array_keys($response->cookie));
 
-        Assert::same(
-            '/',
-            $response->cookie[ProtocolVersion::Legacy->getDefaultCookieName()]['path'],
-        );
-        Assert::false(
-            $response->cookie[ProtocolVersion::Legacy->getDefaultCookieName()]['secure'],
-        );
-        Assert::same(
-            'example.com',
-            $response->cookie[ProtocolVersion::Legacy->getDefaultCookieName()]['domain'],
-        );
-        Assert::same(
-            'dummy-jwt-token-test-provider-token-test-',
-            $response->cookie[ProtocolVersion::Legacy->getDefaultCookieName()]['value'],
-        );
-    }
-
-    public function testNoAuthorizationCookieFromRequestOnRelativeHub(): void
-    {
-        $authorization = new Authorization(
-            new DummyJwtProvider(),
-            new DummyRequest(fromUrl: '/?topics=test&hub=test2'),
-            $response = new DummyResponse(),
-            new ConfigurationRegistry(
-                [
-                    'test' => new Configuration(
-                        hubName: 'test',
-                        hubUrl: '/',
-                        publicUrl: '/',
-                        subscribe: ['*'],
-                        publish: ['*'],
-                        protocolVersion: ProtocolVersion::Legacy,
-                        useCookie: false,
-                    ),
-                ],
-            )
-        );
-
-        $authorization->createCookieFromCurrentRequest();
-
-        Assert::hasNotKey(ProtocolVersion::Legacy->getDefaultCookieName(), $response->cookie);
-    }
-
-    public function testAlternativeValuesOnRelativeHub(): void
-    {
-        $authorization = new Authorization(
-            $provider = new DummyJwtProvider(),
-            new DummyRequest(fromUrl: '/publish?hubName=test&claims[exp]=300'),
-            $response = new DummyResponse(),
-            new ConfigurationRegistry(
-                [
-                    'test' => new Configuration(
-                        hubName: 'test',
-                        hubUrl: '/publish',
-                        publicUrl: '/publish',
-                        subscribe: ['*'],
-                        publish: ['*'],
-                        protocolVersion: ProtocolVersion::Legacy,
-                        useCookie: true,
-                    ),
-                ],
-            )
-        );
-
-        $authorization->createCookieFromCurrentRequest();
-
-        Assert::null(
-            $response->cookie[ProtocolVersion::Legacy->getDefaultCookieName()]['domain'],
-            'null domain cookie set on same domain/relative path'
-        );
-        Assert::same(
-            '/publish',
-            $response->cookie[ProtocolVersion::Legacy->getDefaultCookieName()]['path'],
-        );
-        Assert::true(
-            $response->cookie[ProtocolVersion::Legacy->getDefaultCookieName()]['secure'],
-        );
-        Assert::true(
-            $response->cookie[ProtocolVersion::Legacy->getDefaultCookieName()]['httpOnly'],
-        );
-        Assert::same(
-            'dummy-jwt-token-test-provider-token-*-',
-            $response->cookie[ProtocolVersion::Legacy->getDefaultCookieName()]['value'],
-        );
-        Assert::same(
-            $provider->ttl(),
-            $response->cookie[ProtocolVersion::Legacy->getDefaultCookieName()]['expire'],
-        );
-    }
-
-    public function testAuthorizationCookieFromRequestOnRelativeHub(): void
-    {
-        $authorization = new Authorization(
-            new DummyJwtProvider(),
-            new DummyRequest(fromUrl: '/?topics=test&hub=test2'),
-            $response = new DummyResponse(),
-            new ConfigurationRegistry(
-                [
-                    'test' => new Configuration(
-                        hubName: 'test',
-                        hubUrl: '/',
-                        publicUrl: '/',
-                        subscribe: ['*'],
-                        publish: ['*'],
-                        protocolVersion: ProtocolVersion::Legacy,
-                        useCookie: true,
-                    ),
-                ],
-            )
-        );
-
-        $authorization->createCookieFromCurrentRequest();
-
-        Assert::hasKey(ProtocolVersion::Legacy->getDefaultCookieName(), $response->cookie);
-    }
-
-    public function testCookieFromSubdomain(): void
-    {
-        $authorization = new Authorization(
-            new DummyJwtProvider(),
-            new DummyRequest(fromUrl: 'https://hub.mercure.example.com'),
-            $response = new DummyResponse(),
-            new ConfigurationRegistry([
-                'test' => new Configuration(
-                    hubName: 'test',
-                    hubUrl: 'http://hub.example.com',
-                    publicUrl: 'http://hub.example.com',
-                    subscribe: ['*'],
-                    publish: ['*'],
-                    protocolVersion: ProtocolVersion::Legacy,
-                ),
-            ])
-        );
-
-        $authorization->createCookie(subscribedTopics: ['test']);
-        Assert::same(
-            'dummy-jwt-token-test-provider-token-test-',
-            $response->cookie[ProtocolVersion::Legacy->getDefaultCookieName()]['value'],
-        );
-    }
-
-    public function testCookieFromSameMainDomain(): void
-    {
-        $authorization = new Authorization(
-            new DummyJwtProvider(),
-            new DummyRequest(fromUrl: 'https://hub.example.com'),
-            $response = new DummyResponse(),
-            new ConfigurationRegistry([
-                'test' => new Configuration(
-                    hubName: 'test',
-                    hubUrl: 'http://hub.example.com',
-                    publicUrl: 'http://hub.example.com',
-                    subscribe: ['*'],
-                    publish: ['*'],
-                    protocolVersion: ProtocolVersion::Legacy,
-                ),
-            ])
-        );
-
-        $authorization->createCookie(subscribedTopics: ['test']);
-        Assert::same(
-            'dummy-jwt-token-test-provider-token-test-',
-            $response->cookie[ProtocolVersion::Legacy->getDefaultCookieName()]['value'],
-        );
-
-        $authorization->createCookie(subscribedTopics: ['test']);
-        Assert::same(
-            'dummy-jwt-token-test-provider-token-test-',
-            $response->cookie[ProtocolVersion::Legacy->getDefaultCookieName()]['value'],
-        );
-    }
-
-    public function testCreationExceptionCookie(): void
-    {
-        $authorization = new Authorization(
-            new DummyJwtProvider(),
-            new DummyRequest(fromUrl: 'https://example.cz'),
-            new DummyResponse(),
-            new ConfigurationRegistry([
-                'test' => new Configuration(
-                    hubName: 'test',
-                    hubUrl: 'http://hub.example.com',
-                    publicUrl: 'http://hub.example.com',
-                    subscribe: ['*'],
-                    publish: ['*'],
-                    protocolVersion: ProtocolVersion::Legacy,
-                ),
-            ])
-        );
-
-        Assert::exception(
-            static fn () => $authorization->createCookie(),
-            \RuntimeException::class,
-            '~Unable to create authorization cookie for a hub on the different second-level domain~',
-        );
-    }
-
-    public function testV1ProtocolCookie(): void
-    {
-        $authorization = new Authorization(
-            new DummyJwtProvider(),
-            new DummyRequest(fromUrl: 'https://example.com'),
-            $response = new DummyResponse(),
-            new ConfigurationRegistry([
-                'test' => new Configuration(
-                    hubName: 'test',
-                    hubUrl: 'http://mercure:3000/.well-known/mercure',
-                    publicUrl: 'https://hub.example.com/.well-known/mercure',
-                    subscribe: ['*'],
-                    publish: ['*'],
-                    protocolVersion: ProtocolVersion::V1,
-                ),
-            ])
-        );
-
-        $authorization->createCookie(subscribedTopics: ['test']);
-
-        Assert::hasNotKey(ProtocolVersion::Legacy->getDefaultCookieName(), $response->cookie);
-
-        $cookie = $response->cookie[ProtocolVersion::V1->getDefaultCookieName()];
+        $cookie = $response->cookie[$protocolVersion->getDefaultCookieName()];
+        Assert::same($expected, array_intersect_key($cookie, $expected));
         Assert::same('dummy-jwt-token-test-provider-token-test-', $cookie['value']);
-        Assert::same('/.well-known/mercure', $cookie['path']);
-        Assert::same('example.com', $cookie['domain']);
-        Assert::true($cookie['secure']);
+        Assert::true($cookie['httpOnly']);
     }
 
-    public function testV1ProtocolCookieRequiresHttps(): void
+    /**
+     * @return iterable<string, array{
+     *     additionalClaims: array<string, mixed>,
+     *     expected: string,
+     * }>
+     */
+    public function provideExpirations(): iterable
     {
-        $authorization = new Authorization(
-            new DummyJwtProvider(),
-            new DummyRequest(fromUrl: 'http://example.com'),
-            new DummyResponse(),
-            new ConfigurationRegistry([
-                'test' => new Configuration(
-                    hubName: 'test',
-                    hubUrl: 'http://hub.example.com',
-                    publicUrl: 'http://hub.example.com',
-                    subscribe: ['*'],
-                    publish: ['*'],
-                    protocolVersion: ProtocolVersion::V1,
-                ),
-            ])
-        );
+        yield 'default lifetime' => [
+            'additionalClaims' => [],
+            'expected' => '+1 hour',
+        ];
 
-        Assert::exception(
-            static fn () => $authorization->createCookie(),
-            \InvalidArgumentException::class,
-            '~"__Secure-mercure_access_token" cookie name requires a hub public URL served over HTTPS~',
-        );
+        yield '"exp" claim' => [
+            'additionalClaims' => [
+                'exp' => 300,
+            ],
+            'expected' => '+300 seconds',
+        ];
+    }
+
+    /**
+     * @dataProvider provideExpirations
+     *
+     * @param array<string, mixed> $additionalClaims
+     */
+    public function testCookieExpiresWithTheToken(array $additionalClaims, string $expected): void
+    {
+        $this->authorization('/', 'http://hub.example.com', response: $response = new DummyResponse())
+            ->setCookie(grants: ['test'], additionalClaims: $additionalClaims, hub: 'test');
+
+        $expire = $response->cookie[ProtocolVersion::Legacy->getDefaultCookieName()]['expire'];
+        Assert::type(\DateTimeInterface::class, $expire);
+        Assert::same((new \DateTime($expected))->format('Y-m-d H:i:s'), $expire->format('Y-m-d H:i:s'));
+    }
+
+    /**
+     * @return iterable<string, array{
+     *     requestUrl: string,
+     *     publicUrl: string,
+     *     protocolVersion: ProtocolVersion,
+     *     exception: class-string<\Throwable>,
+     *     message: string,
+     * }>
+     */
+    public function provideInvalidCookies(): iterable
+    {
+        yield 'hub on another second-level domain' => [
+            'requestUrl' => 'https://example.cz',
+            'publicUrl' => 'http://hub.example.com',
+            'protocolVersion' => ProtocolVersion::Legacy,
+            'exception' => \RuntimeException::class,
+            'message' => '~Unable to create authorization cookie for a hub on the different second-level domain~',
+        ];
+
+        yield 'protocol 1.0 without https' => [
+            'requestUrl' => 'http://example.com',
+            'publicUrl' => 'http://hub.example.com',
+            'protocolVersion' => ProtocolVersion::V1,
+            'exception' => \InvalidArgumentException::class,
+            'message' => '~"__Secure-mercure_access_token" cookie name requires a hub public URL served over HTTPS~',
+        ];
+    }
+
+    /**
+     * @dataProvider provideInvalidCookies
+     *
+     * @param class-string<\Throwable> $exception
+     */
+    public function testInvalidCookie(
+        string $requestUrl,
+        string $publicUrl,
+        ProtocolVersion $protocolVersion,
+        string $exception,
+        string $message,
+    ): void {
+        $authorization = $this->authorization($requestUrl, $publicUrl, $protocolVersion);
+
+        Assert::exception(static fn () => $authorization->setCookie(hub: 'test'), $exception, $message);
+    }
+
+    public function testClearCookieMatchesTheSetOne(): void
+    {
+        $authorization = $this->authorization('https://example.com', 'https://hub.example.com/.well-known/mercure', ProtocolVersion::V1, $response = new DummyResponse());
+        $name = ProtocolVersion::V1->getDefaultCookieName();
+
+        $authorization->setCookie(grants: ['test'], hub: 'test');
+        $set = $response->cookie[$name];
+        $authorization->clearCookie('test');
+
+        Assert::hasNotKey($name, $response->cookie);
+        Assert::same([
+            'path' => $set['path'],
+            'domain' => $set['domain'],
+            'secure' => $set['secure'],
+        ], $response->deletedCookie[$name]);
     }
 
     public function testCookieSameSiteIsOnlyPassedToNetteResponse(): void
     {
         foreach ([SameSite::Strict, null] as $sameSite) {
-            $authorization = new Authorization(
-                new DummyJwtProvider(),
-                new DummyRequest(),
-                $response = new DummyResponse(),
-                new ConfigurationRegistry([
-                    'test' => new Configuration(
-                        hubName: 'test',
-                        hubUrl: 'http://hub.example.com',
-                        publicUrl: 'http://hub.example.com',
-                        subscribe: ['*'],
-                        publish: ['*'],
-                        protocolVersion: ProtocolVersion::Legacy,
-                    ),
-                ]),
-                $sameSite,
-            );
-
-            $authorization->createCookie(subscribedTopics: ['test']);
+            $this->authorization('/', 'http://hub.example.com', response: $response = new DummyResponse(), sameSite: $sameSite)
+                ->setCookie(grants: ['test'], hub: 'test');
 
             Assert::null($response->cookie[ProtocolVersion::Legacy->getDefaultCookieName()]['sameSite']);
         }
@@ -363,25 +235,28 @@ final class AuthorizationTest extends TestCase
     public function testCookieWithNetteResponse(): void
     {
         foreach ([SameSite::Lax, null] as $sameSite) {
-            $authorization = new Authorization(
-                new DummyJwtProvider(),
-                new DummyRequest(),
-                new Response(),
-                new ConfigurationRegistry([
-                    'test' => new Configuration(
-                        hubName: 'test',
-                        hubUrl: 'http://hub.example.com',
-                        publicUrl: 'http://hub.example.com',
-                        subscribe: ['*'],
-                        publish: ['*'],
-                        protocolVersion: ProtocolVersion::Legacy,
-                    ),
-                ]),
-                $sameSite,
-            );
+            $authorization = $this->authorization('/', 'http://hub.example.com', response: new Response(), sameSite: $sameSite);
 
-            Assert::noError(static fn () => $authorization->createCookie(subscribedTopics: ['test']));
+            Assert::noError(static fn () => $authorization->setCookie(grants: ['test'], hub: 'test'));
         }
+    }
+
+    /**
+     * "test" is the second hub: a cookie for the default one would fail the path checks.
+     */
+    private function authorization(
+        string $requestUrl,
+        string $publicUrl,
+        ProtocolVersion $protocolVersion = ProtocolVersion::Legacy,
+        IResponse $response = new DummyResponse(),
+        ?SameSite $sameSite = SameSite::Strict,
+    ): Authorization {
+        $config = new ConfigurationRegistry([
+            'other' => new Configuration('other', 'https://other.example.com/other', 'https://other.example.com/other', ['*'], ['*'], protocolVersion: ProtocolVersion::Legacy),
+            'test' => new Configuration('test', $publicUrl, $publicUrl, ['*'], ['*'], protocolVersion: $protocolVersion),
+        ]);
+
+        return new Authorization(new DummyJwtProvider(), new DummyRequest(fromUrl: $requestUrl), $response, $config, $sameSite);
     }
 }
 

@@ -6,6 +6,7 @@ namespace Tests\Integration\Raneomik\NetteMercure\Bridge\DI;
 
 require \dirname(__DIR__, 3) . '/bootstrap.php';
 
+use Nette\DI\InvalidConfigurationException;
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Symfony\Component\Mercure\FrankenPhpHub;
 use Symfony\Component\Mercure\Hub;
@@ -40,6 +41,21 @@ final class HubConfigurationTest extends ContainerTestCase
         $registry = $container->getService('mercure.hubsConfiguration');
         Assert::same('https://hub.example.com/.well-known/mercure', $registry->getConfiguration()->publicUrl);
         Assert::same(ProtocolVersion::V1, $registry->getConfiguration()->protocolVersion);
+    }
+
+    public function testUnknownProtocolVersion(): void
+    {
+        Assert::exception(
+            fn (): \Nette\DI\Container => $this->createContainer('
+            mercure:
+                url: https://hub.example.com/.well-known/mercure
+                protocolVersion: "2.0"
+                jwt:
+                    key: jwt-secret
+            '),
+            InvalidConfigurationException::class,
+            "%a%protocolVersion' expects to be %a%ProtocolVersion, '2.0' given.",
+        );
     }
 
     public function testHubIsPickedAtRuntime(): void

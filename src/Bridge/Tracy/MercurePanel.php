@@ -39,7 +39,7 @@ final readonly class MercurePanel implements Tracy\IBarPanel
                 ->count()
             ;
 
-            require_once __DIR__ . '/dist/tab.phtml';
+            require __DIR__ . '/dist/tab.phtml';
         });
     }
 
@@ -60,15 +60,16 @@ final readonly class MercurePanel implements Tracy\IBarPanel
 
     private function hotReloadScript(): string
     {
-        if (file_exists($this->jsFilename)) {
-            return $this->jsFilename;
-        }
-
-        file_put_contents($this->jsFilename, Tracy\Helpers::capture(function (): void {
+        $js = Tracy\Helpers::capture(function (): void {
             $hotReloadUrl = $this->hotReloadUrl;
 
-            require_once __DIR__ . '/dist/hotReload.js.phtml';
-        }));
+            require __DIR__ . '/dist/hotReload.js.phtml';
+        });
+
+        // rewritten when FRANKENPHP_HOT_RELOAD changes, untouched otherwise
+        if (@file_get_contents($this->jsFilename) !== $js) {
+            file_put_contents($this->jsFilename, $js);
+        }
 
         return $this->jsFilename;
     }

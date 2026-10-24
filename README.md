@@ -62,13 +62,9 @@ mercure:
 			additional: # Optional, any other claim
 				tenant: acme
 		useQueryParam: # false by default, to use JWT token in "authorization" query parameter when using {mercure()} function (https://mercure.rocks/spec#uri-query-parameter)
-		lifetime: # Optional, 0 by default (session.cookie_lifetime, or 3600 seconds), null for non expiring tokens.
-    # following options depends on request parameters
-    # - "hub" or "hubName" if several hubs are defined in configuration, 
-    # - "topics" 
-    # [- "claims" to pass addtional data to cookie, e.g.: "claims=[exp=1800]" to specificaly set cookie lifetime to 30 minutes]
-    useCookie: # true by default, to set JWT token in cookie (https://mercure.rocks/spec#cookie). SSL/Https required client-side ("__Secure-mercure_access_token" cookie with protocol 1.0, "mercureAuthorization" with legacy)
-    autoDiscovery: # true by default, to add Link header for Mercure hub discovery (https://mercure.rocks/spec#discovery)
+		lifetime: # Optional, 0 by default (session.cookie_lifetime, or 3600 seconds), null for non expiring tokens. Same value for the publisher token, the subscriber tokens and the cookie (session cookie with null).
+    # following option depends on request parameter "hub" (or "hubName") if several hubs are defined in configuration
+    autoDiscovery: # false by default, to add Link header for Mercure hub discovery (https://mercure.rocks/spec#discovery)
 
 # several Mercure hubs
 mercure:
@@ -187,11 +183,52 @@ _When working with JWT token in Authorisation Header, you may need a [polyfill](
 </script>
 ```
 
+### Subscribe using the authorization cookie
+
+As with [symfony/mercure](https://symfony.com/doc/current/mercure.html#authorization), the app sets the cookie for the topics the current user may read
+(https://mercure.rocks/spec#cookie). Nette streams the template while rendering it: set the cookie in the presenter, before rendering.
+
+```php
+use Raneomik\NetteMercure\Core\Subscribe\AuthorizationInterface;
+
+final class ChatPresenter extends Nette\Application\UI\Presenter
+{
+    public function __construct(
+        private readonly AuthorizationInterface $authorization,
+    ) {
+    }
+
+    public function actionDefault(int $id): void
+    {
+        // check that the user may read this chat first: the cookie grants what you pass here
+        $this->authorization->setCookie(["/chats/{$id}"]); // hub: 'hubName' if several hubs
+    }
+
+    public function actionLogout(): void
+    {
+        $this->authorization->clearCookie();
+        // ...
+    }
+}
+```
+
+```html
+<script>
+    const eventSource = new EventSource({mercure('/chats/' . $id)}, { withCredentials: true });
+</script>
+```
+
+The hub public URL must be served over HTTPS with protocol 1.0 ("__Secure-mercure_access_token" cookie, "mercureAuthorization" with legacy),
+and on the same site as the app. The cookie is "SameSite=Strict" by default.
+
 ### Subscribe using discovery
 
 You can subscribe to specific topic(s) and hub using [Discovery mechanism](https://symfony.com/doc/current/mercure.html#discovery).
 
 - Setup a `/subscribe` endpoint :
+
+> `$topics` comes from the visitor: the token only grants "subscribe", but to any requested topic.
+> Check that the current user may read them before calling `subscribe()`.
 
 ```php
 
@@ -230,35 +267,29 @@ final class SubscribePresenter extends Nette\Application\UI\Presenter
 ```js
 import { EventSourcePolyfill } from 'event-source-polyfill';
 
-fetch('/subscribe?topics=/* topic(s) to define. "['*']" by default */&hub=/* hubname if multiple hubs configured, first by default */') // Has header Link: </* your defined hub url */>; rel="mercure"
-    .then(response => {
-        // Extract the hub URL from the Link header
-        const hubUrl = response.headers.get('Link').match(/<([^>]+)>;\s+rel=(?:mercure|"[^"]*mercure[^"]*")/)[1];
-
-        // Append the topic(s) to subscribe as query parameter
-        const hub = new URL(hubUrl, window.origin);
-        hub.searchParams.append('topic', /*topic(s)*/);
-
-        const jwtToken = response.json().jwtToken;
-
-        const es = new EventSourcePolyfill(hub,
-        headers: {
-            'Authorization': `Bearer: ${jwtToken}`
-        };
-
-        es.onmessage = event => {
-            for (const container of containers) {
-                container.textContent = event.data;
-            }
-        };
-    );
+// hub: hub name if several hubs are configured, first one by default
+const response = await fetch('/subscribe?topics[]=/chats/1&topics[]=/chats/2', {
+    headers: {'X-Requested-With': 'XMLHttpRequest'},
 });
+// {jwtToken, hubUrl, subscribeUrl, expiresAt, jwtExtraClaims}
+// subscribeUrl: hubUrl with the "match" (protocol 1.0) or "topic" (legacy) query, as built by {mercure()}
+const {jwtToken, subscribeUrl} = await response.json();
+
+const es = new EventSourcePolyfill(subscribeUrl, {
+    headers: {'Authorization': `Bearer ${jwtToken}`},
+});
+
+es.onmessage = event => {
+    console.log(event.data);
+};
 ```
 
 
 ### Broadcast & Subscribe to turbo-streams
 
 You can also subscribe to [turbo-streams](https://turbo.hotwired.dev) :
+
+*NB: turbo needs mercure's `<Link>` headers - enable it using `autoDiscovery: yes` hub config*
 
 - Server side :
 
@@ -271,7 +302,7 @@ You can also subscribe to [turbo-streams](https://turbo.hotwired.dev) :
 			template: 'test.stream.latte',
 			options: [
 /** @see \Raneomik\NetteMercure\Core\Publish\Latte\TurboStreamAction for available action blocks */
-				'action' => Action::Update
+				'action' => TurboStreamAction::Update
 				'target' => 'stream-container' // target container id to update in client side. Default is "stream-container"
 			],
 		);
@@ -294,26 +325,25 @@ You can also subscribe to [turbo-streams](https://turbo.hotwired.dev) :
 - Client side :
 ```js
     import * as Turbo from '@hotwired/turbo'; //npm install @hotwired/turbo
+    Turbo.session.drive = false; // disable turbo-drive to avoid conflicts with naja forms
 
     const eventSource = new EventSource($mercureUrl);
 
-    const containers = document.querySelectorAll('.mercure-container');
-        eventSource.addEventListener('turbo-stream', event => {
-            Turbo.renderStreamMessage(event.data);
-        });
+    eventSource.addEventListener('turbo-stream', event => {
+        Turbo.renderStreamMessage(event.data);
+    });
 
-        eventSource.onerror = event => {
-            console.error("Mercure connection error: ", event);
+    eventSource.onerror = event => {
+        console.error("Mercure connection error: ", event);
 
-            Turbo.disconnectStreamSource(eventSource);
-        }
-
-        document.onclose = () => {
-            console.info("Bye !");
-            Turbo.disconnectStreamSource(eventSource);
-            eventSource.close();
-        };
+        Turbo.disconnectStreamSource(eventSource);
     }
+
+    document.onclose = () => {
+        console.info("Bye !");
+        Turbo.disconnectStreamSource(eventSource);
+        eventSource.close();
+    };
 ```
 
 Resources

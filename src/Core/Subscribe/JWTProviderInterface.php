@@ -9,7 +9,7 @@ use Symfony\Component\Mercure\Jwt\Grant;
 
 interface JWTProviderInterface
 {
-    public function ttl(): \DateTimeInterface;
+    public function ttl(): ?\DateTimeInterface;
 
     /**
      * Provides JWT token for the given hub.

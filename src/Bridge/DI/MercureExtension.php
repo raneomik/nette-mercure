@@ -20,7 +20,7 @@ use Symfony\Component\Mercure\ProtocolVersion;
 
 final class MercureExtension extends Nette\DI\CompilerExtension
 {
-    private const array HUB_OPTIONS = ['url', 'publicUrl', 'protocolVersion', 'jwt', 'useCookie', 'autoDiscovery', 'debugger'];
+    private const array HUB_OPTIONS = ['url', 'publicUrl', 'protocolVersion', 'jwt', 'autoDiscovery', 'debugger'];
 
     public function __construct(
         private readonly bool $debugMode = false,
@@ -36,11 +36,7 @@ final class MercureExtension extends Nette\DI\CompilerExtension
             Expect::structure([
                 'url' => Expect::string()->default('%baseUrl%/.well-known/mercure')->dynamic(),
                 'publicUrl' => Expect::string()->nullable()->dynamic(),
-                'protocolVersion' => Expect::anyOf(...array_map(
-                    static fn (ProtocolVersion $version): string => $version->value,
-                    ProtocolVersion::cases(),
-                ))
-                    ->default(ProtocolVersion::V1->value),
+                'protocolVersion' => Expect::enum(ProtocolVersion::class)->default(ProtocolVersion::V1),
                 'jwt' => Expect::structure([
                     // "key: <secret>" is a shorthand for "key: {secret: <secret>}"
                     'key' => Expect::structure([
@@ -64,8 +60,7 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                         'additional' => Expect::arrayOf('mixed', 'string')->default([]),
                     ]),
                 ])->required(),
-                'useCookie' => Expect::bool(true),
-                'autoDiscovery' => Expect::bool(true),
+                'autoDiscovery' => Expect::bool(false),
                 'debugger' => Expect::bool($this->debugMode),
             ]),
         )->before(static fn (mixed $val): mixed => \is_array($val) && [] !== array_intersect_key($val, array_flip(self::HUB_OPTIONS))
@@ -101,10 +96,10 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                     $config->jwt->subscribe,
                     $config->jwt->publish,
                     $config->jwt->useQueryParam,
-                    ProtocolVersion::from($config->protocolVersion),
-                    MercureHubsDefiner::claimsStatement($config),
-                    $config->useCookie,
+                    $config->protocolVersion,
+                    MercureHubsDefiner::claimsStatement($hubName, $config),
                     $config->autoDiscovery,
+                    $config->jwt->lifetime,
                 ]
             );
 

@@ -46,17 +46,18 @@ final readonly class TemplatingBroadcaster implements BroadcasterInterface
         array $options = [],
         ?string $template = null,
     ): string {
-        $template = $options['template'] ?? $template;
+        $template ??= $options['template'] ?? null;
 
         if (null === $template) {
             return $this->decorated->broadcast($topics, $data, $options);
         }
 
+        $data = \is_object($data) ? get_object_vars($data) : $data;
         $data = \is_string($data)
             ? [
                 'data' => $data,
             ]
-            : (array) $data;
+            : $data;
 
         $contentType = $this->resolveContentType($template);
         $action = $this->resolveAction($options['action'] ?? null);

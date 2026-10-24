@@ -5,21 +5,19 @@ declare(strict_types=1);
 namespace Raneomik\NetteMercure\Core\Subscribe;
 
 use Lcobucci\JWT\Token\RegisteredClaims;
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Bridge\Utils\GrantTopicNormalizer;
 use Symfony\Component\Mercure\HubRegistry;
 use Symfony\Component\Mercure\Jwt\TokenFactoryInterface;
 
 final class JWTProvider implements JWTProviderInterface
 {
-    private readonly int $cookieLifetimeInSeconds;
-
-    private \DateTimeInterface $cookieDateTimeTtl;
+    private ?\DateTimeInterface $cookieDateTimeTtl = null;
 
     public function __construct(
         private readonly HubRegistry $registry,
-        ?int $cookieLifetimeInSeconds = null,
+        private readonly ConfigurationRegistry $config,
     ) {
-        $this->cookieLifetimeInSeconds = $cookieLifetimeInSeconds ?? (int) \ini_get('session.cookie_lifetime');
     }
 
     #[\Override]
@@ -37,7 +35,10 @@ final class JWTProvider implements JWTProviderInterface
             );
         }
 
-        $this->setCookieLifeDateTime($additionalClaims);
+        $this->setCookieLifeDateTime(
+            $additionalClaims,
+            $this->config->getConfiguration($hubName)->lifetime,
+        );
 
         return $tokenFactory->create(
             GrantTopicNormalizer::normalizeGrants($subscribedTopics),
@@ -45,7 +46,7 @@ final class JWTProvider implements JWTProviderInterface
         );
     }
 
-    public function ttl(): \DateTimeInterface
+    public function ttl(): ?\DateTimeInterface
     {
         return $this->cookieDateTimeTtl;
     }
@@ -53,20 +54,28 @@ final class JWTProvider implements JWTProviderInterface
     /**
      * @param array<string, mixed> $additionalClaims
      */
-    private function setCookieLifeDateTime(array &$additionalClaims): void
+    private function setCookieLifeDateTime(array &$additionalClaims, ?int $lifetime): void
     {
-        $cookieLifetime = $this->cookieLifetimeInSeconds;
-        if (null !== ($additionalClaims[RegisteredClaims::EXPIRATION_TIME] ?? null)) {
-            $cookieLifetime = $additionalClaims[RegisteredClaims::EXPIRATION_TIME];
-            $this->cookieDateTimeTtl = new \DateTimeImmutable(\sprintf('+%s seconds', $cookieLifetime));
+        $exp = $additionalClaims[RegisteredClaims::EXPIRATION_TIME] ?? null;
+        if ($exp instanceof \DateTimeInterface) {
+            $this->cookieDateTimeTtl = $exp;
 
             return;
         }
 
+        // a scalar "exp" is a lifetime in seconds: the token needs a date, or "1800" would mean 1970
+        $seconds = null !== $exp ? (int) $exp : $lifetime;
+        if (null === $seconds) {
+            // "lifetime: null": non-expiring token, session cookie
+            $this->cookieDateTimeTtl = null;
+
+            return;
+        }
+
+        // same resolution as the token factories, so the cookie and the token expire together
+        $seconds = 0 === $seconds ? ((int) \ini_get('session.cookie_lifetime') ?: 3600) : $seconds;
         $this->cookieDateTimeTtl = $additionalClaims[RegisteredClaims::EXPIRATION_TIME] = new \DateTimeImmutable(
-            0 === $this->cookieLifetimeInSeconds
-                ? '+1 hour'
-                : \sprintf('+%s seconds', $cookieLifetime)
+            \sprintf('+%d seconds', $seconds),
         );
     }
 }

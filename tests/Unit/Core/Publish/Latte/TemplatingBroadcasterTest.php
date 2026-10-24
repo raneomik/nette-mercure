@@ -24,6 +24,8 @@ use Tests\Fixtures\Dummies\Core\MockHubFactory;
  */
 final class TemplatingBroadcasterTest extends TestCase
 {
+    private const string TEMPLATES = __DIR__ . '/../../../../fixtures/templates';
+
     private HubInterface $broadcasterHub;
 
     private TemplatingBroadcaster $broadcaster;
@@ -36,112 +38,162 @@ final class TemplatingBroadcasterTest extends TestCase
             new PlainBroadcaster(
                 $this->broadcasterHub = MockHubFactory::create('http://example.com/hub'),
             ),
-            $this->templatePathResolver = new TemplatePathResolver(\dirname(__DIR__, 4) . '/fixtures/templates'),
+            $this->templatePathResolver = new TemplatePathResolver(self::TEMPLATES),
             new Engine(),
         );
     }
 
-    public function testException(): void
+    /**
+     * @return iterable<string, array{
+     *     data: array<string, string>|string,
+     *     options: array<string, mixed>,
+     *     template: ?string,
+     *     expected: array<string, mixed>,
+     * }>
+     */
+    public function provideBroadcasts(): iterable
     {
-        Assert::exception(
-            fn (): string => $this->broadcaster->broadcast('test', 'Hello Mercure!', [
-                'template' => '/fixtures/inexistent.latte',
-            ]),
-            BroadcastException::class,
-            \sprintf('Template file "%1$s/fixtures/inexistent.latte" not found in "%1$s".', $this->templatePathResolver->basePath()),
+        yield 'no template' => [
+            'data' => 'test',
+            'options' => [],
+            'template' => null,
+            'expected' => [
+                'data' => 'test',
+                'topics' => ['test'],
+            ],
+        ];
+
+        yield 'latte template' => [
+            'data' => [
+                'data' => 'Hello Mercure!',
+            ],
+            'options' => [],
+            'template' => 'example.latte',
+            'expected' => [
+                'data' => "Hello Mercure!\n",
+                'topics' => ['test'],
+            ],
+        ];
+
+        yield 'template from options' => [
+            'data' => [
+                'data' => 'Hello Mercure!',
+            ],
+            'options' => [
+                'template' => 'example.latte',
+            ],
+            'template' => null,
+            'expected' => [
+                'data' => "Hello Mercure!\n",
+                'topics' => ['test'],
+            ],
+        ];
+
+        yield 'json template' => [
+            'data' => [
+                'id' => '1',
+                'title' => 'Mercure',
+            ],
+            'options' => [],
+            'template' => 'example.json.latte',
+            'expected' => [
+                'data' => Json::encode([
+                    'id' => '1',
+                    'title' => 'Mercure',
+                ], pretty: true) . PHP_EOL,
+                'topics' => ['test'],
+            ],
+        ];
+
+        yield 'turbo stream' => [
+            'data' => 'Hello Mercure!',
+            'options' => [
+                'action' => TurboStreamAction::Update,
+            ],
+            'template' => 'exampleStream.latte',
+            'expected' => [
+                'data' => "\tHello Mercure!\n",
+                'topics' => ['test'],
+                'sse_type' => 'turbo-stream',
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider provideBroadcasts
+     *
+     * @param array<string, string>|string $data
+     * @param array<string, mixed> $options
+     * @param array<string, mixed> $expected
+     */
+    public function testBroadcast(array|string $data, array $options, ?string $template, array $expected): void
+    {
+        Assert::same(
+            Json::encode($expected),
+            $this->broadcaster->broadcast('test', $data, $options, $template),
         );
     }
 
-    public function testMinimalisticBroadcast(): void
+    /**
+     * @return iterable<string, array{
+     *     options: array<string, mixed>,
+     *     template: string,
+     *     exception: class-string<\Throwable>,
+     *     message: string,
+     * }>
+     */
+    public function provideBroadcastErrors(): iterable
     {
-        Assert::same(
-            Json::encode([
-                'data' => 'test',
-                'topics' => ['test'],
-            ]),
-            $this->broadcaster->broadcast(
-                'test',
-                'test',
-            ),
-        );
+        yield 'missing template' => [
+            'options' => [],
+            'template' => '/fixtures/inexistent.latte',
+            'exception' => BroadcastException::class,
+            'message' => \sprintf('Template file "%1$s/fixtures/inexistent.latte" not found in "%1$s".', self::TEMPLATES),
+        ];
 
+        yield 'turbo stream action without block' => [
+            'options' => [
+                'action' => TurboStreamAction::Remove,
+            ],
+            'template' => 'exampleStream.latte',
+            'exception' => RuntimeException::class,
+            'message' => "Cannot include undefined block 'remove'.",
+        ];
+    }
+
+    /**
+     * @dataProvider provideBroadcastErrors
+     *
+     * @param array<string, mixed> $options
+     * @param class-string<\Throwable> $exception
+     */
+    public function testBroadcastError(array $options, string $template, string $exception, string $message): void
+    {
+        Assert::exception(
+            fn (): string => $this->broadcaster->broadcast('test', 'Hello Mercure!', $options, $template),
+            $exception,
+            $message,
+        );
+    }
+
+    public function testBroadcastStateIsExposed(): void
+    {
+        $this->broadcaster->broadcast('test', 'test');
         Assert::same([
             'rendered_data' => 'test',
         ], $this->broadcaster->broadcastOptions());
 
-        Assert::same(
-            Json::encode([
-                'data' => "Hello Mercure!\n",
-                'topics' => ['test'],
-            ]),
-            $this->broadcaster->broadcast(
-                'test',
-                [
-                    'data' => 'Hello Mercure!',
-                ],
-                template: 'example.latte',
-            ),
-        );
+        $this->broadcaster->broadcast('test', [
+            'data' => 'Hello Mercure!',
+        ], template: 'example.latte');
 
+        Assert::same(self::TEMPLATES, $this->templatePathResolver->basePath());
         Assert::same($this->broadcasterHub, $this->broadcaster->broadcasterHub());
         Assert::same('http://example.com/hub', $this->broadcaster->broadcasterUrl());
         Assert::same([
             'template' => $this->templatePathResolver->resolvedDir() . '/example.latte',
             'rendered_data' => 'Hello Mercure!' . PHP_EOL,
         ], $this->broadcaster->broadcastOptions());
-    }
-
-    public function testJsonBroadcast(): void
-    {
-        Assert::same(
-            Json::encode([
-                'data' => Json::encode([
-                    'id' => '1',
-                    'title' => 'Mercure',
-                ], pretty: true) . PHP_EOL,
-                'topics' => ['test'],
-            ]),
-            $this->broadcaster->broadcast(
-                'test',
-                [
-                    'id' => '1',
-                    'title' => 'Mercure',
-                ],
-                template: 'example.json.latte',
-            ),
-        );
-    }
-
-    public function testStreamBroadcast(): void
-    {
-        Assert::same(
-            Json::encode([
-                'data' => "\tHello Mercure!\n",
-                'topics' => ['test'],
-                'sse_type' => 'turbo-stream',
-            ]),
-            $this->broadcaster->broadcast(
-                'test',
-                'Hello Mercure!',
-                [
-                    'action' => TurboStreamAction::Update,
-                ],
-                template: 'exampleStream.latte',
-            ),
-        );
-
-        Assert::exception(
-            fn (): string => $this->broadcaster->broadcast(
-                'test',
-                'Hello Mercure!',
-                [
-                    'action' => TurboStreamAction::Remove,
-                ],
-                template: 'exampleStream.latte',
-            ),
-            RuntimeException::class,
-            "Cannot include undefined block 'remove'.",
-        );
     }
 }
 

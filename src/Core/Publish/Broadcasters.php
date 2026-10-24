@@ -12,19 +12,18 @@ use Symfony\Component\Mercure\HubInterface;
  * @implements \IteratorAggregate<string, BroadcasterInterface>
  * @implements \ArrayAccess<string, BroadcasterInterface>
  */
-final class Broadcasters implements BroadcasterInterface, \IteratorAggregate, \ArrayAccess
+final readonly class Broadcasters implements BroadcasterInterface, \IteratorAggregate, \ArrayAccess
 {
     /**
      * @var \ArrayIterator<string, BroadcasterInterface>
      */
-    private readonly iterable $broadcasters;
+    private iterable $broadcasters;
 
     /**
      * @param iterable<string, BroadcasterInterface> $broadcasters
      */
     public function __construct(
         iterable $broadcasters,
-        private false|string $currentHub = false,
     ) {
         // @phpstan-ignore-next-line
         $this->broadcasters = new \ArrayIterator($broadcasters);
@@ -32,37 +31,19 @@ final class Broadcasters implements BroadcasterInterface, \IteratorAggregate, \A
 
     public function broadcasterHub(?string $hub = null): HubInterface
     {
-        if (null !== $hub) {
-            return $this->getHub($hub)
-                ->broadcasterHub()
-            ;
-        }
-
-        return $this[$this->currentHub ?: '']->broadcasterHub();
+        return $this->pick($hub)->broadcasterHub();
     }
 
     #[\Override]
     public function broadcasterUrl(?string $hub = null): string
     {
-        if (null !== $hub) {
-            return $this->getHub($hub)
-                ->broadcasterUrl()
-            ;
-        }
-
-        return $this[$this->currentHub ?: '']->broadcasterUrl();
+        return $this->pick($hub)->broadcasterUrl();
     }
 
     #[\Override]
     public function broadcastOptions(?string $hub = null): array
     {
-        if (null !== $hub) {
-            return $this->getHub($hub)
-                ->broadcastOptions()
-            ;
-        }
-
-        return $this[$this->currentHub ?: '']->broadcastOptions();
+        return $this->pick($hub)->broadcastOptions();
     }
 
     #[\Override]
@@ -110,9 +91,7 @@ final class Broadcasters implements BroadcasterInterface, \IteratorAggregate, \A
 
     public function first(): BroadcasterInterface
     {
-        foreach ($this->broadcasters as $hub => $broadcaster) {
-            $this->currentHub = $hub;
-
+        foreach ($this->broadcasters as $broadcaster) {
             return $broadcaster;
         }
 
@@ -139,13 +118,19 @@ final class Broadcasters implements BroadcasterInterface, \IteratorAggregate, \A
         throw new \LogicException('Cannot modify readonly collection.');
     }
 
+    /**
+     * Stateless on purpose: the service is shared by every request of a worker.
+     */
+    private function pick(?string $hub): BroadcasterInterface
+    {
+        return null === $hub ? $this->first() : $this->getHub($hub);
+    }
+
     private function getHub(string $name): BroadcasterInterface
     {
         if (false === ($this[$name] ?? false)) {
             throw new BroadcastException(\sprintf('The hub "%s" is not defined.', $name));
         }
-
-        $this->currentHub = $name;
 
         return $this[$name];
     }

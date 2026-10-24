@@ -11,10 +11,12 @@ final class DummyResponse implements IResponse
     /**
      * @param array<string,string> $headers
      * @param array<string, array<mixed>> $cookie
+     * @param array<string, array<mixed>> $deletedCookie
      */
     public function __construct(
         public array $headers = [],
         public array $cookie = [],
+        public array $deletedCookie = [],
     ) {
     }
 
@@ -106,5 +108,10 @@ final class DummyResponse implements IResponse
     public function deleteCookie(string $name, ?string $path = null, ?string $domain = null, ?bool $secure = null): void
     {
         unset($this->cookie[$name]);
+        $this->deletedCookie[$name] = [
+            'path' => $path,
+            'domain' => $domain,
+            'secure' => $secure,
+        ];
     }
 }

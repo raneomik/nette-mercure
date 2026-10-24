@@ -70,8 +70,9 @@ final class BroadcastersTest extends TestCase
             ),
         );
 
-        Assert::same($this->broadcasterHubs['hub2'], $this->broadcasters->broadcasterHub());
-        Assert::same('http://hub2.example.com', $this->broadcasters->broadcasterUrl());
+        // a broadcast to a named hub must not change the default one
+        Assert::same($this->broadcasterHubs['hub1'], $this->broadcasters->broadcasterHub());
+        Assert::same('http://hub1.example.com', $this->broadcasters->broadcasterUrl());
 
         Assert::same(
             Json::encode([
@@ -100,7 +101,7 @@ final class BroadcastersTest extends TestCase
             ),
         );
 
-        Assert::same('http://hub3.example.com', $this->broadcasters->broadcasterUrl());
+        Assert::same('http://hub1.example.com', $this->broadcasters->broadcasterUrl());
     }
 
     public function testBroadcastToAll(): void
@@ -133,69 +134,105 @@ final class BroadcastersTest extends TestCase
         );
     }
 
-    public function testNotExistentHub(): void
+    /**
+     * @return iterable<string, array{
+     *     call: \Closure(Broadcasters): mixed,
+     * }>
+     */
+    public function provideUnknownHubCalls(): iterable
     {
-        Assert::exception(
-            fn (): string => $this->broadcasters->broadcast(
+        yield 'broadcast' => [
+            'call' => static fn (Broadcasters $broadcasters): string => $broadcasters->broadcast(
                 'test',
                 '{"message": "Hello, World!"}',
                 [
                     'hub' => 'inexistent',
                 ],
             ),
-            BroadcastException::class,
-            'The hub "inexistent" is not defined.'
-        );
+        ];
 
-        Assert::exception(
-            fn (): string => $this->broadcasters->broadcasterUrl('inexistent'),
-            BroadcastException::class,
-            'The hub "inexistent" is not defined.'
-        );
+        yield 'broadcasterHub' => [
+            'call' => static fn (Broadcasters $broadcasters): HubInterface => $broadcasters->broadcasterHub('inexistent'),
+        ];
 
+        yield 'broadcasterUrl' => [
+            'call' => static fn (Broadcasters $broadcasters): string => $broadcasters->broadcasterUrl('inexistent'),
+        ];
+
+        yield 'broadcastOptions' => [
+            'call' => static fn (Broadcasters $broadcasters): array => $broadcasters->broadcastOptions('inexistent'),
+        ];
+    }
+
+    /**
+     * @dataProvider provideUnknownHubCalls
+     *
+     * @param \Closure(Broadcasters): mixed $call
+     */
+    public function testUnknownHub(\Closure $call): void
+    {
         Assert::exception(
-            fn (): array => $this->broadcasters->broadcastOptions('inexistent'),
+            fn (): mixed => $call($this->broadcasters),
             BroadcastException::class,
-            'The hub "inexistent" is not defined.'
+            'The hub "inexistent" is not defined.',
         );
     }
 
-    public function testEmptyBroadcasters(): void
+    /**
+     * @return iterable<string, array{
+     *     call: \Closure(Broadcasters): mixed,
+     *     exception: class-string<\Throwable>,
+     *     message: string,
+     * }>
+     */
+    public function provideEmptyBroadcastersCalls(): iterable
     {
-        $broadcasters = new Broadcasters([]);
-
-        Assert::exception(
-            static fn (): string => $broadcasters->broadcast(
+        yield 'broadcast' => [
+            'call' => static fn (Broadcasters $broadcasters): string => $broadcasters->broadcast(
                 'test',
                 '{"message": "Hello, World!"}',
             ),
-            BroadcastException::class,
-            'No broadcaster defined.'
-        );
+            'exception' => BroadcastException::class,
+            'message' => 'No broadcaster defined.',
+        ];
 
-        Assert::exception(
-            static fn (): string => $broadcasters->broadcasterUrl(),
-            BroadcastException::class,
-            'No broadcaster defined.'
-        );
+        yield 'broadcasterUrl' => [
+            'call' => static fn (Broadcasters $broadcasters): string => $broadcasters->broadcasterUrl(),
+            'exception' => BroadcastException::class,
+            'message' => 'No broadcaster defined.',
+        ];
 
-        Assert::exception(
-            static fn (): array => $broadcasters->broadcastOptions(),
-            BroadcastException::class,
-            'No broadcaster defined.'
-        );
+        yield 'broadcastOptions' => [
+            'call' => static fn (Broadcasters $broadcasters): array => $broadcasters->broadcastOptions(),
+            'exception' => BroadcastException::class,
+            'message' => 'No broadcaster defined.',
+        ];
 
-        Assert::exception(
-            // @phpstan-ignore-next-line
-            static fn (): string => $broadcasters['test'] = 'test',
-            \LogicException::class,
-            'Cannot modify readonly collection.'
-        );
+        yield 'offsetSet' => [
+            'call' => static fn (Broadcasters $broadcasters) => $broadcasters->offsetSet('test', new PlainBroadcaster(MockHubFactory::create('http://hub.example.com'))),
+            'exception' => \LogicException::class,
+            'message' => 'Cannot modify readonly collection.',
+        ];
 
+        yield 'offsetUnset' => [
+            'call' => static fn (Broadcasters $broadcasters) => $broadcasters->offsetUnset('test'),
+            'exception' => \LogicException::class,
+            'message' => 'Cannot modify readonly collection.',
+        ];
+    }
+
+    /**
+     * @dataProvider provideEmptyBroadcastersCalls
+     *
+     * @param \Closure(Broadcasters): mixed $call
+     * @param class-string<\Throwable> $exception
+     */
+    public function testEmptyBroadcasters(\Closure $call, string $exception, string $message): void
+    {
         Assert::exception(
-            static fn () => $broadcasters->offsetUnset('test'),
-            \LogicException::class,
-            'Cannot modify readonly collection.'
+            static fn (): mixed => $call(new Broadcasters([])),
+            $exception,
+            $message,
         );
     }
 }

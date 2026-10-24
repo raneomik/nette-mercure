@@ -9,6 +9,7 @@ mercure:
     jwt:
         key: jwt-secret
         factory: Tests\Fixtures\Dummies\Core\DummyJwtFactory
+    autoDiscovery: true
 
 services:
     mercure.sf.hub.default:

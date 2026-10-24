@@ -58,7 +58,7 @@ final readonly class MercureHubsDefiner
 
     public function hubDefinition(\stdClass $config, string $name): Definition
     {
-        $protocol = ProtocolVersion::from($config->protocolVersion);
+        $protocol = $config->protocolVersion;
         $publicUrl = $config->publicUrl ?? $config->url;
 
         $decoratedFactoryDefinition = $this->builder->addDefinition(
@@ -73,7 +73,7 @@ final readonly class MercureHubsDefiner
             ->setType(TokenFactoryInterface::class)
             ->setCreator(new Statement(DefaultClaimsTokenFactory::class, [
                 $decoratedFactoryDefinition,
-                new Statement([self::claimsStatement($config), 'toArray']),
+                new Statement([self::claimsStatement($name, $config), 'toArray']),
             ]))
             ->setAutowired(false)
         ;
@@ -115,7 +115,7 @@ final readonly class MercureHubsDefiner
      * Claims are built at runtime, as they may come from dynamic parameters.
      * With the Mercure protocol 1.0, missing RFC 9068 claims fall back to defaults.
      */
-    public static function claimsStatement(\stdClass $config): Statement
+    public static function claimsStatement(string $hubName, \stdClass $config): Statement
     {
         $claims = new Statement(Claims::class, [
             'iss' => $config->jwt->claims->iss,
@@ -125,7 +125,7 @@ final readonly class MercureHubsDefiner
             'additional' => $config->jwt->claims->additional,
         ]);
 
-        return ProtocolVersion::V1 === ProtocolVersion::from($config->protocolVersion)
+        return ProtocolVersion::V1 === $config->protocolVersion
             ? new Statement([$claims, 'withPublicUrl'], [$config->publicUrl ?? $config->url])
             : $claims;
     }

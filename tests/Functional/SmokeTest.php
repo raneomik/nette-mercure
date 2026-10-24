@@ -66,8 +66,9 @@ final class SmokeTest extends TestCase
             ->expectBody(static function (string $body): bool {
                 Assert::contains('"jwtToken":', $body);
                 Assert::contains('"hubUrl":', $body);
-                Assert::contains('"jwtExtraClaims":', $body);
+                Assert::contains('"subscribeUrl":', $body);
                 Assert::contains('"expiresAt":', $body);
+                Assert::contains('"jwtExtraClaims":', $body);
 
                 return true;
             })

@@ -21,8 +21,8 @@ final readonly class Configuration
         public bool $jwtInQueryParam = false,
         public ProtocolVersion $protocolVersion = ProtocolVersion::V1,
         public Claims $claims = new Claims(),
-        public bool $useCookie = false,
         public bool $autoDiscovery = false,
+        public ?int $lifetime = 0,
     ) {
     }
 }

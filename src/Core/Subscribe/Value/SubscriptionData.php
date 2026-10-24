@@ -8,11 +8,13 @@ final readonly class SubscriptionData
 {
     /**
      * @param array<string, mixed> $jwtExtraClaims
+     * @param string $subscribeUrl hub URL with the "match"/"topic" query, ready for EventSource
      */
     public function __construct(
         public string $jwtToken,
         public string $hubUrl,
-        public \DateTimeInterface $expiresAt,
+        public string $subscribeUrl,
+        public ?\DateTimeInterface $expiresAt,
         public array $jwtExtraClaims = [],
     ) {
     }

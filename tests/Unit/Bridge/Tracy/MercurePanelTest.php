@@ -55,6 +55,10 @@ final class MercurePanelTest extends TestCase
         Assert::type('string', $panel->getTab(), 'test HR file existence');
         Assert::true(file_exists($testFile));
 
+        // a changed URL rewrites the cached script, encoded for a JS string
+        new MercurePanel($params[0], "https://hr.example.com/?topic=a&b='c'", $testFile);
+        Assert::contains('meta.content = "https://hr.example.com/?topic=a&b=\'c\'";', (string) file_get_contents($testFile));
+
         unlink($testFile);
     }
 }
