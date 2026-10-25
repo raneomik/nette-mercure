@@ -9,8 +9,6 @@ require \dirname(__DIR__, 3) . '/bootstrap.php';
 use Raneomik\NetteMercure\Bridge\DI\Config\Configuration;
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Bridge\Latte\Function\HotReload;
-use Raneomik\NetteMercure\Bridge\Latte\Function\Mercure;
-use Raneomik\NetteMercure\Bridge\Latte\Function\MercureJWTToken;
 use Raneomik\NetteMercure\Bridge\Latte\MercureExtension;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;

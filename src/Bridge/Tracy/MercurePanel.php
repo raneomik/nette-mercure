@@ -9,6 +9,7 @@ use Raneomik\NetteMercure\Bridge\Tracy\Value\HubData;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
 use Raneomik\NetteMercure\Core\Subscribe\JWTProviderInterface;
+use Symfony\Component\Mercure\ProtocolVersion;
 use Tracy;
 
 final readonly class MercurePanel implements Tracy\IBarPanel
@@ -39,9 +40,8 @@ final readonly class MercurePanel implements Tracy\IBarPanel
         return Tracy\Helpers::capture(function (): void {
             $name = 'Mercure';
             $icon = $this->icon;
-            $count = $this->broadcasters()
-                ->count()
-            ;
+            $count = $this->broadcasters()->count();
+            $liveHubs = $this->liveEventsHubs();
 
             require __DIR__ . '/dist/tab.phtml';
         });
@@ -64,7 +64,7 @@ final readonly class MercurePanel implements Tracy\IBarPanel
     }
 
     /**
-     * @return list<array{name: string, url: string, jwt: string}>
+     * @return list<array{name: string, url: string, jwt: string, isLegacy: bool}>
      */
     private function liveEventsHubs(): array
     {
@@ -75,6 +75,7 @@ final readonly class MercurePanel implements Tracy\IBarPanel
                     'name' => $hubName,
                     'url' => $config->hubUrl,
                     'jwt' => $this->jwtProvider->provide($hubName, ['*']),
+                    'isLegacy' => ProtocolVersion::Legacy === $config->protocolVersion,
                 ];
             } catch (\Throwable) {
                 // skip hub if JWT generation fails

@@ -62,45 +62,53 @@ declare(strict_types=1);
 
 	hubs.forEach(function (hub) {
 		const url = new URL(hub.url);
-		url.searchParams.append('match', '*');
+		url.searchParams.append(hub.isLegacy ? 'topics' : 'match', '*');
 		url.searchParams.append('authorization', hub.jwt);
 
+        const appendEntry = (event) => {
+            if (!initialized) {
+                container ? container.innerHTML = '' : true;
+                initialized = true;
+            }
+
+            addToTracyBar(hub, event);
+
+            if (null === container) {
+                return;
+            }
+
+            const entry = document.createElement('div');
+            entry.className = 'mercure-live-entry';
+
+            const time = document.createElement('span');
+            time.className = 'mercure-live-time';
+            time.textContent = new Date().toLocaleTimeString();
+
+            const hubLabel = document.createElement('span');
+            hubLabel.className = 'mercure-live-hub';
+            hubLabel.textContent = '[' + hub.name + ']';
+
+            const data = document.createElement('span');
+            data.textContent = event.data;
+
+            entry.appendChild(time);
+            entry.appendChild(hubLabel);
+            entry.appendChild(data);
+            container.insertBefore(entry, container.firstChild);
+        };
+
 		const es = new EventSource(url.toString());
-
-		es.onmessage = function (event) {
-			if (!initialized) {
-				container.innerHTML = '';
-				initialized = true;
-			}
-
-			const entry = document.createElement('div');
-			entry.className = 'mercure-live-entry';
-
-			const time = document.createElement('span');
-			time.className = 'mercure-live-time';
-			time.textContent = new Date().toLocaleTimeString();
-
-			const hubLabel = document.createElement('span');
-			hubLabel.className = 'mercure-live-hub';
-			hubLabel.textContent = '[' + hub.name + ']';
-
-			const data = document.createElement('span');
-			data.textContent = event.data;
-
-			entry.appendChild(time);
-			entry.appendChild(hubLabel);
-			entry.appendChild(data);
-			container.insertBefore(entry, container.firstChild);
-
-			addToTracyBar(hub, event);
-		};
+        es.addEventListener('turbo-stream', (event) => appendEntry(event));
+		es.onmessage = (event) => appendEntry(event);
 
 		es.onerror = function () {
 			const err = document.createElement('div');
 			err.className = 'mercure-live-entry mercure-live-error';
 			err.textContent = 'Connection error — hub: ' + hub.name;
-			container.insertBefore(err, container.firstChild);
+			container && container.insertBefore(err, container.firstChild);
 			initialized = true;
 		};
 	});
+
+    window.mercureEventLoader = true;
 })();

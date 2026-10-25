@@ -82,6 +82,12 @@ $formatData = fn(float $number, string $type): string => match($type) {
 		word-break: break-all;
 	}
 
+	.mercure-live-log:hover,
+	.mercure-live-log:hover .mercure-live-entry {
+        background: #2d2d2d;
+        color: #d4d4d4;
+	}
+
 	.mercure-live-log .mercure-live-time {
 		color: #6a9955;
 		margin-right: 0.4rem;
@@ -192,6 +198,5 @@ $formatData = fn(float $number, string $type): string => match($type) {
 			</div>
 		</div>
 	</details>
-	<script><?php require __DIR__ . '/liveEvents.js.phtml'; ?></script>
 	<?php endif ?>
 </div>
