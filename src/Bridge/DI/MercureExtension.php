@@ -14,6 +14,7 @@ use Raneomik\NetteMercure\Bridge\DI\Dependency\BroadcastersDefiner;
 use Raneomik\NetteMercure\Bridge\DI\Dependency\MercureHubsDefiner;
 use Raneomik\NetteMercure\Bridge\DI\Dependency\SubscribersDefiner;
 use Raneomik\NetteMercure\Bridge\Latte\MercureExtension as LatteMercureExtension;
+use Raneomik\NetteMercure\Bridge\Tracy\CustomScriptsLoader;
 use Raneomik\NetteMercure\Bridge\Tracy\MercurePanel;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Symfony\Component\Mercure\ProtocolVersion;
@@ -110,7 +111,7 @@ final class MercureExtension extends Nette\DI\CompilerExtension
 
         $builder->addDefinition($this->prefix('hubsConfiguration'))
             ->setType(ConfigurationRegistry::class)
-            ->setFactory(ConfigurationRegistry::class, [
+            ->setCreator(ConfigurationRegistry::class, [
                 $configDefinitions,
             ])
             ->setAutowired(false)
@@ -139,21 +140,20 @@ final class MercureExtension extends Nette\DI\CompilerExtension
         }
 
         if ($debug && $builder->hasDefinition('tracy.bar')) {
-            $panelArgs = [
-                new Statement(BroadcastersLoader::class, [
-                    $builder::literal('fn() => $this->getService(?)', [
-                        $this->prefix('broadcasters'),
-                    ]),
-                ]),
-                '@' . $this->prefix('jwtProvider'),
-                '@' . $this->prefix('hubsConfiguration'),
-                $this->hotReloadUrl,
-                null,
-            ];
-
             $panelDef = $builder->addDefinition($this->prefix('tracy.panel'))
-                ->setFactory(MercurePanel::class, $panelArgs)
+                ->setCreator(MercurePanel::class, [
+                    new Statement(BroadcastersLoader::class, [
+                        $builder::literal('fn() => $this->getService(?)', [
+                            $this->prefix('broadcasters'),
+                        ]),
+                    ]),
+                    '@' . $this->prefix('hubsConfiguration'),
+                    new Statement(CustomScriptsLoader::class, [
+                        $this->hotReloadUrl ?? $builder::literal('$_SERVER[\'FRANKENPHP_HOT_RELOAD\'] ?? null'),
+                    ]),
+                ])
                 ->setAutowired(false)
+                ->addSetup('setupLiveEvents')
             ;
 
             $builder->getDefinition('tracy.bar')

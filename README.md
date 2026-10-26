@@ -346,6 +346,12 @@ You can also subscribe to [turbo-streams](https://turbo.hotwired.dev) :
     };
 ```
 
+### Development mode
+
+Frankenphp [HotReload](https://frankenphp.dev/docs/hot-reload/#enabling-frankenphp-hot-reload) feature requires "anonymous" mercure configuration.
+Tracy bar Live mercure event listening follows this requirement. 
+
+
 Resources
 ---------
 * Based on [symfony/mercure](https://github.com/symfony/mercure) / [Documentation](https://symfony.com/doc/current/mercure.html)

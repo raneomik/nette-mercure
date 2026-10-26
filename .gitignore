@@ -7,5 +7,5 @@
 /tests/reports/
 /var
 
-# Others
-/src/Bridge/Tracy/dist/hotReload.js
+# generated js
+/src/Bridge/Tracy/dist/*.js

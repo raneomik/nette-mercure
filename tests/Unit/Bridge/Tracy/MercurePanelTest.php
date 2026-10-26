@@ -8,16 +8,16 @@ require \dirname(__DIR__, 3) . '/bootstrap.php';
 
 use Raneomik\NetteMercure\Bridge\DI\Config\Configuration;
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
+use Raneomik\NetteMercure\Bridge\Tracy\CustomScriptsLoader;
 use Raneomik\NetteMercure\Bridge\Tracy\MercurePanel;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
 use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
 use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
-use Raneomik\NetteMercure\Core\Subscribe\JWTProvider;
-use Symfony\Component\Mercure\HubRegistry;
 use Tester\Assert;
 use Tester\TestCase;
 use Tests\Fixtures\Dummies\Core\MockHubFactory;
+use Tracy\Helpers;
 
 /**
  * @testCase
@@ -64,20 +64,9 @@ final class MercurePanelTest extends TestCase
 
         $panel = new MercurePanel(
             ...$params = [
-                new BroadcastersLoader(static fn (): Broadcasters => $broadcasters),
-                new JWTProvider(
-                    new HubRegistry(
-                        $defaultHub,
-                        [
-                            'test' => $defaultHub,
-                            'nullFactory' => $nullFactoryHub,
-                        ]
-                    ),
-                    $configs,
-                ),
+                new BroadcastersLoader(static fn(): Broadcasters => $broadcasters),
                 $configs,
-                'https://hot-reload.example.com',
-                $testFile,
+                new CustomScriptsLoader('https://hot-reload.example.com', $testFile),
             ]
         );
 
@@ -92,15 +81,16 @@ final class MercurePanelTest extends TestCase
         Assert::true(file_exists($testFile));
 
         // a changed URL rewrites the cached script, encoded for a JS string
-        [$loader, $jwtProvider] = $params;
+        [$loader] = $params;
         new MercurePanel(
             $loader,
-            $jwtProvider,
             $configs,
-            "https://hr.example.com/?topic=a&b='c'",
-            $testFile,
+            new CustomScriptsLoader("https://hr.example.com/?topic=a&b='c'", $testFile),
         );
-        Assert::contains('meta.content = "https://hr.example.com/?topic=a&b=\'c\'";', (string) file_get_contents($testFile));
+        Assert::contains(
+            'meta.content = ' . Helpers::jsonEncode("https://hr.example.com/?topic=a&b='c'"),
+            (string) file_get_contents($testFile)
+        );
 
         unlink($testFile);
     }

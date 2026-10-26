@@ -8,31 +8,39 @@ use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Bridge\Tracy\Value\HubData;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
-use Raneomik\NetteMercure\Core\Subscribe\JWTProviderInterface;
 use Symfony\Component\Mercure\ProtocolVersion;
 use Tracy;
 
+/**
+ * @phpstan-type LightHub array{name: string, url: string, isLegacy: bool}
+ */
 final readonly class MercurePanel implements Tracy\IBarPanel
 {
     private Broadcasters $broadcasters;
 
-    private string $icon;
+    /**
+     * @var LightHub[]
+     */
+    private array $liveHubs;
 
-    private string $jsFilename;
+    private string $icon;
 
     public function __construct(
         private BroadcastersLoader $broadcastersLoader,
-        private JWTProviderInterface $jwtProvider,
         private ConfigurationRegistry $hubsConfig,
-        private ?string $hotReloadUrl = null,
-        ?string $jsFilename = null,
+        private CustomScriptsLoader $customScriptsLoader,
     ) {
         $this->icon = file_get_contents(__DIR__ . '/dist/mercure.svg') ?: '';
+    }
 
-        if (null !== $hotReloadUrl) {
-            $this->jsFilename = $jsFilename ?? __DIR__ . '/dist/hotReload.js';
-            Tracy\Debugger::$customJsFiles[] = $this->hotReloadScript();
+    public function setupLiveEvents(): void
+    {
+        $liveHubs = $this->liveEventsHubs();
+        if ([] === $liveHubs) {
+            return;
         }
+
+        $this->customScriptsLoader->registerLiveEvents($liveHubs);
     }
 
     public function getTab(): string
@@ -41,7 +49,6 @@ final readonly class MercurePanel implements Tracy\IBarPanel
             $name = 'Mercure';
             $icon = $this->icon;
             $count = $this->broadcasters()->count();
-            $liveHubs = $this->liveEventsHubs();
 
             require __DIR__ . '/dist/tab.phtml';
         });
@@ -64,40 +71,23 @@ final readonly class MercurePanel implements Tracy\IBarPanel
     }
 
     /**
-     * @return list<array{name: string, url: string, jwt: string, isLegacy: bool}>
+     * @return LightHub[]
      */
     private function liveEventsHubs(): array
     {
+        if (isset($this->liveHubs)) {
+            return $this->liveHubs;
+        }
+
         $hubs = [];
         foreach ($this->hubsConfig as $hubName => $config) {
-            try {
-                $hubs[] = [
-                    'name' => $hubName,
-                    'url' => $config->hubUrl,
-                    'jwt' => $this->jwtProvider->provide($hubName, ['*']),
-                    'isLegacy' => ProtocolVersion::Legacy === $config->protocolVersion,
-                ];
-            } catch (\Throwable) {
-                // skip hub if JWT generation fails
-            }
+            $hubs[] = [
+                'name' => $hubName,
+                'url' => $config->hubUrl,
+                'isLegacy' => ProtocolVersion::Legacy === $config->protocolVersion,
+            ];
         }
 
-        return $hubs;
-    }
-
-    private function hotReloadScript(): string
-    {
-        $js = Tracy\Helpers::capture(function (): void {
-            $hotReloadUrl = $this->hotReloadUrl;
-
-            require __DIR__ . '/dist/hotReload.js.phtml';
-        });
-
-        // rewritten when FRANKENPHP_HOT_RELOAD changes, untouched otherwise
-        if (@file_get_contents($this->jsFilename) !== $js) {
-            file_put_contents($this->jsFilename, $js);
-        }
-
-        return $this->jsFilename;
+        return $this->liveHubs = $hubs;
     }
 }

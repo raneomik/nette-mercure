@@ -1,13 +1,21 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 use Tracy\Dumper;
+use Raneomik\NetteMercure\Bridge\Tracy\MercurePanel;
+use Raneomik\NetteMercure\Bridge\Tracy\Value\HubData;
 
 $formatData = fn(float $number, string $type): string => match($type) {
     'duration' => sprintf('%.2f ms', $number * 1000),
     'memory' => sprintf('%.2f kB', $number / 1024),
 };
+
+/**
+ * @phpstan-import-type LightHub from MercurePanel
+ *
+ * @var $icon string
+ * @var $liveHubs LightHub[]
+ * @var $hubData HubData
+ */
 
 ?>
 <style class="tracy-debug">

@@ -1,6 +1,8 @@
-<?php
+<?php declare(strict_types=1);
 
-declare(strict_types=1);
+/**
+ * @var $hotReloadUrl string
+ */
 
 ?>
 'use strict';
@@ -8,7 +10,7 @@ declare(strict_types=1);
 (function() {
     const meta = document.createElement('meta');
     meta.name = 'frankenphp-hot-reload:url';
-    meta.content = <?= json_encode($hotReloadUrl, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_THROW_ON_ERROR) ?>;
+    meta.content = <?= Tracy\Helpers::jsonEncode($hotReloadUrl, true) ?>;
 
     const script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/frankenphp-hot-reload/+esm';
