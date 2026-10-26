@@ -12,21 +12,14 @@ use Symfony\Component\Mercure\HubInterface;
  * @implements \IteratorAggregate<string, BroadcasterInterface>
  * @implements \ArrayAccess<string, BroadcasterInterface>
  */
-final readonly class Broadcasters implements BroadcasterInterface, \IteratorAggregate, \ArrayAccess
+final readonly class Broadcasters implements BroadcasterInterface, \ArrayAccess, \IteratorAggregate
 {
     /**
-     * @var \ArrayIterator<string, BroadcasterInterface>
-     */
-    private iterable $broadcasters;
-
-    /**
-     * @param iterable<string, BroadcasterInterface> $broadcasters
+     * @param array<string, BroadcasterInterface> $broadcasters
      */
     public function __construct(
-        iterable $broadcasters,
+        private iterable $broadcasters,
     ) {
-        // @phpstan-ignore-next-line
-        $this->broadcasters = new \ArrayIterator($broadcasters);
     }
 
     public function broadcasterHub(?string $hub = null): HubInterface
@@ -81,14 +74,6 @@ final readonly class Broadcasters implements BroadcasterInterface, \IteratorAggr
         return \count($this->broadcasters);
     }
 
-    /**
-     * @return \ArrayIterator<string, BroadcasterInterface>
-     */
-    public function getIterator(): \ArrayIterator
-    {
-        return $this->broadcasters;
-    }
-
     public function first(): BroadcasterInterface
     {
         foreach ($this->broadcasters as $broadcaster) {
@@ -133,5 +118,10 @@ final readonly class Broadcasters implements BroadcasterInterface, \IteratorAggr
         }
 
         return $this[$name];
+    }
+
+    public function getIterator(): \Traversable
+    {
+        yield from $this->broadcasters;
     }
 }

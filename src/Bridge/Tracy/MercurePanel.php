@@ -33,22 +33,15 @@ final readonly class MercurePanel implements Tracy\IBarPanel
         $this->icon = file_get_contents(__DIR__ . '/dist/mercure.svg') ?: '';
     }
 
-    public function setupLiveEvents(): void
-    {
-        $liveHubs = $this->liveEventsHubs();
-        if ([] === $liveHubs) {
-            return;
-        }
-
-        $this->customScriptsLoader->registerLiveEvents($liveHubs);
-    }
-
     public function getTab(): string
     {
         return Tracy\Helpers::capture(function (): void {
             $name = 'Mercure';
             $icon = $this->icon;
             $count = $this->broadcasters()->count();
+            $scripts = $this->customScriptsLoader->scripts(
+                $this->liveEventsHubs(),
+            );
 
             require __DIR__ . '/dist/tab.phtml';
         });

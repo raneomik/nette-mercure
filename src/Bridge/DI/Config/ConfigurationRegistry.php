@@ -29,6 +29,6 @@ final readonly class ConfigurationRegistry implements \IteratorAggregate
 
     public function getIterator(): \Traversable
     {
-        return new \ArrayIterator($this->configurations);
+        yield from $this->configurations;
     }
 }

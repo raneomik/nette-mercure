@@ -24,21 +24,13 @@ use Tracy\Helpers;
  */
 final class MercurePanelTest extends TestCase
 {
-    protected function tearDown(): void
-    {
-        @unlink(__DIR__ . '/test.js');
-    }
-
     public function testPanelComponents(): void
     {
-        $testFile = 'test.js';
-        Assert::false(file_exists($testFile));
-
         $broadcaster = new PlainBroadcaster(
-            $defaultHub = MockHubFactory::create('http://hub.example.com'),
+            MockHubFactory::create('http://hub.example.com'),
         );
         $nullFactoryBroadcaster = new PlainBroadcaster(
-            $nullFactoryHub = MockHubFactory::create('http://nullhub.example.com', withoutJWTFactory: true),
+            MockHubFactory::create('http://nullhub.example.com', withoutJWTFactory: true),
         );
         $broadcasters = new Broadcasters([
             'test' => $broadcaster = new TraceableBroadcaster($broadcaster),
@@ -66,7 +58,9 @@ final class MercurePanelTest extends TestCase
             ...$params = [
                 new BroadcastersLoader(static fn(): Broadcasters => $broadcasters),
                 $configs,
-                new CustomScriptsLoader('https://hot-reload.example.com', $testFile),
+                new CustomScriptsLoader(
+                    'https://hot-reload.example.com',
+                ),
             ]
         );
 
@@ -78,21 +72,20 @@ final class MercurePanelTest extends TestCase
 
         $panel = new MercurePanel(...$params);
         Assert::type('string', $panel->getTab(), 'test HR file existence');
-        Assert::true(file_exists($testFile));
 
         // a changed URL rewrites the cached script, encoded for a JS string
         [$loader] = $params;
-        new MercurePanel(
+        $panel = new MercurePanel(
             $loader,
             $configs,
-            new CustomScriptsLoader("https://hr.example.com/?topic=a&b='c'", $testFile),
+            new CustomScriptsLoader(
+                "https://hr.example.com/?topic=a&b='c'",
+            ),
         );
         Assert::contains(
             'meta.content = ' . Helpers::jsonEncode("https://hr.example.com/?topic=a&b='c'"),
-            (string) file_get_contents($testFile)
+            $panel->getTab(),
         );
-
-        unlink($testFile);
     }
 }
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Raneomik\NetteMercure\Bridge\DI\Dependency;
 
 use Nette\DI\ContainerBuilder;
-use Nette\DI\Definitions\Definition;
+use Nette\DI\Definitions\ServiceDefinition;
 use Nette\DI\Definitions\Statement;
 use Nette\DI\InvalidConfigurationException;
 use Raneomik\NetteMercure\Bridge\DI\Config\Claims;
@@ -36,7 +36,7 @@ final readonly class MercureHubsDefiner
     }
 
     /**
-     * @param array<string, Definition> $broadcasterDefinitions
+     * @param array<string, ServiceDefinition> $broadcasterDefinitions
      */
     public function postLoad(array $broadcasterDefinitions): void
     {
@@ -56,7 +56,7 @@ final readonly class MercureHubsDefiner
         ;
     }
 
-    public function hubDefinition(\stdClass $config, string $name): Definition
+    public function hubDefinition(\stdClass $config, string $name): ServiceDefinition
     {
         $protocol = $config->protocolVersion;
         $publicUrl = $config->publicUrl ?? $config->url;
@@ -73,7 +73,7 @@ final readonly class MercureHubsDefiner
             ->setType(TokenFactoryInterface::class)
             ->setCreator(new Statement(DefaultClaimsTokenFactory::class, [
                 $decoratedFactoryDefinition,
-                new Statement([self::claimsStatement($name, $config), 'toArray']),
+                new Statement([self::claimsStatement($config), 'toArray']),
             ]))
             ->setAutowired(false)
         ;
@@ -115,7 +115,7 @@ final readonly class MercureHubsDefiner
      * Claims are built at runtime, as they may come from dynamic parameters.
      * With the Mercure protocol 1.0, missing RFC 9068 claims fall back to defaults.
      */
-    public static function claimsStatement(string $hubName, \stdClass $config): Statement
+    public static function claimsStatement(\stdClass $config): Statement
     {
         $claims = new Statement(Claims::class, [
             'iss' => $config->jwt->claims->iss,

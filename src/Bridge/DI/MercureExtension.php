@@ -98,7 +98,7 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                     $config->jwt->publish,
                     $config->jwt->useQueryParam,
                     $config->protocolVersion,
-                    MercureHubsDefiner::claimsStatement($hubName, $config),
+                    MercureHubsDefiner::claimsStatement($config),
                     $config->autoDiscovery,
                     $config->jwt->lifetime,
                 ]
@@ -153,7 +153,6 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                     ]),
                 ])
                 ->setAutowired(false)
-                ->addSetup('setupLiveEvents')
             ;
 
             $builder->getDefinition('tracy.bar')

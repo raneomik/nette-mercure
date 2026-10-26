@@ -18,7 +18,7 @@ use Raneomik\NetteMercure\Bridge\Tracy\MercurePanel;
 		#counter = 0;
 
 		#container() {
-			return document.getElementById('tracy-mercure-live');
+            return (Tracy.Debug.shadow ?? document).getElementById('tracy-mercure-live');
 		}
 
 		#escHtml(s) {

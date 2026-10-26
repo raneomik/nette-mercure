@@ -12,41 +12,32 @@ use Tracy;
 final readonly class CustomScriptsLoader
 {
     public function __construct(
-        ?string $hotReloadUrl = null,
-        ?string $hotReloadOutputPath = null,
+        private ?string $hotReloadUrl = null,
     ) {
-        if (null !== $hotReloadUrl) {
-            $this->registerHotReload($hotReloadUrl, $hotReloadOutputPath ?? __DIR__ . '/dist/hotReload.js');
-        }
-    }
-
-    private function registerHotReload(string $url, string $outputPath): void
-    {
-        $js = Tracy\Helpers::capture(static function () use ($url): void {
-            $hotReloadUrl = $url;
-            require __DIR__ . '/dist/hotReload.js.phtml';
-        });
-        $this->register($js, $outputPath);
     }
 
     /**
-     * @param non-empty-array<LightHub> $liveHubs
+     * @param LightHub[] $liveHubs
+     * @return string[]
      */
-    public function registerLiveEvents(array $liveHubs): void
+    public function scripts(array $liveHubs): array
     {
-        $js = Tracy\Helpers::capture(static function () use ($liveHubs): void {
-            require __DIR__ . '/dist/liveEvents.js.phtml';
-        });
-        // shortcut: liveEvents.js overwritten each request, race on concurrent devs
-        $this->register($js, __DIR__ . '/dist/liveEvents.js');
-    }
+        $scripts = [];
+        if (null !== $this->hotReloadUrl) {
+            $scripts[] = Tracy\Helpers::capture(function (): void {
+                $hotReloadUrl = $this->hotReloadUrl;
 
-    private function register(string $js, string $path): void
-    {
-        if (@file_get_contents($path) !== $js) {
-            file_put_contents($path, $js);
+                require __DIR__ . '/dist/hotReload.js.phtml';
+            });
         }
 
-        Tracy\Debugger::$customJsFiles[] = $path;
+        if ([] !== $liveHubs) {
+            $scripts[] = Tracy\Helpers::capture(static function () use ($liveHubs): void {
+
+                require __DIR__ . '/dist/liveEvents.js.phtml';
+            });
+        }
+
+        return $scripts;
     }
 }
