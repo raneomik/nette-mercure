@@ -30,7 +30,7 @@ final class HubData extends \ArrayIterator
             $data[$name] = new HubDatum(
                 $name,
                 $broadcaster->broadcasterUrl(),
-                $broadcaster->getMessageData(),
+                $broadcaster->broadcastData(),
                 $duration,
                 $memory,
             );

@@ -110,6 +110,44 @@ $formatData = fn(float $number, string $type): string => match($type) {
 		color: #f44747;
 	}
 
+	.mercure-live-log .mercure-live-warn {
+		color: #ce9178;
+	}
+
+	.mercure-live-log .mercure-live-up,
+	.mercure-live-log .mercure-live-down {
+		margin-right: 0.4rem;
+		font-weight: bold;
+	}
+
+	.mercure-live-log .mercure-live-up {
+		color: #4ec9b0;
+	}
+
+	.mercure-live-log .mercure-live-down {
+		color: #569cd6;
+	}
+
+	.mercure-live-log .mercure-live-what {
+		margin-right: 0.4rem;
+	}
+
+	.mercure-live-log .mercure-live-meta {
+		color: #808080;
+		margin-right: 0.4rem;
+	}
+
+	.mercure-live-log .mercure-live-latency {
+		color: #dcdcaa;
+		margin-right: 0.4rem;
+	}
+
+	.mercure-live-log .mercure-live-data {
+		display: block;
+		color: #9a9a9a;
+		white-space: pre-wrap;
+	}
+
 	.mercure-live-log .mercure-live-placeholder {
 		color: #808080;
 		font-style: italic;
@@ -159,9 +197,9 @@ $formatData = fn(float $number, string $type): string => match($type) {
 							<tbody>
 								<?php foreach ($hubDatum->broadcastData as $message): ?>
 									<tr>
-										<td><?= Tracy\Helpers::escapeHtml(implode(', ', $message->getTopics())) ?></td>
-										<td><?= Dumper::toHtml($message->getData(), [Dumper::COLLAPSE => true]) ?></td>
-										<td><?= Tracy\Helpers::escapeHtml($message->getTemplate()) ?></td>
+										<td><?= Tracy\Helpers::escapeHtml(implode(', ', $message->topics)) ?></td>
+										<td><?= Dumper::toHtml($message->renderedData() ?? $message->data, [Dumper::COLLAPSE => true]) ?></td>
+										<td><?= Tracy\Helpers::escapeHtml($message->template()) ?></td>
 									</tr>
 								<?php endforeach ?>
 							</tbody>

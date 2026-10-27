@@ -1,6 +1,7 @@
 <?php declare(strict_types=1);
 
 use Raneomik\NetteMercure\Bridge\Tracy\MercurePanel;
+use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 
 /**
  * @phpstan-import-type LightHub from MercurePanel
@@ -8,17 +9,33 @@ use Raneomik\NetteMercure\Bridge\Tracy\MercurePanel;
  * @var $liveHubs LightHub[]
  */
 ?>
-'use strict';
+((hubs, BUS, BUS_TYPE) => {
+    'use strict';
 
-(function (hubs) {
 	if (window.tracyMercureEventLoader) return;
 
+	const MAX_ROWS = 200;
+	const MAX_ENVELOPES = 300;
+	const MAX_LATENCY = 60000; // above that, browser and server clocks are not comparable
+
 	class MercureEventLoader {
-		#initialized = false;
 		#counter = 0;
+		#entries = [];           // newest first
+		#envelopes = new Map();  // publish id -> envelope announced on the debug bus
+		#bound = null;           // container the rows are currently rendered into
+
+		constructor() {
+			// The panel content is only inserted by Tracy when it is opened for the first time
+			new MutationObserver(() => this.#attach()).observe(this.#root(), {childList: true, subtree: true});
+		}
+
+		// Tracy lives in a shadow root: document.getElementById() cannot see the bar
+		#root() {
+			return window.Tracy?.Debug?.shadow ?? document;
+		}
 
 		#container() {
-            return (Tracy.Debug.shadow ?? document).getElementById('tracy-mercure-live');
+			return this.#root().getElementById('tracy-mercure-live');
 		}
 
 		#escHtml(s) {
@@ -29,29 +46,174 @@ use Raneomik\NetteMercure\Bridge\Tracy\MercurePanel;
 			return String(s).replace(/&/g, '&amp;').replace(/'/g, '&#039;');
 		}
 
-		#pushToBar(hub, event) {
-			if (!window.Tracy?.Debug) return;
+		#time(t) {
+			const d = new Date(t);
+			return d.toLocaleTimeString() + '.' + String(d.getMilliseconds()).padStart(3, '0');
+		}
+
+		#bytes(n) {
+			return n < 1024 ? n + ' B' : (n / 1024).toFixed(1) + ' kB';
+		}
+
+		#ms(seconds) {
+			return (seconds * 1000).toFixed(2) + ' ms';
+		}
+
+		#shortId(id) {
+			return String(id).replace(/^urn:uuid:/, '').slice(0, 8);
+		}
+
+		#describe(env) {
+			if (env.action && env.target) return env.action + ' → #' + env.target;
+			return env.action || env.type || env.topics.join(', ');
+		}
+
+		#latency(entry) {
+			const env = entry.id ? this.#envelopes.get(entry.id) : null;
+			if (!env) return null;
+			const ms = entry.t - env.sentAt;
+			return ms >= 0 && ms < MAX_LATENCY ? ms : null;
+		}
+
+		#span(className, text) {
+			const el = document.createElement('span');
+			el.className = className;
+			el.textContent = text;
+			return el;
+		}
+
+		#build(entry) {
+			const row = document.createElement('div');
+			row.className = 'mercure-live-entry';
+			const add = (cls, text) => row.append(this.#span(cls, text));
+
+			switch (entry.kind) {
+				case 'pub': {
+					const env = entry.env;
+					if (env.status === 'error') row.classList.add('mercure-live-error');
+					add('mercure-live-time', this.#time(env.sentAt));
+					add('mercure-live-up', '↑');
+					add('mercure-live-hub', '[' + (env.hub ?? '?') + ']');
+					add('mercure-live-what', this.#describe(env));
+					add('mercure-live-meta', env.topics.join(', ') + (env.private ? ' · private' : '') + ' · ' + this.#bytes(env.size) + ' · ' + this.#ms(env.duration));
+					if (env.error) add('mercure-live-data', env.error.class + ': ' + env.error.message);
+					else if (env.preview) add('mercure-live-data', env.preview);
+					break;
+				}
+				case 'recv': {
+					const env = entry.id ? this.#envelopes.get(entry.id) : null;
+					const latency = this.#latency(entry);
+					add('mercure-live-time', this.#time(entry.t));
+					add('mercure-live-down', '↓');
+					add('mercure-live-hub', '[' + (env?.hub ?? entry.label) + ']');
+					add('mercure-live-what', env ? this.#describe(env) : entry.type);
+					add('mercure-live-meta', (entry.id ? this.#shortId(entry.id) + ' · ' : '') + this.#bytes(entry.size) + ' · ' + entry.label);
+					if (latency !== null) add('mercure-live-latency', '+' + latency + ' ms');
+					if (!env) add('mercure-live-data', entry.data);
+					break;
+				}
+				case 'conn': {
+					const label = entry.label ?? 'native';
+					add('mercure-live-time', this.#time(entry.t));
+					if (entry.phase === 'error' || entry.kind === 'error') row.classList.add('mercure-live-error');
+					add('mercure-live-down', '●');
+					add('mercure-live-what', label + ' ' + entry.phase);
+					add('mercure-live-meta', String(entry.url).replace(/^https?:\/\//, ''));
+					break;
+				}
+				case 'turbo': {
+					add('mercure-live-time', this.#time(entry.t));
+					add('mercure-live-down', '⚙');
+					add('mercure-live-what', 'turbo ' + entry.action + (entry.target ? ' → #' + entry.target : ''));
+					if (!entry.found) {
+						row.classList.add('mercure-live-warn');
+						add('mercure-live-meta', 'target not found: Turbo ignores this stream');
+					}
+					break;
+				}
+				case 'naja': {
+					add('mercure-live-time', this.#time(entry.t));
+					add('mercure-live-down', '⚙');
+					add('mercure-live-what', 'naja ' + entry.phase);
+					add('mercure-live-meta', entry.phase === 'error' ? entry.message : entry.snippets.join(', '));
+					if (entry.phase === 'error') row.classList.add('mercure-live-error');
+					break;
+				}
+				default: {
+					row.classList.add('mercure-live-warn');
+					add('mercure-live-meta', entry.text);
+				}
+			}
+
+			return row;
+		}
+
+		#attach() {
+			const container = this.#container();
+			if (!container || container === this.#bound) return;
+			this.#bound = container;
+			if (this.#entries.length === 0) return; // keep the "waiting" placeholder
+			container.innerHTML = '';
+			this.#entries.forEach((entry) => {
+				entry.el = this.#build(entry);
+				container.append(entry.el);
+			});
+		}
+
+		#push(entry) {
+			entry.t ??= Date.now();
+			this.#entries.unshift(entry);
+			if (this.#entries.length > MAX_ROWS) this.#entries.pop()?.el?.remove();
+
+			if (!this.#bound) this.#attach();
+			if (this.#bound) {
+				this.#bound.querySelector(':scope > .mercure-live-placeholder')?.remove();
+				entry.el = this.#build(entry);
+				this.#bound.insertBefore(entry.el, this.#bound.firstChild);
+			}
+		}
+
+		#rebuild(entry) {
+			if (!entry.el) return;
+			const el = this.#build(entry);
+			entry.el.replaceWith(el);
+			entry.el = el;
+		}
+
+		#pushToBar(env) {
+			if (!window.Tracy?.Debug?.bar) return;
 
 			const id = 'tracy-debug-panel-mercure-' + (++this.#counter);
-			const time = new Date().toLocaleTimeString();
+			const row = (label, value) => value === null || value === undefined || value === ''
+				? ''
+				: '<tr><th>' + label + '</th><td>' + this.#escHtml(value) + '</td></tr>';
 
-			let dataPretty;
-			try { dataPretty = JSON.stringify(JSON.parse(event.data), null, 2); }
-			catch (e) { dataPretty = event.data; }
+			let preview = env.preview;
+			try { preview = JSON.stringify(JSON.parse(env.preview), null, 2); } catch (e) { /* not JSON, or truncated */ }
 
 			const panelContent = '<h1>Mercure Event</h1>'
 				+ '<div class="tracy-inner"><table><tbody>'
-				+ '<tr><th>Hub</th><td>' + this.#escHtml(hub.name) + '</td></tr>'
-				+ '<tr><th>Time</th><td>' + this.#escHtml(time) + '</td></tr>'
-				+ (event.lastEventId ? '<tr><th>ID</th><td>' + this.#escHtml(event.lastEventId) + '</td></tr>' : '')
-				+ '<tr><th>Data</th><td><pre style="margin:0;white-space:pre-wrap">' + this.#escHtml(dataPretty) + '</pre></td></tr>'
+				+ row('Hub', env.hub)
+				+ row('Time', this.#time(env.sentAt))
+				+ row('ID', env.id)
+				+ row('Topics', env.topics.join(', '))
+				+ row('Type', env.type)
+				+ row('Action', env.action ? env.action + (env.target ? ' → #' + env.target : '') : null)
+				+ row('Template', env.template)
+				+ row('Private', env.private ? 'yes' : 'no')
+				+ row('Size', this.#bytes(env.size))
+				+ row('Status', env.status)
+				+ row('Error', env.error ? env.error.class + ': ' + env.error.message : null)
+				+ row('Duration', this.#ms(env.duration))
+				+ row('Memory', (env.memory / 1024).toFixed(2) + ' kB')
+				+ '<tr><th>Data</th><td><pre style="margin:0;white-space:pre-wrap">' + this.#escHtml(preview) + '</pre></td></tr>'
 				+ '</tbody></table></div>'
 				+ '<div class="tracy-icons">'
 				+ '<a href="#" data-tracy-action="window" title="open in window">&curren;</a>'
 				+ '<a href="#" data-tracy-action="close" title="close window">&times;</a>'
 				+ '</div>';
 
-			const preview = event.data.length > 40 ? event.data.slice(0, 40) + '…' : event.data;
+			const label = (env.status === 'error' ? '✗ ' : '') + this.#describe(env);
 
 			Tracy.Debug.loadAjax({
 				panels: '<div itemscope>'
@@ -60,61 +222,69 @@ use Raneomik\NetteMercure\Bridge\Tracy\MercurePanel;
 					+ '</div>',
 				bar: '<ul class="tracy-row" data-tracy-group="ajax">'
 					+ '<li>Mercure</li>'
-					+ '<li><a href="#" rel="' + id + '">[' + this.#escHtml(hub.name) + '] ' + this.#escHtml(preview) + '</a></li>'
+					+ '<li><a href="#" rel="' + id + '">[' + this.#escHtml(env.hub) + '] ' + this.#escHtml(label.length > 40 ? label.slice(0, 40) + '…' : label) + '</a></li>'
 					+ '</ul>',
 			});
 		}
 
-		#handle(hub, event) {
-			const container = this.#container();
+		#onBus(event) {
+			let env;
+			try { env = JSON.parse(event.data); } catch (e) { return; }
 
-			if (!this.#initialized) {
-				if (container) container.innerHTML = '';
-				this.#initialized = true;
+			this.#push({kind: 'pub', env, t: env.sentAt});
+
+			// a failed publication has no id: nothing will ever be received for it
+			if (env.id) {
+				this.#envelopes.set(env.id, env);
+				if (this.#envelopes.size > MAX_ENVELOPES) this.#envelopes.delete(this.#envelopes.keys().next().value);
+				// the page may have received the event before its envelope: complete those rows
+				this.#entries.filter((e) => e.kind === 'recv' && e.id === env.id).forEach((e) => this.#rebuild(e));
 			}
-
-			this.#pushToBar(hub, event);
-
-			if (!container) return;
-
-			const time = document.createElement('span');
-			time.className = 'mercure-live-time';
-			time.textContent = new Date().toLocaleTimeString();
-
-			const hubLabel = document.createElement('span');
-			hubLabel.className = 'mercure-live-hub';
-			hubLabel.textContent = '[' + hub.name + ']';
-
-			const data = document.createElement('span');
-			data.textContent = event.data;
-
-			const entry = document.createElement('div');
-			entry.className = 'mercure-live-entry';
-			entry.append(time, hubLabel, data);
-			container.insertBefore(entry, container.firstChild);
+			this.#pushToBar(env);
 		}
 
-		start(hubs) {
-			hubs.forEach(hub => {
-				const url = new URL(hub.url);
-				url.searchParams.append(hub.isLegacy ? 'topic' : 'match', '*');
+		#onHook(ev) {
+			switch (ev.kind) {
+				case 'connect': this.#push({kind: 'conn', phase: 'connecting', label: ev.label, url: ev.url, t: ev.t}); break;
+				case 'open': this.#push({kind: 'conn', phase: 'open', label: ev.label, url: ev.url, t: ev.t}); break;
+				case 'error': this.#push({kind: 'conn', phase: 'error', label: ev.label, url: ev.url, t: ev.t}); break;
+				case 'event': this.#push({...ev, kind: 'recv'}); break;
+				case 'turbo':
+				case 'naja': this.#push(ev); break;
+			}
+		}
 
-				const es = new EventSource(url.toString());
-				es.addEventListener('turbo-stream', e => this.#handle(hub, e));
-				es.onmessage = e => this.#handle(hub, e);
-				es.onerror = () => {
-					const container = this.#container();
-					const err = document.createElement('div');
-					err.className = 'mercure-live-entry mercure-live-error';
-					err.textContent = 'Connection error — hub: ' + hub.name;
-					if (container) container.insertBefore(err, container.firstChild);
-					this.#initialized = true;
-				};
+		start() {
+			// the panel uses the untouched constructor: its own connection must not show up as page traffic
+			const ES = window.__mercureDebug?.Native ?? window.EventSource;
+
+			// hubs sharing the same URL are the same hub: one connection is enough
+			const byUrl = new Map();
+			hubs.forEach((hub) => byUrl.has(hub.url) || byUrl.set(hub.url, hub));
+
+			byUrl.forEach((hub) => {
+				const url = new URL(hub.url);
+				url.searchParams.append(hub.isLegacy ? 'topic' : 'match', BUS);
+
+				const es = new ES(url.toString());
+				es.addEventListener(BUS_TYPE, (e) => this.#onBus(e));
+				es.addEventListener('open', () => this.#push({kind: 'conn', phase: 'open', label: 'debug bus', url: hub.url}));
+				es.addEventListener('error', () => this.#push({kind: 'conn', phase: 'error', label: 'debug bus', url: hub.url}));
 			});
+
+			if (window.__mercureDebug) {
+				window.__mercureDebug.subscribe((ev) => this.#onHook(ev));
+			} else {
+				this.#push({kind: 'hint', text: 'Page connections are not observed.'});
+			}
 
 			return this;
 		}
 	}
 
-	window.tracyMercureEventLoader = new MercureEventLoader().start(hubs);
-})(<?= Tracy\Helpers::jsonEncode($liveHubs, true) ?>);
+	window.tracyMercureEventLoader = new MercureEventLoader().start();
+})(
+    <?= Tracy\Helpers::jsonEncode($liveHubs, true) ?>,
+    <?= Tracy\Helpers::jsonEncode(TraceableBroadcaster::DEBUG_TOPIC, true) ?>,
+    <?= Tracy\Helpers::jsonEncode(TraceableBroadcaster::DEBUG_EVENT, true) ?>
+);

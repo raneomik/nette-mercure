@@ -8,7 +8,6 @@ require \dirname(__DIR__, 3) . '/bootstrap.php';
 
 use Raneomik\NetteMercure\Bridge\DI\Config\Configuration;
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
-use Raneomik\NetteMercure\Bridge\Latte\Function\HotReload;
 use Raneomik\NetteMercure\Bridge\Latte\MercureExtension;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
@@ -25,8 +24,6 @@ use Tests\Fixtures\Dummies\Core\Subscribe\DummyJwtProvider;
  */
 final class MercureExtensionTest extends TestCase
 {
-    private const string HOT_RELOAD_URL = 'http://v1.example.com/?match=hot-reload';
-
     private static Broadcasters $broadcasters;
 
     private static MercureExtension $extension;
@@ -35,13 +32,13 @@ final class MercureExtensionTest extends TestCase
     {
         self::$broadcasters ??= new Broadcasters([
             'test' => new PlainBroadcaster(
-                MockHubFactory::create('http://hub.example.com'),
+                MockHubFactory::create(
+                    'http://hub.example.com',
+                    protocolVersion: ProtocolVersion::Legacy,
+                ),
             ),
             'v1' => new PlainBroadcaster(
-                MockHubFactory::create(
-                    'http://v1.example.com',
-                    protocolVersion: ProtocolVersion::V1,
-                ),
+                MockHubFactory::create('http://v1.example.com'),
             ),
         ]);
 
@@ -66,7 +63,6 @@ final class MercureExtensionTest extends TestCase
                     jwtInQueryParam: true,
                 ),
             ]),
-            self::HOT_RELOAD_URL,
         );
     }
 
@@ -126,7 +122,7 @@ final class MercureExtensionTest extends TestCase
             'options' => [
                 'lastEventId' => '987',
             ],
-            'expected' => 'http://v1.example.com?match_urlpattern=foo&match_urlpattern=bar&lastEventID=987&authorization=dummy-jwt-token-test-provider-token-*-',
+            'expected' => 'http://v1.example.com?match_urlpattern=foo&match_urlpattern=bar&lastEventID=987',
         ];
 
         yield 'hub from options' => [
@@ -135,7 +131,7 @@ final class MercureExtensionTest extends TestCase
             'options' => [
                 'hub' => 'v1',
             ],
-            'expected' => 'http://v1.example.com?match=test&authorization=dummy-jwt-token-test-provider-token-*-',
+            'expected' => 'http://v1.example.com?match=test',
         ];
     }
 
@@ -237,46 +233,6 @@ final class MercureExtensionTest extends TestCase
         $token = $this->function('mercureJWTToken');
 
         Assert::same($expected, $token($subscribe, [], $hub));
-    }
-
-    public function testHotReload(): void
-    {
-        $hotReloadHeadersFunction = $this->function('hotReloadMetaHead');
-
-        Assert::same(
-            (string) HotReload::build(self::HOT_RELOAD_URL)(),
-            (string) $hotReloadHeadersFunction(),
-        );
-        Assert::notSame(
-            '',
-            (string) $hotReloadHeadersFunction(),
-        );
-    }
-
-    public function testExtensionWithoutHotReloadUrl(): void
-    {
-        self::$extension = new MercureExtension(
-            new DummyJwtProvider(),
-            new BroadcastersLoader(static fn (): Broadcasters => self::$broadcasters),
-            new ConfigurationRegistry(
-                [
-                    'test' => new Configuration(
-                        hubName: 'test',
-                        hubUrl: 'http://hub.example.com',
-                        publicUrl: 'http://hub.example.com',
-                        subscribe: ['*'],
-                        publish: ['*'],
-                        protocolVersion: ProtocolVersion::Legacy,
-                    ),
-                ],
-            ),
-        );
-
-        $hotReloadHeadersFunction = $this->function('hotReloadMetaHead');
-        Assert::same(
-            '',
-            (string) $hotReloadHeadersFunction(),
-        );
     }
 
     private function function(string $name): callable

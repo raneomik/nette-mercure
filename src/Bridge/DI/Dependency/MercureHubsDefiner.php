@@ -132,11 +132,15 @@ final readonly class MercureHubsDefiner
 
     private function tokenFactoryStatement(\stdClass $jwt, ProtocolVersion $protocol, string $name): Statement
     {
-        $factory = $jwt->factory ?? (ProtocolVersion::V1 === $protocol ? WebTokenFactory::class : LcobucciFactory::class);
+        $factory = $jwt->factory ?? (
+            ProtocolVersion::V1 === $protocol
+            ? WebTokenFactory::class
+            : LcobucciFactory::class
+        );
 
-        if (WebTokenFactory::class === $factory && ProtocolVersion::V1 !== $protocol) {
+        if (null !== $jwt->factory && \in_array($factory, [WebTokenFactory::class, LcobucciFactory::class], true)) {
             throw new InvalidConfigurationException(\sprintf(
-                'Hub "%s": %s only supports the Mercure protocol 1.0, use %s for the legacy protocol.',
+                'Hub "%s": use `protocolVersion` to control the token factory (V1 → %s, legacy → %s); set `jwt.factory` only for custom implementations.',
                 $name,
                 WebTokenFactory::class,
                 LcobucciFactory::class,

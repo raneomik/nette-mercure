@@ -18,16 +18,10 @@ use Tester\TestCase;
  */
 abstract class ContainerTestCase extends TestCase
 {
-    protected Configurator $configurator;
-
     protected function setUp(): void
     {
         mkdir($this->tmpDir(), recursive: true);
 
-        $this->configurator = (new Configurator())
-            ->setTempDirectory($this->tmpDir())
-            ->addConfig(\dirname(__DIR__, 3) . '/fixtures/config/test.neon')
-        ;
     }
 
     protected function tearDown(): void
@@ -38,20 +32,25 @@ abstract class ContainerTestCase extends TestCase
 
     protected function createContainer(string $neon, bool $debug = false): Container
     {
+        $configurator = (new Configurator())
+            ->setTempDirectory($this->tmpDir())
+            ->addConfig(\dirname(__DIR__, 3) . '/fixtures/config/test.neon')
+        ;
+
         if ($debug) {
-            $this->configurator
+            $configurator
                 ->setDebugMode(true)
                 ->enableTracy($this->tmpDir())
             ;
         }
 
-        $this->configurator->onCompile[] = static function ($configurator, $compiler) use ($debug): void {
+        $configurator->onCompile[] = static function ($configurator, $compiler) use ($debug): void {
             $compiler->addExtension('mercure', new MercureExtension($debug));
         };
 
-        $this->configurator->addConfig(FileMock::create($neon, 'neon'));
+        $configurator->addConfig(FileMock::create($neon, 'neon'));
 
-        return $this->configurator->createContainer();
+        return $configurator->createContainer();
     }
 
     /**

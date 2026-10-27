@@ -48,9 +48,8 @@ mercure:
 			algorithm: HS256 # Optional, defaults to HS256 with WebTokenFactory, hmac.sha256 with LcobucciFactory
 		publish: ['test-topic'] # Optional, default is ['*']. Topics to narrow in JWT validation.
 		subscribe: ['test-topic'] # Optional, default is ['*']. Topics to narrow in JWT validation (1.0 also accepts matchers, e.g. {urlpattern: ['/books/:id']}).
-		# Optional, defaults to Symfony\Component\Mercure\Jwt\WebTokenFactory with protocol 1.0 (1.0 only),
-		# and to Symfony\Component\Mercure\Jwt\LcobucciFactory with legacy protocol (supports both).
-		# You can implement your own Symfony\Component\Mercure\Jwt\TokenFactoryInterface
+		# Optional, only for custom Symfony\Component\Mercure\Jwt\TokenFactoryInterface implementations.
+		# Use protocolVersion to switch between built-in factories: '1.0' → WebTokenFactory, '0.x' → LcobucciFactory.
 		factory:
 		# Optional, claims added to every token. With protocol 1.0, the RFC 9068 "iss", "aud", "sub" and "client_id" claims are required
 		# and defaults on publicUrl, fallbacked on url, and derived values: set them for production.
@@ -350,6 +349,38 @@ You can also subscribe to [turbo-streams](https://turbo.hotwired.dev) :
 
 Frankenphp [HotReload](https://frankenphp.dev/docs/hot-reload/#enabling-frankenphp-hot-reload) feature requires "anonymous" mercure configuration.
 Tracy bar Live mercure event listening follows this requirement. 
+
+#### Debug bus
+
+An SSE event only carries its type, id and data: topics, visibility, hub name or Turbo Stream
+action never reach the subscribers. On every hub with `debugger: true`, each publication is therefore
+also announced, with its metadata, on the public topic `_debug/mercure`. The Tracy panel listens
+to that single topic and shows, for any publisher (any tab, any request): hub, topics, `private`, SSE type,
+Turbo action and target, template, size in bytes and a preview of the data.
+
+> If you restrict the `publish` grants of a hub, allow the `_debug/mercure` topic too, otherwise the
+> announcements are silently dropped (they never break a real publication).
+
+#### Observing the page itself
+
+To also see the connections opened by the page (open / error / received events with their size and the
+latency since publication) and what Turbo does with each stream (including "target not found"),
+add the hook to the `<head>` of your layout, **before** any other script:
+
+```latte
+<head>
+    {mercureDebugHook()}
+    ...
+```
+
+It renders nothing outside of debug mode. A global patch cannot see an `EventSource` polyfill imported as a module:
+register it explicitly right after its creation.
+
+```js
+window.__mercureDebug?.track(eventSource, 'turbo');
+```
+
+Naja events (`success`, `error`) are reported too when the instance is exposed (`window.naja = naja`).
 
 
 Resources

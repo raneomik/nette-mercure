@@ -5,6 +5,7 @@
  * @var $name string
  * @var $count int
  * @var $scripts string[]
+ * @var $nonce string
  */
 
 ?>
@@ -14,4 +15,6 @@
 		<?= Tracy\Helpers::escapeHtml($count) ?>
 	</span>
 </span>
-<?php foreach ($scripts as $js): ?><script><?= $js ?></script><?php endforeach ?>
+<script <?= $nonce ?>>
+<?php foreach ($scripts as $js): ?><?= $js ?><?php endforeach ?>
+</script>

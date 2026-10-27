@@ -33,10 +33,13 @@ final readonly class CustomScriptsLoader
 
         if ([] !== $liveHubs) {
             $scripts[] = Tracy\Helpers::capture(static function () use ($liveHubs): void {
-
                 require __DIR__ . '/dist/liveEvents.js.phtml';
             });
         }
+
+        $scripts[] = Tracy\Helpers::capture(static function (): void {
+            require __DIR__ . '/dist/debugHook.js.phtml';
+        });
 
         return $scripts;
     }

@@ -57,6 +57,7 @@ final readonly class BroadcastersDefiner
                 ->setType(TraceableBroadcaster::class)
                 ->setCreator(TraceableBroadcaster::class, [
                     $latteBroadcasterDef ?? $plainBroadcasterDef,
+                    'hubName' => $hubName,
                 ])
                 ->setAutowired(false)
             ;

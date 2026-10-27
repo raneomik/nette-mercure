@@ -6,7 +6,6 @@ namespace Raneomik\NetteMercure\Bridge\Latte;
 
 use Latte\Extension;
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
-use Raneomik\NetteMercure\Bridge\Latte\Function\HotReload;
 use Raneomik\NetteMercure\Bridge\Latte\Function\Mercure;
 use Raneomik\NetteMercure\Bridge\Latte\Function\MercureJWTToken;
 use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
@@ -18,17 +17,13 @@ final class MercureExtension extends Extension
 
     private readonly MercureJWTToken $JWTTokenFunction;
 
-    private readonly HotReload $hotReloadFunction;
-
     public function __construct(
         JWTProviderInterface $jwtProvider,
         BroadcastersLoader $broadcastersLoader,
         ConfigurationRegistry $configuredData,
-        ?string $hotReloadUrl = null,
     ) {
         $this->mercureFunction = Mercure::build($jwtProvider, $broadcastersLoader, $configuredData);
         $this->JWTTokenFunction = MercureJWTToken::build($jwtProvider);
-        $this->hotReloadFunction = HotReload::build($hotReloadUrl);
     }
 
     #[\Override]
@@ -36,7 +31,6 @@ final class MercureExtension extends Extension
      * @return array{
      *      mercure: Mercure,
      *      mercureJWTToken: MercureJWTToken,
-     *      mercureHotReload: HotReload,
      * }
      */
     public function getFunctions(): array
@@ -44,7 +38,6 @@ final class MercureExtension extends Extension
         return [
             'mercure' => ($this->mercureFunction)(...),
             'mercureJWTToken' => ($this->JWTTokenFunction)(...),
-            'hotReloadMetaHead' => ($this->hotReloadFunction)(...),
         ];
     }
 }

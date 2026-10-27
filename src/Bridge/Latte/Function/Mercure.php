@@ -9,6 +9,7 @@ use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Raneomik\NetteMercure\Bridge\Utils\SubscriptionQuery;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
 use Raneomik\NetteMercure\Core\Subscribe\JWTProviderInterface;
+use Symfony\Component\Mercure\ProtocolVersion;
 
 /**
  * @phpstan-type MercureOptions array{
@@ -75,11 +76,15 @@ final readonly class Mercure
     {
         $params = SubscriptionQuery::params(
             $topics,
-            $this->broadcasters()->broadcasterHub($hub)->getProtocolVersion(),
+            $protocolVersion = $this->broadcasters()->broadcasterHub($hub)->getProtocolVersion(),
         );
 
         if ('' !== ($options['lastEventId'] ?? '')) {
             $params[] = 'lastEventID=' . rawurlencode($options['lastEventId']);
+        }
+
+        if (ProtocolVersion::V1 === $protocolVersion) {
+            return SubscriptionQuery::build($params);
         }
 
         $hubData = $this->configuredData->getConfiguration($hub);

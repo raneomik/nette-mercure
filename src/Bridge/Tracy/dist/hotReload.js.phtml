@@ -8,6 +8,9 @@
 'use strict';
 
 (function() {
+    if (window.tracyFrankenPhphHotReload) return;
+    window.tracyFrankenPhphHotReload = true;
+
     const meta = document.createElement('meta');
     meta.name = 'frankenphp-hot-reload:url';
     meta.content = <?= Tracy\Helpers::jsonEncode($hotReloadUrl, true) ?>;

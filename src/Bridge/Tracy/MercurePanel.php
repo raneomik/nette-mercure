@@ -42,6 +42,7 @@ final readonly class MercurePanel implements Tracy\IBarPanel
             $scripts = $this->customScriptsLoader->scripts(
                 $this->liveEventsHubs(),
             );
+            $nonce = Tracy\Helpers::getNonce(true);
 
             require __DIR__ . '/dist/tab.phtml';
         });
