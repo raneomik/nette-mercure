@@ -3,14 +3,13 @@
 use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 
 ?>
-(() => {
+((BUS) => {
 	'use strict';
 
 	// Observes every EventSource opened by the page, plus what Turbo / Naja do with the events.
 	// Must run before any application script: install it in <head> with {mercureDebugHook()}.
 	if (window.__mercureDebug || typeof window.EventSource !== 'function') return;
 
-	const BUS = <?= TraceableBroadcaster::DEBUG_TOPIC ?>; // keep in sync with TraceableBroadcaster::DEBUG_TOPIC
 	const MAX_BUFFERED = 300;
 	const subscribers = new Set();
 	const buffer = [];
@@ -112,4 +111,6 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 			return () => subscribers.delete(fn);
 		},
 	};
-})();
+})(
+    <?= Tracy\Helpers::jsonEncode(TraceableBroadcaster::DEBUG_TOPIC, true) ?>,
+);

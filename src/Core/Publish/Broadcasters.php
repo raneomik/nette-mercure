@@ -113,7 +113,7 @@ final readonly class Broadcasters implements BroadcasterInterface, \ArrayAccess,
 
     private function getHub(string $name): BroadcasterInterface
     {
-        if (false === ($this[$name] ?? false)) {
+        if (false === $this->offsetExists($name)) {
             throw new BroadcastException(\sprintf('The hub "%s" is not defined.', $name));
         }
 

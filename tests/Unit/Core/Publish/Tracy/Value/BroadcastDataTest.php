@@ -69,7 +69,7 @@ final class BroadcastDataTest extends TestCase
             size: 5010.0,
             options: [
                 'action' => TurboStreamAction::Append,
-                'template' => 'n/a',
+                'template' => null,
                 'target' => 'messages',
                 'sse_type' => 'turbo-stream',
                 'private' => true,
@@ -86,7 +86,7 @@ final class BroadcastDataTest extends TestCase
         Assert::same('one', $json['hub']);
         Assert::same('error', $json['status']);
         Assert::same('append', $json['action']);
-        Assert::null($json['template'], 'the "n/a" placeholder is not announced');
+        Assert::null($json['template']);
         Assert::same('messages', $json['target']);
         Assert::same('turbo-stream', $json['type']);
         Assert::true($json['private']);

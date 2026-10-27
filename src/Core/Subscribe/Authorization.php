@@ -26,8 +26,8 @@ final readonly class Authorization implements AuthorizationInterface
     #[\Override]
     public function setCookie(array|string $grants = [], array $additionalClaims = [], ?string $hub = null): void
     {
-        $token = $this->jwtProvider->provide($hub, $grants, $additionalClaims);
-        $expire = $this->jwtProvider->ttl() ?? 0; // 0: session cookie
+        $jwt = $this->jwtProvider->provide($hub, $grants, $additionalClaims);
+        $expire = $jwt->ttl ?? 0; // 0: session cookie
         [$name, $path, $domain, $secure] = $this->cookieParameters($hub);
 
         // IResponse::setCookie() has no "sameSite" parameter, only Nette\Http\Response does
@@ -35,12 +35,12 @@ final readonly class Authorization implements AuthorizationInterface
             $this->response instanceof Response
             && $this->cookieSameSite instanceof SameSite
         ) {
-            $this->response->setCookie($name, $token, $expire, $path, $domain, $secure, true, $this->cookieSameSite->value);
+            $this->response->setCookie($name, $jwt->token, $expire, $path, $domain, $secure, true, $this->cookieSameSite->value);
 
             return;
         }
 
-        $this->response->setCookie($name, $token, $expire, $path, $domain, $secure, true);
+        $this->response->setCookie($name, $jwt->token, $expire, $path, $domain, $secure, true);
     }
 
     #[\Override]

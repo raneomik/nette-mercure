@@ -68,7 +68,7 @@ final class TraceableBroadcasterTest extends TestCase
             $this->debugBroadcaster->getDuration(),
         );
         Assert::same(1, $this->debugBroadcaster->count());
-        Assert::count(1, $this->debugBroadcaster->getMessageData());
+        Assert::count(1, $this->debugBroadcaster->broadcastData());
 
         $this->debugBroadcaster->broadcast(
             'test',
@@ -90,7 +90,7 @@ final class TraceableBroadcasterTest extends TestCase
         );
 
         Assert::same(2, $this->debugBroadcaster->count());
-        Assert::count(2, $this->debugBroadcaster->getMessageData());
+        Assert::count(2, $this->debugBroadcaster->broadcastData());
 
         $formatedData = array_map(
             static fn (BroadcastData $data): array => [
@@ -107,8 +107,8 @@ final class TraceableBroadcasterTest extends TestCase
                 [
                     'topics' => ['test'],
                     'data' => 'Hello, World!',
-                    'template' => 'n/a',
-                    'action' => 'n/a',
+                    'template' => null,
+                    'action' => null,
                     'options' => [],
                 ],
                 [

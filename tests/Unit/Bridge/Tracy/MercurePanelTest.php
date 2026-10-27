@@ -86,6 +86,7 @@ final class MercurePanelTest extends TestCase
             'meta.content = ' . Helpers::jsonEncode("https://hr.example.com/?topic=a&b='c'"),
             $panel->getTab(),
         );
+        Assert::contains(Helpers::jsonEncode(TraceableBroadcaster::DEBUG_TOPIC), $panel->getTab());
     }
 }
 

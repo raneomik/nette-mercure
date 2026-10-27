@@ -74,8 +74,7 @@ final class TraceableBroadcaster implements BroadcasterInterface
 
         $options = $this->broadcastOptions();
 
-        $options['template'] ??= $template ?? 'n/a';
-        $options['action'] ??= 'n/a';
+        $options['template'] ??= $template;
 
         $this->broadcastData[] = $broadcastData = new BroadcastData(
             $status,
@@ -109,14 +108,6 @@ final class TraceableBroadcaster implements BroadcasterInterface
     public function count(): int
     {
         return \count($this->broadcastData);
-    }
-
-    /**
-     * @return list<array<string, mixed>|object|string>
-     */
-    public function getMessageData(): array
-    {
-        return array_column($this->broadcastData, 'data');
     }
 
     public function getDuration(): float

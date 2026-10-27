@@ -115,7 +115,7 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 				case 'conn': {
 					const label = entry.label ?? 'native';
 					add('mercure-live-time', this.#time(entry.t));
-					if (entry.phase === 'error' || entry.kind === 'error') row.classList.add('mercure-live-error');
+					if (entry.phase === 'error') row.classList.add('mercure-live-error');
 					add('mercure-live-down', '●');
 					add('mercure-live-what', label + ' ' + entry.phase);
 					add('mercure-live-meta', String(entry.url).replace(/^https?:\/\//, ''));

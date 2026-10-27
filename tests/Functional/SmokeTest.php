@@ -64,11 +64,11 @@ final class SmokeTest extends TestCase
 
         $response
             ->expectBody(static function (string $body): bool {
-                Assert::contains('"jwtToken":', $body);
                 Assert::contains('"hubUrl":', $body);
                 Assert::contains('"subscribeUrl":', $body);
-                Assert::contains('"expiresAt":', $body);
-                Assert::contains('"jwtExtraClaims":', $body);
+                Assert::contains('"jwt":', $body);
+                Assert::contains('"ttl":', $body);
+                Assert::contains('"extraClaims":', $body);
 
                 return true;
             })

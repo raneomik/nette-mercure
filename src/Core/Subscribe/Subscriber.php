@@ -29,13 +29,9 @@ final readonly class Subscriber implements SubscriberInterface
         // built first: it rejects malformed topics before any token is issued
         $subscribeUrl = $hubData->publicUrl . SubscriptionQuery::build(SubscriptionQuery::params($topics, $hubData->protocolVersion));
 
-        return new SubscriptionData(
-            // a single "subscribe" grant: $topics often comes from the request, it must not be able to add "publish"
-            $this->jwtProvider->provide($hubName, [new Grant([Grant::ACTION_SUBSCRIBE], $topics)], $extraClaims),
-            $hubData->publicUrl,
-            $subscribeUrl,
-            $this->jwtProvider->ttl(),
-            $extraClaims,
-        );
+        // a single "subscribe" grant: $topics often comes from the request, it must not be able to add "publish"
+        $jwt = $this->jwtProvider->provide($hubName, [new Grant([Grant::ACTION_SUBSCRIBE], $topics)], $extraClaims);
+
+        return new SubscriptionData($jwt, $hubData->publicUrl, $subscribeUrl);
     }
 }

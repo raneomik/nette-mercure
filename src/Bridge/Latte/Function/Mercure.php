@@ -90,11 +90,7 @@ final readonly class Mercure
         $hubData = $this->configuredData->getConfiguration($hub);
 
         if ($hubData->jwtInQueryParam || true === ($options['addJwt'] ?? false)) {
-            $params[] = 'authorization=' . $this->jwtProvider->provide(
-                $hub,
-                $options['subscribe'] ?? $hubData->subscribe,
-                $options['additionalClaims'] ?? [],
-            );
+            $params[] = 'authorization=' . $this->jwtProvider->provide($hub, $options['subscribe'] ?? $hubData->subscribe, $options['additionalClaims'] ?? [])->token;
         }
 
         return SubscriptionQuery::build($params);
