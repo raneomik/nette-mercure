@@ -20,8 +20,11 @@ final readonly class CustomScriptsLoader
      * @param LightHub[] $liveHubs
      * @return string[]
      */
-    public function scripts(array $liveHubs): array
-    {
+    public function scripts(
+        array $liveHubs,
+        string $icon,
+        bool $isAjax = false,
+    ): array {
         $scripts = [];
         if (null !== $this->hotReloadUrl) {
             $scripts[] = Tracy\Helpers::capture(function (): void {
@@ -31,15 +34,15 @@ final readonly class CustomScriptsLoader
             });
         }
 
-        if ([] !== $liveHubs) {
-            $scripts[] = Tracy\Helpers::capture(static function () use ($liveHubs): void {
+        if ([] !== $liveHubs && false === $isAjax) {
+            $scripts[] = Tracy\Helpers::capture(static function (): void {
+                require __DIR__ . '/dist/debugHook.js.phtml';
+            });
+
+            $scripts[] = Tracy\Helpers::capture(static function () use ($liveHubs, $icon): void {
                 require __DIR__ . '/dist/liveEvents.js.phtml';
             });
         }
-
-        $scripts[] = Tracy\Helpers::capture(static function (): void {
-            require __DIR__ . '/dist/debugHook.js.phtml';
-        });
 
         return $scripts;
     }

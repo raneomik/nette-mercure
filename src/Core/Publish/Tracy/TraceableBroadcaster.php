@@ -92,7 +92,7 @@ final class TraceableBroadcaster implements BroadcasterInterface
             $this->hubName,
         );
 
-        $this->announce($broadcastData);
+        $this->publishDebug($broadcastData);
 
         return $messageId;
     }
@@ -120,7 +120,7 @@ final class TraceableBroadcaster implements BroadcasterInterface
         return array_sum(array_column($this->broadcastData, 'memory'));
     }
 
-    private function announce(BroadcastData $broadcastData): void
+    private function publishDebug(BroadcastData $broadcastData): void
     {
         try {
             $this->broadcasterHub()->publish(new Update(

@@ -39,4 +39,9 @@ final class HubData extends \ArrayIterator
         /** @var array<string, HubDatum> $data */
         parent::__construct($data);
     }
+
+    public function hasData(): bool
+    {
+        return 0 < $this->totalDuration && 0 < $this->totalMemory;
+    }
 }

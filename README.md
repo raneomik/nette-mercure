@@ -363,18 +363,15 @@ Turbo action and target, template, size in bytes and a preview of the data.
 
 #### Observing the page itself
 
-To also see the connections opened by the page (open / error / received events with their size and the
-latency since publication) and what Turbo does with each stream (including "target not found"),
-add the hook to the `<head>` of your layout, **before** any other script:
+The Tracy bar installs a small hook, before the deferred / module scripts of your page run. It observes every
+connection opened by the page (connecting / open / reconnecting / closed, with the events received, their size and
+the latency since publication) and what Turbo does with each stream (including "target not found").
+Nothing to add to your layout.
 
-```latte
-<head>
-    {mercureDebugHook()}
-    ...
-```
+Two limits:
 
-It renders nothing outside of debug mode. A global patch cannot see an `EventSource` polyfill imported as a module:
-register it explicitly right after its creation.
+* a classic script opening an `EventSource` while the page is still being parsed runs before the hook and is not seen;
+* a global patch cannot see an `EventSource` polyfill imported as a module: register it right after its creation.
 
 ```js
 window.__mercureDebug?.track(eventSource, 'turbo');

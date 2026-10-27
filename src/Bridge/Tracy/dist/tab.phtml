@@ -7,7 +7,6 @@
  * @var $scripts string[]
  * @var $nonce string
  */
-
 ?>
 <span title="Raneomik\NetteMercure <?= Tracy\Helpers::escapeHtml($name) ?>">
 	<?= $icon ?>
@@ -15,6 +14,4 @@
 		<?= Tracy\Helpers::escapeHtml($count) ?>
 	</span>
 </span>
-<script <?= $nonce ?>>
-<?php foreach ($scripts as $js): ?><?= $js ?><?php endforeach ?>
-</script>
+<?php foreach ($scripts as $js): ?><script<?= $nonce ?>><?= $js ?></script><?php endforeach ?>

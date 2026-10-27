@@ -13,7 +13,7 @@ $formatData = fn(float $number, string $type): string => match($type) {
  * @phpstan-import-type LightHub from MercurePanel
  *
  * @var $icon string
- * @var $liveHubs LightHub[]
+ * @var $isAjax bool
  * @var $hubData HubData
  */
 
@@ -92,7 +92,7 @@ $formatData = fn(float $number, string $type): string => match($type) {
 
 	.mercure-live-log:hover,
 	.mercure-live-log:hover .mercure-live-entry {
-        background: #2d2d2d;
+		background: #2d2d2d; /* the background only: errors and warnings keep their colour */
         color: #d4d4d4;
 	}
 
@@ -145,7 +145,36 @@ $formatData = fn(float $number, string $type): string => match($type) {
 	.mercure-live-log .mercure-live-data {
 		display: block;
 		color: #9a9a9a;
-		white-space: pre-wrap;
+		white-space: pre;
+        overflow-x: auto;
+	}
+
+	.mercure-connections {
+		margin-bottom: 0.5rem;
+	}
+
+	.mercure-connections table {
+		width: 100%;
+	}
+
+	.mercure-connections td[title] {
+		max-width: 22rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.mercure-connections .mercure-state-open {
+		color: #4ec9b0;
+	}
+
+	.mercure-connections .mercure-state-connecting,
+	.mercure-connections .mercure-state-reconnecting {
+		color: #d7ba7d;
+	}
+
+	.mercure-connections .mercure-state-closed {
+		color: #f44747;
 	}
 
 	.mercure-live-log .mercure-live-placeholder {
@@ -170,7 +199,7 @@ $formatData = fn(float $number, string $type): string => match($type) {
                             1 => '1 message',
                             default => $hubDatum->messageCount() . ' messages',
                         });
-                    ?>)
+                        ?>)
                     </em>
                 </h2>
 			</summary>
@@ -178,14 +207,10 @@ $formatData = fn(float $number, string $type): string => match($type) {
 				<dl>
 					<dt>url</dt>
 					<dd><?= Tracy\Helpers::escapeHtml($hubDatum->hubUrl) ?></dd>
-					<dt>Sent Messages</dt>
+                    <?php if ([] !== $hubDatum->broadcastData): ?>
+                    <dt>Sent Messages</dt>
 					<dd>
 						<table>
-							<colgroup>
-								<col style="width:20%">
-								<col style="width:60%">
-								<col style="width:20%">
-							</colgroup>
 							<thead>
 								<tr>
 									<th style="text-align: center;">Topics</th>
@@ -194,35 +219,37 @@ $formatData = fn(float $number, string $type): string => match($type) {
 								</tr>
 							</thead>
 
-							<tbody>
-								<?php foreach ($hubDatum->broadcastData as $message): ?>
-									<tr>
-										<td><?= Tracy\Helpers::escapeHtml(implode(', ', $message->topics)) ?></td>
-										<td><?= Dumper::toHtml($message->renderedData() ?? $message->data, [Dumper::COLLAPSE => true]) ?></td>
-										<td><?= Tracy\Helpers::escapeHtml($message->template()) ?></td>
-									</tr>
-								<?php endforeach ?>
-							</tbody>
+                        <tbody>
+                            <?php foreach ($hubDatum->broadcastData as $message): ?>
+                                <tr>
+                                    <td><?= Tracy\Helpers::escapeHtml(implode(', ', $message->topics)) ?></td>
+                                    <td><?= Dumper::toHtml($message->renderedData() ?? $message->data, [Dumper::COLLAPSE => true]) ?></td>
+                                    <td><?= Tracy\Helpers::escapeHtml($message->template()) ?></td>
+                                </tr>
+                            <?php endforeach ?>
+                        </tbody>
 
-							<tfoot>
-								<tr>
-									<th scope="row" colspan="2" style="text-align: right;">Total</th>
-									<td style="text-align: center;"><?= Tracy\Helpers::escapeHtml($hubDatum->messageCount()) ?></td>
-								</tr>
-							</tfoot>
-						</table>
-					</dd>
+                        <tfoot>
+                            <tr>
+                                <th scope="row" colspan="2" style="text-align: right;">Total</th>
+                                <td style="text-align: center;"><?= Tracy\Helpers::escapeHtml($hubDatum->messageCount()) ?></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </dd>
 
-					<dt>Duration</dt>
-					<dd><?= Tracy\Helpers::escapeHtml($formatData($hubDatum->duration, 'duration')) ?></dd>
+                    <dt>Duration</dt>
+                    <dd><?= Tracy\Helpers::escapeHtml($formatData($hubDatum->duration, 'duration')) ?></dd>
 
-					<dt>Memory</dt>
-					<dd><?= Tracy\Helpers::escapeHtml($formatData($hubDatum->memory, 'memory')) ?></dd>
-				</dl>
-			</div>
-		</details>
+                    <dt>Memory</dt>
+                    <dd><?= Tracy\Helpers::escapeHtml($formatData($hubDatum->memory, 'memory')) ?></dd>
+                <?php endif; ?>
+            </dl>
+        </div>
+    </details>
 	<?php endforeach ?>
 
+    <?php if ($hubData->hasData()): ?>
 	<div>
 		<div style="text-align: right;">
 			<dl>
@@ -234,11 +261,13 @@ $formatData = fn(float $number, string $type): string => match($type) {
 			</dl>
 		</div>
 	</div>
+    <?php endif ?>
 
-	<?php if ([] !== $liveHubs): ?>
+	<?php if (false === $isAjax): ?>
 	<details open>
 		<summary><h2>Live Events</h2></summary>
 		<div style="margin-top: 1rem;">
+			<div id="tracy-mercure-connections"></div>
 			<div id="tracy-mercure-live" class="mercure-live-log">
 				<div class="mercure-live-placeholder">Waiting for events&hellip;</div>
 			</div>

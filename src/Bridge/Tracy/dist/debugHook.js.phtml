@@ -3,20 +3,24 @@
 use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 
 ?>
-((BUS) => {
+((debugTopic) => {
 	'use strict';
 
 	// Observes every EventSource opened by the page, plus what Turbo / Naja do with the events.
-	// Must run before any application script: install it in <head> with {mercureDebugHook()}.
+	// Installed by the Tracy bar, i.e. before the deferred / module scripts of the page run: a script
+	// opening an EventSource while the page is still being parsed would not be seen.
 	if (window.__mercureDebug || typeof window.EventSource !== 'function') return;
 
 	const MAX_BUFFERED = 300;
+	let connections = 0;
 	const subscribers = new Set();
 	const buffer = [];
 
 	const bytes = (s) => new TextEncoder().encode(s ?? '').length;
-	const isBus = (url) => {
-		try { return decodeURIComponent(String(url)).includes(BUS); } catch { return false; }
+	// the panel's own debug bus and FrankenPHP hot reload are tooling, not page traffic
+	const IGNORED = ['frankenphp.dev/hot-reload'];
+	const isIgnored = (url) => {
+		try { return IGNORED.some((topic) => decodeURIComponent(String(url)).includes(topic)); } catch { return false; }
 	};
 
 	const emit = (entry) => {
@@ -32,14 +36,25 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 	// as modules (window.__mercureDebug?.track(es, 'turbo')), as the global patch cannot see them.
 	const track = (es, label = 'native') => {
 		const url = String(es.url ?? '');
-		if (isBus(url)) return es;
+		if (isIgnored(url)) return es;
 
-		emit({kind: 'connect', url, label});
-		es.addEventListener('open', () => emit({kind: 'open', url, label}));
-		es.addEventListener('error', () => emit({kind: 'error', url, label, state: es.readyState}));
+		const connection = {cid: ++connections, url, label}; // identifies this connection among the others
+
+		emit({kind: 'connect', ...connection});
+		es.addEventListener('open', () => emit({kind: 'open', ...connection}));
+		// readyState 0: the browser is retrying by itself, 2: it gave up
+		es.addEventListener('error', () => emit({kind: 'error', ...connection, state: es.readyState}));
+
+		if (typeof es.close === 'function') {
+			const close = es.close.bind(es);
+			es.close = () => {
+				close();
+				emit({kind: 'close', ...connection});
+			};
+		}
 
 		const log = (e) => emit({
-			kind: 'event', url, label, type: e.type, id: e.lastEventId || null, size: bytes(e.data), data: e.data,
+			kind: 'event', ...connection, type: e.type, id: e.lastEventId || null, size: bytes(e.data), data: e.data,
 		});
 		es.addEventListener('message', log); // also covers `es.onmessage = ...`
 
@@ -100,8 +115,53 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 		}));
 	});
 
+    const nativeFetch = window.fetch;
+    window.fetch = function (input, init = {}) {
+        const accept = new Headers(init.headers ?? input?.headers).get('Accept') ?? '';
+        if (!accept.includes('text/event-stream')) return nativeFetch.apply(this, arguments);
+
+        const url = String(input?.url ?? input);
+        if (isIgnored(url)) return nativeFetch.apply(this, arguments);
+
+        const connection = {cid: ++connections, url, label: 'fetch'};
+        emit({kind: 'connect', ...connection});
+
+        return nativeFetch.apply(this, arguments).then((response) => {
+            emit({kind: response.ok ? 'open' : 'error', ...connection, state: response.ok ? 1 : 2});
+            if (response.ok) readSse(response.clone().body, connection);
+            return response;
+        }, (error) => {
+            emit({kind: 'error', ...connection, state: 0});
+            throw error;
+        });
+    };
+
+    // parse the SSE stream: events are separated by a blank line
+    async function readSse(body, connection) {
+        const reader = body.getReader(), decoder = new TextDecoder();
+        let buffer = '';
+        for (;;) {
+            const {done, value} = await reader.read();
+            if (done) return emit({kind: 'error', ...connection, state: 0}); // the polyfill reconnects by itself
+            buffer += decoder.decode(value, {stream: true});
+            const blocks = buffer.split(/\r?\n\r?\n/);
+            buffer = blocks.pop();
+            for (const block of blocks) {
+                const field = {};
+                const data = [];
+                for (const line of block.split(/\r?\n/)) {
+                    const [, name, text = ''] = /^([^:]+):? ?(.*)$/.exec(line) ?? [];
+                    if (name === 'data') data.push(text); else if (name) field[name] = text;
+                }
+                if (!data.length) continue; // comment or heartbeat
+                emit({kind: 'event', ...connection, type: field.event ?? 'message', id: field.id ?? null,
+                    size: bytes(data.join('\n')), data: data.join('\n')});
+            }
+        }
+    }
+
 	window.__mercureDebug = {
-		BUS,
+		debugTopic,
 		Native, // untracked constructor, used by the panel for its own connection
 		emit,
 		track,

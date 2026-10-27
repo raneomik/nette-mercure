@@ -41,6 +41,7 @@ final readonly class MercurePanel implements Tracy\IBarPanel
             $count = $this->broadcasters()->count();
             $scripts = $this->customScriptsLoader->scripts(
                 $this->liveEventsHubs(),
+                $icon,
             );
             $nonce = Tracy\Helpers::getNonce(true);
 
@@ -53,7 +54,7 @@ final readonly class MercurePanel implements Tracy\IBarPanel
         return Tracy\Helpers::capture(function (): void {
             $hubData = new HubData($this->broadcasters());
             $icon = $this->icon;
-            $liveHubs = $this->liveEventsHubs();
+            $isAjax = $this->isAjax();
 
             require __DIR__ . '/dist/panel.phtml';
         });
@@ -83,5 +84,10 @@ final readonly class MercurePanel implements Tracy\IBarPanel
         }
 
         return $this->liveHubs = $hubs;
+    }
+
+    private function isAjax(): bool
+    {
+        return isset($_SERVER['HTTP_X_REQUESTED_WITH']) || isset($_SERVER['HTTP_X_TRACY_AJAX']);
     }
 }

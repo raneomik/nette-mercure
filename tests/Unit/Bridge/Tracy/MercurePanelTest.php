@@ -87,6 +87,9 @@ final class MercurePanelTest extends TestCase
             $panel->getTab(),
         );
         Assert::contains(Helpers::jsonEncode(TraceableBroadcaster::DEBUG_TOPIC), $panel->getTab());
+
+        // hot reload, page hook and panel: one <script> each, so that a failing one cannot prevent the next ones
+        Assert::same(3, substr_count($panel->getTab(), '<script'));
     }
 }
 
