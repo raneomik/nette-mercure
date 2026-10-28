@@ -220,10 +220,9 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 		#entries = [];            // log entries, newest first
 		#published = new Map();   // publish id -> its 'pub' entry, to attach what the page received
 		#connections = new Map(); // connection id -> state shown in the table
+		#views = new Map();       // document or shadow root -> {log, table}: the panel, and its "window" popups
 		#uid = 0;
 		#barRows = 0;
-		#log = null;              // containers created by Tracy when the panel is opened for the first time
-		#table = null;
 		#tableScheduled = false;
 
 		constructor() {
@@ -237,18 +236,35 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 
 		// The panel content is only inserted by Tracy when it is opened: render what happened until then
 		#attach() {
-			const log = this.#root().getElementById('tracy-mercure-live');
-			const table = this.#root().getElementById('tracy-mercure-connections');
+			this.#register(this.#root());
+		}
 
-			if (table && table !== this.#table) {
-				this.#table = table;
-				this.#renderConnections();
-			}
+		// Tracy's "window" mode copies the panel into a popup, whose document nothing updates by itself:
+		// the panel calls this from there (the popup is same-origin, it reaches us through window.opener).
+		adopt(doc) {
+			this.#register(doc);
+			doc.defaultView?.addEventListener('pagehide', () => this.#views.delete(doc), {once: true});
+		}
 
-			if (log && log !== this.#log) {
-				this.#log = log;
-				if (this.#entries.length) log.innerHTML = this.#entries.map((entry) => markup(rows[entry.kind](entry))).join('');
-			}
+		#register(root) {
+			const log = root.getElementById('tracy-mercure-live');
+			const table = root.getElementById('tracy-mercure-connections');
+			const known = this.#views.get(root);
+
+			if ((!log && !table) || (known?.log === log && known?.table === table)) return;
+
+			const view = {log, table};
+			this.#views.set(root, view);
+			this.#renderConnections(view);
+			if (log && this.#entries.length) log.innerHTML = this.#entries.map((entry) => markup(rows[entry.kind](entry))).join('');
+		}
+
+		// the views still in a document (a closed popup is forgotten)
+		#live() {
+			this.#views.forEach((view, root) => {
+				if (!(view.log ?? view.table).isConnected) this.#views.delete(root);
+			});
+			return [...this.#views.values()];
 		}
 
 		// ── log ──
@@ -260,37 +276,42 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 			this.#entries.unshift(entry);
 			if (this.#entries.length > MAX_ROWS) this.#drop(this.#entries.pop());
 
-			this.#log?.querySelector(':scope > .mercure-live-placeholder')?.remove();
-			this.#log?.insertAdjacentHTML('afterbegin', markup(rows[entry.kind](entry)));
+			const line = markup(rows[entry.kind](entry));
+			this.#live().forEach(({log}) => {
+				log?.querySelector(':scope > .mercure-live-placeholder')?.remove();
+				log?.insertAdjacentHTML('afterbegin', line);
+			});
 
 			return entry;
 		}
 
-		#el(entry) {
-			return this.#log?.querySelector(`[data-uid="${entry.uid}"]`) ?? null;
-		}
-
 		#drop(entry) {
-			this.#el(entry)?.remove();
+			this.#live().forEach(({log}) => log?.querySelector(`[data-uid="${entry.uid}"]`)?.remove());
 			if (entry.kind === 'pub') this.#published.delete(entry.env.id);
 		}
 
 		#refresh(entry) {
-			const el = this.#el(entry);
-			if (el) el.outerHTML = markup(rows[entry.kind](entry));
+			const line = markup(rows[entry.kind](entry));
+			this.#live().forEach(({log}) => {
+				const el = log?.querySelector(`[data-uid="${entry.uid}"]`);
+				if (el) el.outerHTML = line;
+			});
 		}
 
 		// ── connections ──
-		#renderConnections() {
-			if (this.#table && this.#connections.size) {
-				this.#table.innerHTML = markup(connectionsTable([...this.#connections.values()]));
+		#renderConnections(view) {
+			if (view.table && this.#connections.size) {
+				view.table.innerHTML = markup(connectionsTable([...this.#connections.values()]));
 			}
 		}
 
 		#scheduleConnections() {
 			if (this.#tableScheduled) return;
 			this.#tableScheduled = true;
-			queueMicrotask(() => { this.#tableScheduled = false; this.#renderConnections(); });
+			queueMicrotask(() => {
+				this.#tableScheduled = false;
+				this.#live().forEach((view) => this.#renderConnections(view));
+			});
 		}
 
 		#onConnection(ev) {
@@ -329,11 +350,11 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 
 			const entry = this.#add({kind: 'pub', env, t: env.sentAt, deliveries: []});
 			// a failed publication has no id: nothing will ever be received for it
-			if (env.id) this.#register(entry);
+			if (env.id) this.#track(entry);
 			this.#pushToBar(env);
 		}
 
-		#register(entry) {
+		#track(entry) {
 			const {id} = entry.env;
 			this.#published.set(id, entry);
 			if (this.#published.size > MAX_PUBLISHED) this.#published.delete(this.#published.keys().next().value);
@@ -342,7 +363,7 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 			const orphans = this.#entries.filter((e) => e.kind === 'recv' && e.id === id);
 			orphans.forEach((orphan) => {
 				this.#entries.splice(this.#entries.indexOf(orphan), 1);
-				this.#el(orphan)?.remove();
+				this.#live().forEach(({log}) => log?.querySelector(`[data-uid="${orphan.uid}"]`)?.remove());
 				entry.deliveries.push(orphan);
 			});
 			if (orphans.length) this.#refresh(entry);

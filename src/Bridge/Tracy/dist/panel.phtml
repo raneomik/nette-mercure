@@ -15,6 +15,7 @@ $formatData = fn(float $number, string $type): string => match($type) {
  * @var $icon string
  * @var $isAjax bool
  * @var $hubData HubData
+ * @var $nonce string
  */
 
 ?>
@@ -275,3 +276,4 @@ $formatData = fn(float $number, string $type): string => match($type) {
 	</details>
 	<?php endif ?>
 </div>
+<script<?= $nonce ?>>if (!window.tracyMercureEventLoader) window.opener?.tracyMercureEventLoader?.adopt(document);</script>

@@ -90,6 +90,9 @@ final class MercurePanelTest extends TestCase
 
         // hot reload, page hook and panel: one <script> each, so that a failing one cannot prevent the next ones
         Assert::same(3, substr_count($panel->getTab(), '<script'));
+
+        // "window" mode: the popup gets a copy of the panel, which hands itself over to the loader of the page
+        Assert::contains('opener?.tracyMercureEventLoader?.adopt(document)', $panel->getPanel());
     }
 }
 

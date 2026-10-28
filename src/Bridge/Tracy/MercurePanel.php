@@ -55,6 +55,7 @@ final readonly class MercurePanel implements Tracy\IBarPanel
             $hubData = new HubData($this->broadcasters());
             $icon = $this->icon;
             $isAjax = $this->isAjax();
+            $nonce = Tracy\Helpers::getNonce(true);
 
             require __DIR__ . '/dist/panel.phtml';
         });
