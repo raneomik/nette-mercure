@@ -26,7 +26,7 @@ final class PlainBroadcaster implements BroadcasterInterface
      *     sse_retry?: int,
      * } $resolvedOptions
      */
-    private array $resolvedOptions;
+    private array $resolvedOptions = [];
 
     public function __construct(
         private readonly HubInterface $hub,

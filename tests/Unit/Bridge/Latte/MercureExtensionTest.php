@@ -9,7 +9,6 @@ require \dirname(__DIR__, 3) . '/bootstrap.php';
 use Raneomik\NetteMercure\Bridge\DI\Config\Configuration;
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Bridge\Latte\MercureExtension;
-use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
 use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
 use Symfony\Component\Mercure\Exception\InvalidArgumentException;
@@ -44,7 +43,7 @@ final class MercureExtensionTest extends TestCase
 
         self::$extension ??= new MercureExtension(
             new DummyJwtProvider(),
-            new BroadcastersLoader(static fn (): Broadcasters => self::$broadcasters),
+            static fn (): Broadcasters => self::$broadcasters,
             new ConfigurationRegistry([
                 'test' => new Configuration(
                     hubName: 'test',
@@ -132,6 +131,16 @@ final class MercureExtensionTest extends TestCase
                 'hub' => 'v1',
             ],
             'expected' => 'http://v1.example.com?match=test',
+        ];
+
+        yield 'legacy, subscribe in options overrides hub defaults' => [
+            'topics' => 'topicX',
+            'hub' => 'test',
+            'options' => [
+                'addJwt' => true,
+                'subscribe' => ['my-topic'],
+            ],
+            'expected' => 'http://hub.example.com?topic=topicX&authorization=dummy-jwt-token-test-provider-token-my-topic-',
         ];
     }
 
@@ -233,6 +242,14 @@ final class MercureExtensionTest extends TestCase
         $token = $this->function('mercureJWTToken');
 
         Assert::same($expected, $token($subscribe, [], $hub));
+    }
+
+    public function testMercureJWTTokenDefaultSubscribeIsWildcard(): void
+    {
+        Assert::same(
+            'dummy-jwt-token-test-provider-token-*-',
+            ($this->function('mercureJWTToken'))(),
+        );
     }
 
     private function function(string $name): callable

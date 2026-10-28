@@ -19,11 +19,15 @@ final readonly class ConfigurationRegistry implements \IteratorAggregate
 
     public function getConfiguration(?string $hubName = null): Configuration
     {
-        /** @var string $first */
-        $first = array_key_first($this->configurations);
+        if (null === $hubName) {
+            /** @var string $firstKey */
+            $firstKey = array_key_first($this->configurations);
 
-        return $this->configurations[$hubName ?? $first]
-            ?? $this->configurations[$first]
+            return $this->configurations[$firstKey];
+        }
+
+        return $this->configurations[$hubName]
+            ?? throw new \InvalidArgumentException(sprintf('"%s" is not a known hub', $hubName))
         ;
     }
 

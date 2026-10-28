@@ -16,7 +16,6 @@ use Raneomik\NetteMercure\Bridge\DI\Dependency\SubscribersDefiner;
 use Raneomik\NetteMercure\Bridge\Latte\MercureExtension as LatteMercureExtension;
 use Raneomik\NetteMercure\Bridge\Tracy\CustomScriptsLoader;
 use Raneomik\NetteMercure\Bridge\Tracy\MercurePanel;
-use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Symfony\Component\Mercure\ProtocolVersion;
 
 final class MercureExtension extends Nette\DI\CompilerExtension
@@ -127,10 +126,8 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                 ->addSetup('addExtension', [
                     new Statement(LatteMercureExtension::class, [
                         '@' . $this->prefix('jwtProvider'),
-                        new Statement(BroadcastersLoader::class, [
-                            $builder::literal('fn() => $this->getService(?)', [
-                                $this->prefix('broadcasters'),
-                            ]),
+                        $builder::literal('fn() => $this->getService(?)', [
+                            $this->prefix('broadcasters'),
                         ]),
                         '@' . $this->prefix('hubsConfiguration'),
                         $this->hotReloadUrl,
@@ -142,10 +139,8 @@ final class MercureExtension extends Nette\DI\CompilerExtension
         if ($debug && $builder->hasDefinition('tracy.bar')) {
             $panelDef = $builder->addDefinition($this->prefix('tracy.panel'))
                 ->setCreator(MercurePanel::class, [
-                    new Statement(BroadcastersLoader::class, [
-                        $builder::literal('fn() => $this->getService(?)', [
-                            $this->prefix('broadcasters'),
-                        ]),
+                    $builder::literal('fn() => $this->getService(?)', [
+                        $this->prefix('broadcasters'),
                     ]),
                     '@' . $this->prefix('hubsConfiguration'),
                     new Statement(CustomScriptsLoader::class, [

@@ -8,7 +8,6 @@ use Latte\Extension;
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Bridge\Latte\Function\Mercure;
 use Raneomik\NetteMercure\Bridge\Latte\Function\MercureJWTToken;
-use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Raneomik\NetteMercure\Core\Subscribe\JWTProviderInterface;
 
 final class MercureExtension extends Extension
@@ -19,7 +18,7 @@ final class MercureExtension extends Extension
 
     public function __construct(
         JWTProviderInterface $jwtProvider,
-        BroadcastersLoader $broadcastersLoader,
+        \Closure $broadcastersLoader,
         ConfigurationRegistry $configuredData,
     ) {
         $this->mercureFunction = Mercure::build($jwtProvider, $broadcastersLoader, $configuredData);

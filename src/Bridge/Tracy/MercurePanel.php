@@ -6,7 +6,6 @@ namespace Raneomik\NetteMercure\Bridge\Tracy;
 
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Bridge\Tracy\Value\HubData;
-use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
 use Symfony\Component\Mercure\ProtocolVersion;
 use Tracy;
@@ -26,7 +25,7 @@ final readonly class MercurePanel implements Tracy\IBarPanel
     private string $icon;
 
     public function __construct(
-        private BroadcastersLoader $broadcastersLoader,
+        private \Closure $broadcastersLoader,
         private ConfigurationRegistry $hubsConfig,
         private CustomScriptsLoader $customScriptsLoader,
     ) {

@@ -13,7 +13,7 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 ((hubs, debugTopic, debugEvent, iconContent) => {
 	'use strict';
 
-	if (window.tracyMercureEventLoader || 1 >= hubs.length) return;
+	if (window.tracyMercureEventLoader) return;
 
 	const MAX_ROWS = 200;
 	const MAX_PUBLISHED = 300;

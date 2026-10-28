@@ -10,7 +10,6 @@ use Raneomik\NetteMercure\Bridge\DI\Config\Configuration;
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Bridge\Tracy\CustomScriptsLoader;
 use Raneomik\NetteMercure\Bridge\Tracy\MercurePanel;
-use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
 use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
 use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
@@ -56,7 +55,7 @@ final class MercurePanelTest extends TestCase
 
         $panel = new MercurePanel(
             ...$params = [
-                new BroadcastersLoader(static fn(): Broadcasters => $broadcasters),
+                static fn(): Broadcasters => $broadcasters,
                 $configs,
                 new CustomScriptsLoader(
                     'https://hot-reload.example.com',
@@ -68,7 +67,8 @@ final class MercurePanelTest extends TestCase
 
         $broadcaster->broadcast('test', 'Hello, Mercure!');
         Assert::type('string', $panel->getPanel(), 'test traced data rendering');
-        Assert::type('string', $panel->getTab());
+        Assert::type('string', $tab = $panel->getTab());
+        Assert::contains('<svg', $tab, 'icon must be embedded');
 
         $panel = new MercurePanel(...$params);
         Assert::type('string', $panel->getTab(), 'test HR file existence');

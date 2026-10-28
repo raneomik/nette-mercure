@@ -34,6 +34,7 @@ final readonly class JWTProvider implements JWTProviderInterface
             );
         }
 
+        $originalClaims = $additionalClaims;
         $ttl = $this->resolveTtl(
             $additionalClaims,
             $this->config->getConfiguration($hubName)->lifetime,
@@ -45,7 +46,7 @@ final readonly class JWTProvider implements JWTProviderInterface
                 $additionalClaims,
             ),
             ttl: $ttl,
-            extraClaims: $additionalClaims,
+            extraClaims: $originalClaims,
         );
     }
 
