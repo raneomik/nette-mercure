@@ -60,7 +60,6 @@ mercure:
 			clientId: nette-app # "client_id" claim
 			additional: # Optional, any other claim
 				tenant: acme
-		useQueryParam: # false by default, to use JWT token in "authorization" query parameter when using {mercure()} function (https://mercure.rocks/spec#uri-query-parameter)
 		lifetime: # Optional, 0 by default (session.cookie_lifetime, or 3600 seconds), null for non expiring tokens. Same value for the publisher token, the subscriber tokens and the cookie (session cookie with null).
     # following option depends on request parameter "hub" (or "hubName") if several hubs are defined in configuration
     autoDiscovery: # false by default, to add Link header for Mercure hub discovery (https://mercure.rocks/spec#discovery)
@@ -150,11 +149,11 @@ _When working with JWT token in Authorisation Header, you may need a [polyfill](
 
 <script type="module">
     /**
-     * use mercure(array|string|null $topics, ?string $hub = null) function to render mercure URL.
+     * use mercure(array|string|null $topics, ?string $hub = null, array $options = []) function to render mercure URL.
      * - "hub" param defines the hub to subscribe to if multiple hubs are defined in configuration, default is first found hub
-     * - "addJwt" option adds jwt token in query url and overrides "useQueryParam: false" (default) configuration option
+     * - "lastEventId" option asks the hub for the events missed since this one
      */
-    const eventSource = new EventSource({mercure('test-topic', hub: 'hubName', [addJwt => true])});
+    const eventSource = new EventSource({mercure('test-topic', hub: 'hubName')});
 
     const containers = document.querySelectorAll('.mercure-container');
     eventSource.onmessage = event => {
@@ -167,14 +166,14 @@ _When working with JWT token in Authorisation Header, you may need a [polyfill](
 
     import { EventSourcePolyfill } from 'event-source-polyfill';
 
-    const es = new EventSourcePolyfill({mercure('test-topic')},
+    const es = new EventSourcePolyfill({mercure('test-topic')}, {
         headers: {
-// use mercureJWTToken(array|string|null $subscribe = ['*'], array|string|null $publish = ['*'], ?string $hub = null) function to render mercure JWT token
-            'Authorization': 'Bearer: ' + {mercureJWTToken('test-topic')}
+// use mercureJWTToken(array|string $subscribe = ['*'], array $additionalClaims = [], ?string $hub = null) function to render mercure JWT token
+            'Authorization': 'Bearer ' + {mercureJWTToken('test-topic')}
         }
-    );
+    });
 
-    eventSource.onmessage = event => {
+    es.onmessage = event => {
         for (const container of containers) {
             container.textContent = event.data;
         }

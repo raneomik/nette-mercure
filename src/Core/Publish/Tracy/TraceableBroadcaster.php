@@ -120,14 +120,20 @@ final class TraceableBroadcaster implements BroadcasterInterface
         return array_sum(array_column($this->broadcastData, 'memory'));
     }
 
+    public function getSize(): float
+    {
+        return array_sum(array_column($this->broadcastData, 'size'));
+    }
+
     private function publishDebug(BroadcastData $broadcastData): void
     {
         try {
-            $this->broadcasterHub()->publish(new Update(
-                self::DEBUG_TOPIC,
-                json_encode($broadcastData, \JSON_THROW_ON_ERROR | \JSON_INVALID_UTF8_SUBSTITUTE | \JSON_UNESCAPED_SLASHES),
-                type: self::DEBUG_EVENT,
-            ));
+            $this->broadcasterHub()
+                ->publish(new Update(
+                    self::DEBUG_TOPIC,
+                    json_encode($broadcastData, \JSON_THROW_ON_ERROR | \JSON_INVALID_UTF8_SUBSTITUTE | \JSON_UNESCAPED_SLASHES),
+                    type: self::DEBUG_EVENT,
+                ));
         } catch (\Throwable) {
             // debug tooling must never break a real publication (nor hide its own error with a second one)
         }

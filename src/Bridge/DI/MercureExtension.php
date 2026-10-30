@@ -51,7 +51,6 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                     'subscribe' => Expect::arrayOf('string|string[]')->default(['*'])->mergeDefaults(false),
                     'factory' => Expect::string()->nullable(),
                     'lifetime' => Expect::int(0)->nullable()->dynamic(),
-                    'useQueryParam' => Expect::bool(false),
                     'claims' => Expect::structure([
                         'iss' => Expect::string()->nullable()->dynamic(),
                         'aud' => Expect::string()->nullable()->dynamic(),
@@ -95,7 +94,6 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                     $config->publicUrl ?? $config->url,
                     $config->jwt->subscribe,
                     $config->jwt->publish,
-                    $config->jwt->useQueryParam,
                     $config->protocolVersion,
                     MercureHubsDefiner::claimsStatement($config),
                     $config->autoDiscovery,
@@ -129,8 +127,6 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                         $builder::literal('fn() => $this->getService(?)', [
                             $this->prefix('broadcasters'),
                         ]),
-                        '@' . $this->prefix('hubsConfiguration'),
-                        $this->hotReloadUrl,
                     ]),
                 ])
             ;

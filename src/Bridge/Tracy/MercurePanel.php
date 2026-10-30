@@ -37,7 +37,8 @@ final readonly class MercurePanel implements Tracy\IBarPanel
         return Tracy\Helpers::capture(function (): void {
             $name = 'Mercure';
             $icon = $this->icon;
-            $count = $this->broadcasters()->count();
+            $count = $this->broadcasters()
+                ->count();
             $scripts = $this->customScriptsLoader->scripts(
                 $this->liveEventsHubs(),
                 $icon,
@@ -52,6 +53,7 @@ final readonly class MercurePanel implements Tracy\IBarPanel
     {
         return Tracy\Helpers::capture(function (): void {
             $hubData = new HubData($this->broadcasters());
+            $hubsConfig = $this->hubsConfig;
             $icon = $this->icon;
             $isAjax = $this->isAjax();
             $nonce = Tracy\Helpers::getNonce(true);

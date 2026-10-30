@@ -18,7 +18,6 @@ final readonly class Configuration
         public string $publicUrl,
         public array $subscribe,
         public array $publish,
-        public bool $jwtInQueryParam = false,
         public ProtocolVersion $protocolVersion = ProtocolVersion::V1,
         public Claims $claims = new Claims(),
         public bool $autoDiscovery = false,

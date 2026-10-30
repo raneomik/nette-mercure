@@ -95,7 +95,8 @@ final class ClaimsTest extends TestCase
         // a pre-set aud must not be overwritten by the default
         Assert::same(
             'https://custom-aud.example.com',
-            (new Claims(aud: 'https://custom-aud.example.com'))->withPublicUrl($hubUrl)->aud,
+            (new Claims(aud: 'https://custom-aud.example.com'))->withPublicUrl($hubUrl)
+                ->aud,
         );
     }
 }

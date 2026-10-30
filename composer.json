@@ -14,9 +14,9 @@
   "license": "MIT",
   "require": {
     "php": ">=8.3",
-    "ext-tokenizer": "*",
     "lcobucci/jwt": "^5.6",
-    "nette/http": "^2.0|^3.4",
+    "nette/di": "^3.2",
+    "nette/http": "^3.4",
     "nette/schema": "^1.4",
     "symfony/mercure": "^0.9",
     "web-token/jwt-library": "^4.2"
@@ -26,7 +26,6 @@
     "latte/latte": "^3.1",
     "nette/application": "^3.3",
     "nette/bootstrap": "^3.3",
-    "nette/di": "^3.2",
     "nette/security": "^3.2",
     "nette/tester": "^2.6",
     "phpro/grumphp": "^2.23",
@@ -38,6 +37,11 @@
     "symplify/easy-coding-standard": "^13.3",
     "tomasvotruba/type-coverage": "^2.2.0|^2.3",
     "tracy/tracy": "^2.12"
+  },
+  "suggest": {
+    "latte/latte": "To render templates in broadcasts and use the {mercure()} and {mercureJWTToken()} functions",
+    "nette/application": "To use the subscriber, authorization and discovery services",
+    "tracy/tracy": "To debug publications and live events in the Tracy panel"
   },
   "autoload": {
     "psr-4": {

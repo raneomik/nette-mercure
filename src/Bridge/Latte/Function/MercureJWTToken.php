@@ -22,7 +22,8 @@ final readonly class MercureJWTToken
         array $additionalClaims = [],
         ?string $hub = null
     ): string {
-        return $this->jwtProvider->provide($hub, $subscribe, $additionalClaims)->token;
+        return $this->jwtProvider->provide($hub, $subscribe, $additionalClaims)
+            ->token;
     }
 
     public static function build(JWTProviderInterface $jwtProvider): self

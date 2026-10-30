@@ -93,6 +93,27 @@ final class MercurePanelTest extends TestCase
 
         // "window" mode: the popup gets a copy of the panel, which hands itself over to the loader of the page
         Assert::contains('opener?.tracyMercureEventLoader?.adopt(document)', $panel->getPanel());
+
+        // current page: live events and config, no metrics
+        $page = $panel->getPanel();
+        Assert::contains('tracy-mercure-live', $page);
+        Assert::contains('mercure-config', $page);
+        Assert::contains('Public URL', $page);
+        Assert::contains('http://nullhub.example.com', $page);
+        Assert::notContains('Total Size', $page);
+
+        // ajax: metrics of the hubs that sent something and config, no live events
+        $_SERVER['HTTP_X_TRACY_AJAX'] = '1';
+        try {
+            $ajax = (new MercurePanel(...$params))->getPanel();
+        } finally {
+            unset($_SERVER['HTTP_X_TRACY_AJAX']);
+        }
+
+        Assert::contains('Total Size', $ajax);
+        Assert::contains('15 B', $ajax);
+        Assert::contains('mercure-config', $ajax);
+        Assert::notContains('tracy-mercure-live', $ajax);
     }
 }
 

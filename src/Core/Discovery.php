@@ -39,7 +39,8 @@ final readonly class Discovery
         ;
 
         try {
-            $hubData = $this->config->getConfiguration($hub);
+            // comes from the URL: "?hub[]=a" gives an array
+            $hubData = $this->config->getConfiguration(\is_string($hub) ? $hub : null);
         } catch (\InvalidArgumentException) {
             return;
         }

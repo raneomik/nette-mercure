@@ -164,6 +164,22 @@ final class DiscoveryTest extends TestCase
             'expectedHeaders' => [],
         ];
 
+        yield 'array-hub-query-falls-back-on-default-hub' => [
+            'discovery' => new Discovery(
+                new HttpHeaderSerializer(),
+                new DummyRequest(fromUrl: '/?hub[]=test'),
+                $response = new DummyResponse(),
+                new ConfigurationRegistry([
+                    'test' => $hub2Config,
+                ])
+            ),
+            'response' => $response,
+            'expectedHeaders' => [
+                'Access-Control-Expose-Headers' => 'Link',
+                'Link' => '<http://hub2.example.com>; rel="mercure"',
+            ],
+        ];
+
         yield 'preflight-attempt-with-options-method-only' => [
             'discovery' => new Discovery(
                 new HttpHeaderSerializer(),

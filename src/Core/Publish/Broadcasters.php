@@ -24,19 +24,22 @@ final readonly class Broadcasters implements BroadcasterInterface, \ArrayAccess,
 
     public function broadcasterHub(?string $hub = null): HubInterface
     {
-        return $this->pick($hub)->broadcasterHub();
+        return $this->pick($hub)
+            ->broadcasterHub();
     }
 
     #[\Override]
     public function broadcasterUrl(?string $hub = null): string
     {
-        return $this->pick($hub)->broadcasterUrl();
+        return $this->pick($hub)
+            ->broadcasterUrl();
     }
 
     #[\Override]
     public function broadcastOptions(?string $hub = null): array
     {
-        return $this->pick($hub)->broadcastOptions();
+        return $this->pick($hub)
+            ->broadcastOptions();
     }
 
     #[\Override]

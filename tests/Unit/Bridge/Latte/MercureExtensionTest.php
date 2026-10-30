@@ -6,8 +6,6 @@ namespace Tests\Unit\Raneomik\NetteMercure\Bridge\Latte;
 
 require \dirname(__DIR__, 3) . '/bootstrap.php';
 
-use Raneomik\NetteMercure\Bridge\DI\Config\Configuration;
-use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Bridge\Latte\MercureExtension;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
 use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
@@ -44,24 +42,6 @@ final class MercureExtensionTest extends TestCase
         self::$extension ??= new MercureExtension(
             new DummyJwtProvider(),
             static fn (): Broadcasters => self::$broadcasters,
-            new ConfigurationRegistry([
-                'test' => new Configuration(
-                    hubName: 'test',
-                    hubUrl: 'http://hub.example.com',
-                    publicUrl: 'http://hub.example.com',
-                    subscribe: ['*'],
-                    publish: ['*'],
-                    protocolVersion: ProtocolVersion::Legacy,
-                ),
-                'v1' => new Configuration(
-                    hubName: 'v1',
-                    hubUrl: 'http://v1.example.com',
-                    publicUrl: 'http://v1.example.com',
-                    subscribe: ['*'],
-                    publish: ['*'],
-                    jwtInQueryParam: true,
-                ),
-            ]),
         );
     }
 
@@ -75,15 +55,6 @@ final class MercureExtensionTest extends TestCase
      */
     public function provideUrls(): iterable
     {
-        yield 'legacy, forced jwt' => [
-            'topics' => 'test',
-            'hub' => null,
-            'options' => [
-                'addJwt' => true,
-            ],
-            'expected' => 'http://hub.example.com?topic=test&authorization=dummy-jwt-token-test-provider-token-*-',
-        ];
-
         yield 'legacy, lastEventId' => [
             'topics' => 'test',
             'hub' => 'test',
@@ -131,16 +102,6 @@ final class MercureExtensionTest extends TestCase
                 'hub' => 'v1',
             ],
             'expected' => 'http://v1.example.com?match=test',
-        ];
-
-        yield 'legacy, subscribe in options overrides hub defaults' => [
-            'topics' => 'topicX',
-            'hub' => 'test',
-            'options' => [
-                'addJwt' => true,
-                'subscribe' => ['my-topic'],
-            ],
-            'expected' => 'http://hub.example.com?topic=topicX&authorization=dummy-jwt-token-test-provider-token-my-topic-',
         ];
     }
 

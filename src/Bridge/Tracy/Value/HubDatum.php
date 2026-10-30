@@ -17,6 +17,7 @@ final readonly class HubDatum
         public array $broadcastData,
         public float $duration,
         public float $memory,
+        public float $size,
     ) {
     }
 

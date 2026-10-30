@@ -72,7 +72,6 @@ final class BroadcastDataTest extends TestCase
                 'template' => null,
                 'target' => 'messages',
                 'sse_type' => 'turbo-stream',
-                'private' => true,
                 'rendered_data' => str_repeat('b', 5000),
             ],
             error: new \RuntimeException('boom'),
@@ -89,13 +88,31 @@ final class BroadcastDataTest extends TestCase
         Assert::null($json['template']);
         Assert::same('messages', $json['target']);
         Assert::same('turbo-stream', $json['type']);
-        Assert::true($json['private']);
+        Assert::false($json['private']);
         Assert::true(400 >= mb_strlen($json['preview']), 'a preview, never a second copy of the message');
         Assert::same([
             'class' => \RuntimeException::class,
             'message' => 'boom',
         ], $json['error']);
         Assert::false(isset($json['data']) || isset($json['renderedData']));
+    }
+
+    public function testPrivateMessageHasNoPreview(): void
+    {
+        $bdata = new BroadcastData(
+            BroadcastStatus::Sent,
+            topics: ['topic'],
+            data: 'secret',
+            options: [
+                'private' => true,
+                'rendered_data' => 'secret',
+            ],
+        );
+
+        $json = Json::encode($bdata);
+
+        Assert::notContains('secret', $json);
+        Assert::true(Json::decode($json, forceArrays: true)['private']);
     }
 }
 

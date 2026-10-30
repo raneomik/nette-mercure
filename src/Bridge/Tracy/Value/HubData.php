@@ -16,6 +16,8 @@ final class HubData extends \ArrayIterator
 
     public float $totalMemory = 0;
 
+    public float $totalSize = 0;
+
     public function __construct(
         Broadcasters $broadcasters
     ) {
@@ -27,12 +29,14 @@ final class HubData extends \ArrayIterator
 
             $this->totalDuration += $duration = $broadcaster->getDuration();
             $this->totalMemory += $memory = $broadcaster->getMemory();
+            $this->totalSize += $size = $broadcaster->getSize();
             $data[$name] = new HubDatum(
                 $name,
                 $broadcaster->broadcasterUrl(),
                 $broadcaster->broadcastData(),
                 $duration,
                 $memory,
+                $size,
             );
         }
 

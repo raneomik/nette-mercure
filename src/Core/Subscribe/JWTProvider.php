@@ -37,7 +37,8 @@ final readonly class JWTProvider implements JWTProviderInterface
         $originalClaims = $additionalClaims;
         $ttl = $this->resolveTtl(
             $additionalClaims,
-            $this->config->getConfiguration($hubName)->lifetime,
+            $this->config->getConfiguration($hubName)
+                ->lifetime,
         );
 
         return new JWTToken(

@@ -176,9 +176,9 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 					${field('Action', env.action && `${env.action}${env.target ? ` → #${env.target}` : ''}`)}
 					${field('Template', env.template)}
 					${field('Private', env.private ? 'yes' : 'no')}
-					${field('Size', format.bytes(env.size))}
 					${field('Duration', format.ms(env.duration))}
 					${field('Memory', `${(env.memory / 1024).toFixed(2)} kB`)}
+                    ${field('Size', format.bytes(env.size))}
 					${field('Data', env.preview && html`<pre style="margin:0;white-space:pre;overflow-x:auto;max-width:500px">${format.pretty(env.preview)}</pre>`)}
                     ${field('Error', env.error && `${env.error.class}: ${env.error.message}`)}
 				</tbody>
@@ -207,7 +207,9 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
                         <a href="#" rel="${id}">
                             [${env.hub ?? '?'}]
                             ${format.truncate(label, 40)}
-                            <span style="color:grey">● ${format.ms(env.duration)}</span>
+                            <span style="color:grey"> ⏱ ${format.ms(env.duration)}</span>
+                            <span style="color:grey"> 🖫 ${format.bytes(env.memory)}</span>
+                            <span style="color:grey"> 🛢 ${format.bytes(env.size)}</span>
                         </a>
                     </li>
 				</ul>

@@ -182,7 +182,7 @@ final class TraceableBroadcasterTest extends TestCase
         Assert::same('chat', $envelope['type']);
         Assert::true($envelope['private']);
         Assert::same(5, (int) $envelope['size'], 'size is expressed in bytes, not in characters');
-        Assert::same('é<b>', $envelope['preview']);
+        Assert::null($envelope['preview'], 'the debug channel is public: nothing of a private message');
         Assert::null($envelope['error']);
         Assert::true(5000 > abs($envelope['sentAt'] - microtime(true) * 1000), 'sentAt is a wall clock, in ms');
 

@@ -69,7 +69,7 @@ final readonly class BroadcastData implements \JsonSerializable
 
     /**
      * Payload announced on the debug topic: lean (no copy of the whole message, only a preview) and safe to
-     * encode (a Throwable would serialize to an empty object).
+     * encode (a Throwable would serialize to an empty object). This topic is public: no preview of a private message.
      *
      * @return array<string,mixed>
      */
@@ -81,13 +81,14 @@ final readonly class BroadcastData implements \JsonSerializable
         $action = $action instanceof TurboStreamAction ? $action->value : $action;
 
         $template = $this->template();
+        $private = (bool) ($this->options['private'] ?? false);
 
         return [
             'id' => $this->id,
             'hub' => $this->hub,
             'status' => $this->status,
             'topics' => $this->topics,
-            'private' => (bool) ($this->options['private'] ?? false),
+            'private' => $private,
             'type' => $this->options['sse_type'] ?? null,
             'action' => $action,
             'target' => $this->options['target'] ?? null,
@@ -96,7 +97,7 @@ final readonly class BroadcastData implements \JsonSerializable
             'size' => $this->size,
             'duration' => $this->duration,
             'memory' => $this->memory,
-            'preview' => Strings::truncate($rendered, self::PREVIEW_LENGTH),
+            'preview' => $private ? null : Strings::truncate($rendered, self::PREVIEW_LENGTH),
             'error' => $this->error instanceof \Throwable ? [
                 'class' => $this->error::class,
                 'message' => $this->error->getMessage(),

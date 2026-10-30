@@ -43,7 +43,7 @@ final readonly class MercureHubsDefiner
         $this->builder->addDefinition($this->extension->prefix('symfony.hub.registry'))
             ->setType(HubRegistry::class)
             ->setCreator(HubRegistry::class, [
-                array_first($broadcasterDefinitions),
+                current($broadcasterDefinitions) ?: null,
                 $broadcasterDefinitions,
             ])
             ->setAutowired(false)
