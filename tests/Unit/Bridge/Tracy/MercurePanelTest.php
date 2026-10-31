@@ -13,6 +13,7 @@ use Raneomik\NetteMercure\Bridge\Tracy\MercurePanel;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
 use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
 use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
+use Symfony\Component\Mercure\ProtocolVersion;
 use Tester\Assert;
 use Tester\TestCase;
 use Tests\Fixtures\Dummies\Core\MockHubFactory;
@@ -50,6 +51,7 @@ final class MercurePanelTest extends TestCase
                 publicUrl: 'http://nullhub.example.com',
                 subscribe: ['*'],
                 publish: ['*'],
+                protocolVersion: ProtocolVersion::Legacy,
             ),
         ]);
 
@@ -93,6 +95,20 @@ final class MercurePanelTest extends TestCase
 
         // "window" mode: the popup gets a copy of the panel, which hands itself over to the loader of the page
         Assert::contains('opener?.tracyMercureEventLoader?.adopt(document)', $panel->getPanel());
+
+        // the live panel connects to every hub, with the query parameter of its protocol
+        Assert::contains(Helpers::jsonEncode([
+            [
+                'name' => 'test',
+                'url' => 'http://hub.example.com',
+                'isLegacy' => false,
+            ],
+            [
+                'name' => 'nullFactory',
+                'url' => 'http://nullhub.example.com',
+                'isLegacy' => true,
+            ],
+        ], true), $panel->getTab());
 
         // current page: live events and config, no metrics
         $page = $panel->getPanel();

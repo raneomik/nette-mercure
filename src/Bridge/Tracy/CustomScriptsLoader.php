@@ -23,7 +23,6 @@ final readonly class CustomScriptsLoader
     public function scripts(
         array $liveHubs,
         string $icon,
-        bool $isAjax = false,
     ): array {
         $scripts = [];
         if (null !== $this->hotReloadUrl) {
@@ -34,7 +33,7 @@ final readonly class CustomScriptsLoader
             });
         }
 
-        if ([] !== $liveHubs && false === $isAjax) {
+        if ([] !== $liveHubs) {
             $scripts[] = Tracy\Helpers::capture(static function (): void {
                 require __DIR__ . '/dist/debugHook.js.phtml';
             });

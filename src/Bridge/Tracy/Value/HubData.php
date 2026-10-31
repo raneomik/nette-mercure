@@ -32,7 +32,6 @@ final class HubData extends \ArrayIterator
             $this->totalSize += $size = $broadcaster->getSize();
             $data[$name] = new HubDatum(
                 $name,
-                $broadcaster->broadcasterUrl(),
                 $broadcaster->broadcastData(),
                 $duration,
                 $memory,

@@ -8,6 +8,7 @@ require \dirname(__DIR__, 3) . '/bootstrap.php';
 
 use Latte\Engine;
 use Latte\Extension;
+use Nette\Application\Application;
 use Nette\Bridges\ApplicationLatte\LatteFactory;
 use Nette\DI\Compiler;
 use Nette\DI\Config\Loader;
@@ -24,6 +25,8 @@ use Raneomik\NetteMercure\Core\Publish\Latte\TemplatePathResolver;
 use Raneomik\NetteMercure\Core\Publish\Latte\TemplatingBroadcaster;
 use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
 use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
+use Raneomik\NetteMercure\Core\Subscribe\Authorization;
+use Raneomik\NetteMercure\Core\Subscribe\AuthorizationInterface;
 use Raneomik\NetteMercure\Core\Subscribe\Subscriber;
 use Symfony\Component\Mercure\FrankenPhpHub;
 use Symfony\Component\Mercure\Hub;
@@ -138,6 +141,41 @@ final class MercureExtensionTest extends ContainerTestCase
 
         self::assertTypeNotFound($container, [FrankenPhpHub::class]);
         self::assertNotAutowired($container, array_values($toTest));
+    }
+
+    public function testDefaultConfiguration(): void
+    {
+        $container = $this->createContainer('
+        mercure:
+            url: https://hub.example.com/.well-known/mercure
+            jwt:
+                key: jwt-secret
+        ');
+
+        /** @var ConfigurationRegistry $registry */
+        $registry = $container->getService('mercure.hubsConfiguration');
+        $config = $registry->getConfiguration();
+
+        Assert::false($config->autoDiscovery);
+        Assert::same(['*'], $config->publish);
+        Assert::same(['*'], $config->subscribe);
+        Assert::same(0, $config->lifetime);
+    }
+
+    public function testSubscriptionServicesAreWired(): void
+    {
+        $container = $this->createContainer('
+        mercure:
+            url: https://hub.example.com/.well-known/mercure
+            jwt:
+                key: jwt-secret
+        ');
+
+        Assert::type(Authorization::class, $container->getByType(AuthorizationInterface::class));
+
+        /** @var Application $application */
+        $application = $container->getByType(Application::class);
+        Assert::count(1, $application->onRequest, 'discovery listens to every request');
     }
 
     public function testMultiCompilationWithDebug(): void

@@ -9,6 +9,7 @@ require \dirname(__DIR__, 3) . '/bootstrap.php';
 use Nette\Utils\Json;
 use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
 use Symfony\Component\Mercure\HubInterface;
+use Symfony\Component\Mercure\Update;
 use Tester\Assert;
 use Tester\TestCase;
 use Tests\Fixtures\Dummies\Core\MockHubFactory;
@@ -62,6 +63,36 @@ final class PlainBroadcasterTest extends TestCase
         );
         Assert::same([
             'rendered_data' => '{"message":"test"}',
+        ], $this->broadcaster->broadcastOptions());
+    }
+
+    public function testMessagesArePublicUnlessAskedOtherwise(): void
+    {
+        $private = [];
+        $broadcaster = new PlainBroadcaster(MockHubFactory::create(
+            publisher: static function (Update $update) use (&$private): string {
+                $private[] = $update->isPrivate();
+
+                return 'id';
+            },
+        ));
+
+        $broadcaster->broadcast('test', 'public');
+        $broadcaster->broadcast('test', 'private', [
+            'private' => true,
+        ]);
+
+        Assert::same([false, true], $private);
+    }
+
+    public function testGivenRenderedDataIsKept(): void
+    {
+        $this->broadcaster->broadcast('test', 'raw', [
+            'rendered_data' => 'rendered',
+        ]);
+
+        Assert::same([
+            'rendered_data' => 'rendered',
         ], $this->broadcaster->broadcastOptions());
     }
 

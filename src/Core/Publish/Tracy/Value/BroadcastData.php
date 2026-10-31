@@ -13,8 +13,6 @@ final readonly class BroadcastData implements \JsonSerializable
     private const int PREVIEW_LENGTH = 400;
 
     /**
-     * Undocumented function.
-     *
      * @param string[] $topics
      * @param array<string, mixed>|object|string $data
      * @param array<string,mixed> $options
@@ -47,24 +45,6 @@ final readonly class BroadcastData implements \JsonSerializable
     public function renderedData(): ?string
     {
         return $this->options['rendered_data'] ?? null;
-    }
-
-    public function errorMessage(): ?string
-    {
-        return $this->error?->getMessage() ?? null;
-    }
-
-    /**
-     * @return array<string,mixed>
-     */
-    public function options(): array
-    {
-        return array_diff_key($this->options, array_flip([
-            'action',
-            'template',
-            'topics',
-            'rendered_data',
-        ]));
     }
 
     /**

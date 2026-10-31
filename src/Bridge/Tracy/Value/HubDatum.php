@@ -13,7 +13,6 @@ final readonly class HubDatum
      */
     public function __construct(
         public string $hubName,
-        public string $hubUrl,
         public array $broadcastData,
         public float $duration,
         public float $memory,

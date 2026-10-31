@@ -26,17 +26,27 @@ final class MetricsTest extends TestCase
 
         $metrics->stop('test');
 
-        Assert::notSame($currentMemory, $stoppedMemory = $metrics->getMemory('test'));
-        Assert::notSame($currentDuration, $stoppedDuration = $metrics->getDuration('test'));
+        Assert::notSame($currentMemory, $metrics->getMemory('test'));
+        Assert::notSame($currentDuration, $metrics->getDuration('test'));
+    }
 
-        Assert::same(
-            number_format($stoppedMemory / 1000000, 2, '.', "\u{202f}") . "\u{202f}MB",
-            $metrics->formatMemory('test'),
-        );
-        Assert::same(
-            number_format($stoppedDuration, 2, '.', "\u{202f}") . "\u{202f}ms",
-            $metrics->formatDuration('test'),
-        );
+    public function testMemoryIsWhatWasAllocatedBetweenStartAndStop(): void
+    {
+        $metrics = new Metrics();
+
+        $metrics->start('test');
+
+        $allocated = str_repeat('x', 1_000_000);
+        $metrics->stop('test');
+
+        Assert::same(1_000_000, \strlen($allocated));
+        Assert::true(1_000_000 <= $metrics->getMemory('test') && 1_500_000 > $metrics->getMemory('test'));
+    }
+
+    public function testUnknownKey(): void
+    {
+        Assert::same(0.0, (new Metrics())->getMemory('unknown'));
+        Assert::same(0.0, (new Metrics())->getDuration('unknown'));
     }
 }
 

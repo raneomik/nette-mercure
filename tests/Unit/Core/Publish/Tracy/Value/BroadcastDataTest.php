@@ -30,10 +30,9 @@ final class BroadcastDataTest extends TestCase
         Assert::same('test', $bdata->data);
         Assert::null($bdata->template());
         Assert::null($bdata->action());
-        Assert::count(0, $bdata->options());
     }
 
-    public function testOptionsCleanup(): void
+    public function testOptionsAccessors(): void
     {
         $bdata = new BroadcastData(
             BroadcastStatus::Sent,
@@ -51,10 +50,6 @@ final class BroadcastDataTest extends TestCase
         Assert::same('{"key":"value"}', $bdata->data);
         Assert::same(TurboStreamAction::Update, $bdata->action());
         Assert::same('template.latte', $bdata->template());
-        Assert::same([
-            'meta' => 'metadata',
-            'id' => 'id',
-        ], $bdata->options());
     }
 
     public function testJsonSerializationIsLeanAndSafe(): void
@@ -67,6 +62,8 @@ final class BroadcastDataTest extends TestCase
             ],
             sentAt: 1_700_000_000_000.0,
             size: 5010.0,
+            duration: 1.5,
+            memory: 2.5,
             options: [
                 'action' => TurboStreamAction::Append,
                 'template' => null,
@@ -84,6 +81,8 @@ final class BroadcastDataTest extends TestCase
         Assert::same('urn:uuid:1', $json['id']);
         Assert::same('one', $json['hub']);
         Assert::same('error', $json['status']);
+        Assert::same(1.5, $json['duration']);
+        Assert::same(2.5, $json['memory']);
         Assert::same('append', $json['action']);
         Assert::null($json['template']);
         Assert::same('messages', $json['target']);
@@ -97,6 +96,24 @@ final class BroadcastDataTest extends TestCase
         Assert::false(isset($json['data']) || isset($json['renderedData']));
     }
 
+    public function testPreviewOfTheRawData(): void
+    {
+        $preview = static fn (array|string $data): string => Json::decode(
+            Json::encode(new BroadcastData(BroadcastStatus::Sent, ['topic'], $data)),
+            forceArrays: true,
+        )['preview'];
+
+        Assert::same('text', $preview('text'));
+        Assert::same('{"a":1}', $preview([
+            'a' => 1,
+        ]));
+
+        $rendered = new BroadcastData(BroadcastStatus::Sent, ['topic'], 'raw', options: [
+            'rendered_data' => 'rendered',
+        ]);
+        Assert::same('rendered', $rendered->jsonSerialize()['preview']);
+    }
+
     public function testPrivateMessageHasNoPreview(): void
     {
         $bdata = new BroadcastData(
@@ -104,7 +121,7 @@ final class BroadcastDataTest extends TestCase
             topics: ['topic'],
             data: 'secret',
             options: [
-                'private' => true,
+                'private' => 1,
                 'rendered_data' => 'secret',
             ],
         );

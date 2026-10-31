@@ -68,9 +68,9 @@ final class TraceableBroadcaster implements BroadcasterInterface
         } catch (\Throwable $throwable) {
             $status = BroadcastStatus::Error;
             $error = $throwable;
-        } finally {
-            $this->metrics->stop($key);
         }
+
+        $this->metrics->stop($key);
 
         $options = $this->broadcastOptions();
 

@@ -98,7 +98,6 @@ final class TraceableBroadcasterTest extends TestCase
                 'data' => $data->data,
                 'template' => $data->template(),
                 'action' => $data->action(),
-                'options' => $data->options(),
             ],
             $this->debugBroadcaster->broadcastData(),
         );
@@ -109,16 +108,12 @@ final class TraceableBroadcasterTest extends TestCase
                     'data' => 'Hello, World!',
                     'template' => null,
                     'action' => null,
-                    'options' => [],
                 ],
                 [
                     'topics' => ['test'],
                     'data' => 'Hello, another World!',
                     'template' => 'uncosidered_in_plain_broadcaster',
                     'action' => TurboStreamAction::Update,
-                    'options' => [
-                        'metadata' => 'second broadcast',
-                    ],
                 ],
             ],
             $formatedData,
@@ -140,7 +135,7 @@ final class TraceableBroadcasterTest extends TestCase
         $broadcast->broadcast('test', 'Hello, error!');
 
         $formatedData = array_map(
-            static fn (BroadcastData $data): ?string => $data->errorMessage(),
+            static fn (BroadcastData $data): ?string => $data->error?->getMessage(),
             $broadcast->broadcastData(),
         );
 
@@ -218,6 +213,56 @@ final class TraceableBroadcasterTest extends TestCase
             'class' => \RuntimeException::class,
             'message' => 'publish error',
         ], $envelope['error']);
+    }
+
+    public function testResolvedOptionsWinOverTheArguments(): void
+    {
+        $broadcaster = new TraceableBroadcaster(new PlainBroadcaster(MockHubFactory::create()), new Metrics());
+
+        $broadcaster->broadcast('argument', 'ignored', [
+            'topics' => ['resolved'],
+            'template' => 'resolved.latte',
+            'rendered_data' => 'abc',
+        ], template: 'argument.latte');
+
+        $data = $broadcaster->broadcastData()[0];
+        Assert::same(['resolved'], $data->topics);
+        Assert::same('resolved.latte', $data->template());
+        Assert::same(3.0, $data->size, 'the size of what was rendered, not of the raw data');
+    }
+
+    public function testSizeWithoutRenderedData(): void
+    {
+        $broadcaster = new TraceableBroadcaster(
+            new DummyBroadcaster(MockHubFactory::create(), static fn (): string => 'id'),
+            new Metrics(),
+        );
+
+        $broadcaster->broadcast('test', 'abc');
+        $broadcaster->broadcast('test', [
+            'a' => 1,
+        ]);
+
+        Assert::same(3.0, $broadcaster->broadcastData()[0]->size);
+        Assert::same(7.0, $broadcaster->broadcastData()[1]->size);
+        Assert::same(10.0, $broadcaster->getSize());
+    }
+
+    public function testAnnouncementEncoding(): void
+    {
+        $published = [];
+        $broadcaster = new TraceableBroadcaster(new PlainBroadcaster(MockHubFactory::create(
+            publisher: static function (Update $update) use (&$published): string {
+                $published[] = $update;
+
+                return 'id';
+            },
+        )), new Metrics());
+
+        $broadcaster->broadcast('a/b', "bad\xff");
+
+        Assert::count(2, $published, 'invalid UTF-8 must not silently drop the announcement');
+        Assert::contains('"topics":["a/b"]', $published[1]->getData());
     }
 
     public function testAFailingAnnouncementNeverBreaksTheRealPublication(): void
