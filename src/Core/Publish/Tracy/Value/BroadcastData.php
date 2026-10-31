@@ -4,56 +4,84 @@ declare(strict_types=1);
 
 namespace Raneomik\NetteMercure\Core\Publish\Tracy\Value;
 
+use Nette\Utils\Json;
+use Nette\Utils\Strings;
 use Raneomik\NetteMercure\Core\Publish\Latte\TurboStreamAction;
 
-final readonly class BroadcastData
+final readonly class BroadcastData implements \JsonSerializable
 {
+    private const int PREVIEW_LENGTH = 400;
+
     /**
-     * Undocumented function.
-     *
      * @param string[] $topics
+     * @param array<string, mixed>|object|string $data
      * @param array<string,mixed> $options
      */
     public function __construct(
-        private array $topics,
-        private string $data,
+        public BroadcastStatus $status,
+        public array $topics,
+        public array|object|string $data,
+        public float $sentAt = 0,
+        public float $size = 0,
+        public float $duration = 0,
+        public float $memory = 0,
         private array $options = [],
+        public ?\Throwable $error = null,
+        public ?string $id = null,
+        public ?string $hub = null,
     ) {
     }
 
-    /**
-     * @return string[]
-     */
-    public function getTopics(): array
-    {
-        return $this->topics;
-    }
-
-    public function getData(): string
-    {
-        return $this->data;
-    }
-
-    public function getAction(): string|TurboStreamAction|null
+    public function action(): string|TurboStreamAction|null
     {
         return $this->options['action'] ?? null;
     }
 
-    public function getTemplate(): ?string
+    public function template(): ?string
     {
         return $this->options['template'] ?? null;
     }
 
+    public function renderedData(): ?string
+    {
+        return $this->options['rendered_data'] ?? null;
+    }
+
     /**
+     * Payload announced on the debug topic: lean (no copy of the whole message, only a preview) and safe to
+     * encode (a Throwable would serialize to an empty object). This topic is public: no preview of a private message.
+     *
      * @return array<string,mixed>
      */
-    public function getOptions(): array
+    public function jsonSerialize(): array
     {
-        return array_diff_key($this->options, array_flip([
-            'action',
-            'template',
-            'topics',
-            'rendered_data',
-        ]));
+        $rendered = $this->renderedData()
+            ?? (\is_string($this->data) ? $this->data : Json::encode($this->data));
+        $action = $this->action();
+        $action = $action instanceof TurboStreamAction ? $action->value : $action;
+
+        $template = $this->template();
+        $private = (bool) ($this->options['private'] ?? false);
+
+        return [
+            'id' => $this->id,
+            'hub' => $this->hub,
+            'status' => $this->status,
+            'topics' => $this->topics,
+            'private' => $private,
+            'type' => $this->options['sse_type'] ?? null,
+            'action' => $action,
+            'target' => $this->options['target'] ?? null,
+            'template' => $template,
+            'sentAt' => $this->sentAt,
+            'size' => $this->size,
+            'duration' => $this->duration,
+            'memory' => $this->memory,
+            'preview' => $private ? null : Strings::truncate($rendered, self::PREVIEW_LENGTH),
+            'error' => $this->error instanceof \Throwable ? [
+                'class' => $this->error::class,
+                'message' => $this->error->getMessage(),
+            ] : null,
+        ];
     }
 }

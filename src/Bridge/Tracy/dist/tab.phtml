@@ -1,11 +1,14 @@
-<?php
+<?php declare(strict_types=1);
 
-declare(strict_types=1);
-
+/**
+ * @var $icon string
+ * @var $name string
+ * @var $count int
+ * @var $scripts string[]
+ * @var $nonce string
+ */
 ?>
 <span title="Raneomik\NetteMercure <?= Tracy\Helpers::escapeHtml($name) ?>">
 	<?= $icon ?>
-	<span class="tracy-label">
-		<?= Tracy\Helpers::escapeHtml($count) ?>
-	</span>
 </span>
+<?php foreach ($scripts as $js): ?><script<?= $nonce ?>><?= $js ?></script><?php endforeach ?>

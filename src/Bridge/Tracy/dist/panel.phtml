@@ -1,19 +1,35 @@
-<?php
+<?php declare(strict_types=1);
 
-declare(strict_types=1);
-
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
+use Raneomik\NetteMercure\Bridge\Tracy\MercurePanel;
+use Raneomik\NetteMercure\Bridge\Tracy\Value\HubData;
 use Tracy\Dumper;
 
 $formatData = fn(float $number, string $type): string => match($type) {
     'duration' => sprintf('%.2f ms', $number * 1000),
     'memory' => sprintf('%.2f kB', $number / 1024),
+    'size' => $number < 1024 ? sprintf('%d B', $number) : sprintf('%.1f kB', $number / 1024),
 };
+
+/**
+ * @phpstan-import-type LightHub from MercurePanel
+ *
+ * @var $icon string
+ * @var $isAjax bool
+ * @var $hubData HubData
+ * @var $hubsConfig ConfigurationRegistry
+ * @var $nonce string
+ */
 
 ?>
 <style class="tracy-debug">
 	.mercure-panel {
 		min-width: 375px;
 	}
+
+    .mercure-panel.tracy-inner .mercure-details {
+        margin-right: 1rem;
+    }
 
 	.mercure-panel p,
 	.mercure-panel dt {
@@ -64,86 +80,261 @@ $formatData = fn(float $number, string $type): string => match($type) {
 	.mercure-panel details[open] summary::after {
 		transform: rotate(0deg);
 	}
+
+	.mercure-live-log {
+		max-height: 280px;
+		overflow-y: auto;
+		font-family: monospace;
+		font-size: 0.8rem;
+		background: #1e1e1e;
+		color: #d4d4d4;
+		padding: 0.5rem;
+		border-radius: 3px;
+	}
+
+	.mercure-live-log .mercure-live-entry {
+		padding: 0.2rem 0;
+		border-bottom: 1px solid #2d2d2d;
+		word-break: break-all;
+	}
+
+	.mercure-live-log:hover,
+	.mercure-live-log:hover .mercure-live-entry {
+		background: #2d2d2d; /* the background only: errors and warnings keep their colour */
+        color: #d4d4d4;
+	}
+
+	.mercure-live-log .mercure-live-time {
+		color: #6a9955;
+		margin-right: 0.4rem;
+	}
+
+	.mercure-live-log .mercure-live-hub {
+		color: #9cdcfe;
+		margin-right: 0.4rem;
+	}
+
+	.mercure-live-log .mercure-live-error {
+		color: #f44747;
+	}
+
+	.mercure-live-log .mercure-live-warn {
+		color: #ce9178;
+	}
+
+	.mercure-live-log .mercure-live-up,
+	.mercure-live-log .mercure-live-down {
+		margin-right: 0.4rem;
+		font-weight: bold;
+	}
+
+	.mercure-live-log .mercure-live-up {
+		color: #4ec9b0;
+	}
+
+	.mercure-live-log .mercure-live-down {
+		color: #569cd6;
+	}
+
+	.mercure-live-log .mercure-live-what {
+		margin-right: 0.4rem;
+	}
+
+	.mercure-live-log .mercure-live-meta {
+		color: #808080;
+		margin-right: 0.4rem;
+	}
+
+	.mercure-live-log .mercure-live-latency {
+		color: #dcdcaa;
+		margin-right: 0.4rem;
+	}
+
+	.mercure-live-log .mercure-live-data {
+		display: block;
+		color: #9a9a9a;
+		white-space: pre;
+        overflow-x: auto;
+	}
+
+	.mercure-connections {
+		margin-bottom: 0.5rem;
+	}
+
+	.mercure-connections table {
+		width: 100%;
+	}
+
+	.mercure-connections td[title] {
+		max-width: 22rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.mercure-connections .mercure-state-open {
+		color: #4ec9b0;
+	}
+
+	.mercure-connections .mercure-state-connecting,
+	.mercure-connections .mercure-state-reconnecting {
+		color: #d7ba7d;
+	}
+
+	.mercure-connections .mercure-state-closed {
+		color: #f44747;
+	}
+
+	.mercure-live-log .mercure-live-placeholder {
+		color: #808080;
+		font-style: italic;
+	}
+
+	.mercure-panel .mercure-config table {
+		width: 100%;
+		margin-bottom: 0.5rem;
+		font-size: 0.75rem;
+	}
+
+	.mercure-panel .mercure-config tbody th {
+		width: 7rem;
+		white-space: nowrap;
+	}
+
+	.mercure-panel .mercure-config td {
+		word-break: break-all;
+	}
 </style>
 
 <h1 style="display: flex; align-items: center; gap: 1rem;">
 	<span style="width: 32px;"><?= $icon ?></span>
 	<span>Mercure</span>
 </h1>
+
+
+
 <div class="tracy-inner mercure-panel">
+
+    <details class="mercure-details">
+        <summary><h2>Configuration</h2></summary>
+        <div style="margin-top: 1rem;">
+            <?php foreach ($hubsConfig as $hubName => $config): ?>
+                <table>
+                    <thead>
+                    <tr><th colspan="2"><?= Tracy\Helpers::escapeHtml($hubName) ?></th></tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ([
+                           'Hub URL' => $config->hubUrl,
+                           'Public URL' => $config->publicUrl,
+                           'Protocol' => $config->protocolVersion->value,
+                           'Subscribe' => implode(', ', $config->subscribe),
+                           'Publish' => implode(', ', $config->publish),
+                           'Lifetime' => $config->lifetime ?? '—',
+                           'Auto discovery' => $config->autoDiscovery ? 'yes' : 'no',
+                           'Claims' => Tracy\Helpers::jsonEncode($config->claims->toArray()),
+                       ] as $label => $value): ?>
+                        <tr>
+                            <th><?= Tracy\Helpers::escapeHtml($label) ?></th>
+                            <td><?= Tracy\Helpers::escapeHtml($value) ?></td>
+                        </tr>
+                    <?php endforeach ?>
+                    </tbody>
+                </table>
+            <?php endforeach ?>
+        </div>
+    </details>
+
+	<?php if ($isAjax): ?>
 	<?php foreach ($hubData as $hubDatum): ?>
-		<details>
-			<summary>
-				<h2>Hub
-                    <?= Tracy\Helpers::escapeHtml($hubDatum->hubName) ?>
-                    <em>
-                        (<?= Tracy\Helpers::escapeHtml(match ($hubDatum->messageCount()) {
-                            0 => 'no messages',
-                            1 => '1 message',
-                            default => $hubDatum->messageCount() . ' messages',
-                        });
-                    ?>)
-                    </em>
-                </h2>
-			</summary>
-			<div style="margin-top: 1rem;">
-				<dl>
-					<dt>url</dt>
-					<dd><?= Tracy\Helpers::escapeHtml($hubDatum->hubUrl) ?></dd>
-					<dt>Sent Messages</dt>
-					<dd>
-						<table>
-							<colgroup>
-								<col style="width:20%">
-								<col style="width:60%">
-								<col style="width:20%">
-							</colgroup>
-							<thead>
-								<tr>
-									<th style="text-align: center;">Topics</th>
-									<th style="text-align: center;">Content</th>
-									<th style="text-align: center;">Template</th>
-								</tr>
-							</thead>
+		<?php if (0 === $hubDatum->messageCount()) continue; ?>
+            <details class="mercure-details">
+                <summary>
+                    <h2>Hub
+                        <?= Tracy\Helpers::escapeHtml($hubDatum->hubName) ?>
+                        <em>
+                            (<?= Tracy\Helpers::escapeHtml(match ($hubDatum->messageCount()) {
+                                1 => '1 message',
+                                default => $hubDatum->messageCount() . ' messages',
+                            });
+                            ?>)
+                        </em>
+                    </h2>
+                </summary>
+                <div style="margin-top: 1rem;">
+                    <dl>
+                        <dt>Sent Messages</dt>
+                        <dd>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="text-align: center;">Topics</th>
+                                        <th style="text-align: center;">Content</th>
+                                        <th style="text-align: center;">Template</th>
+                                        <th style="text-align: center;">Size</th>
+                                    </tr>
+                                </thead>
 
-							<tbody>
-								<?php foreach ($hubDatum->broadcastData as $message): ?>
-									<tr>
-										<td><?= Tracy\Helpers::escapeHtml(implode(', ', $message->getTopics())) ?></td>
-										<td><?= Dumper::toHtml($message->getData(), [Dumper::COLLAPSE => true]) ?></td>
-										<td><?= Tracy\Helpers::escapeHtml($message->getTemplate()) ?></td>
-									</tr>
-								<?php endforeach ?>
-							</tbody>
+                            <tbody>
+                                <?php foreach ($hubDatum->broadcastData as $message): ?>
+                                    <tr>
+                                        <td><?= Tracy\Helpers::escapeHtml(implode(', ', $message->topics)) ?></td>
+                                        <td><?= Dumper::toHtml($message->renderedData() ?? $message->data, [Dumper::COLLAPSE => true]) ?></td>
+                                        <td><?= Tracy\Helpers::escapeHtml($message->template()) ?></td>
+                                        <td><?= Tracy\Helpers::escapeHtml($formatData($message->size, 'size')) ?></td>
+                                    </tr>
+                                <?php endforeach ?>
+                            </tbody>
 
-							<tfoot>
-								<tr>
-									<th scope="row" colspan="2" style="text-align: right;">Total</th>
-									<td style="text-align: center;"><?= Tracy\Helpers::escapeHtml($hubDatum->messageCount()) ?></td>
-								</tr>
-							</tfoot>
-						</table>
-					</dd>
+                            <tfoot>
+                                <tr>
+                                    <th scope="row" colspan="2" style="text-align: right;">Total</th>
+                                    <td style="text-align: center;"><?= Tracy\Helpers::escapeHtml($hubDatum->messageCount()) ?></td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </dd>
 
-					<dt>Duration</dt>
-					<dd><?= Tracy\Helpers::escapeHtml($formatData($hubDatum->duration, 'duration')) ?></dd>
+                        <dt>Duration</dt>
+                        <dd><?= Tracy\Helpers::escapeHtml($formatData($hubDatum->duration, 'duration')) ?></dd>
 
-					<dt>Memory</dt>
-					<dd><?= Tracy\Helpers::escapeHtml($formatData($hubDatum->memory, 'memory')) ?></dd>
-				</dl>
-			</div>
-		</details>
+                        <dt>Memory</dt>
+                        <dd><?= Tracy\Helpers::escapeHtml($formatData($hubDatum->memory, 'memory')) ?></dd>
+
+                        <dt>Size</dt>
+                        <dd><?= Tracy\Helpers::escapeHtml($formatData($hubDatum->size, 'size')) ?></dd>
+                </dl>
+            </div>
+        </details>
 	<?php endforeach ?>
 
-	<div>
-		<div style="text-align: right;">
+    <?php if ($hubData->hasData()): ?>
+	<div class="mercure-details">
+        <div style="text-align: right;">
 			<dl>
 				<dt>Total Duration</dt>
 				<dd><?= Tracy\Helpers::escapeHtml($formatData($hubData->totalDuration, 'duration')) ?></dd>
 
 				<dt>Total Memory</dt>
 				<dd><?= Tracy\Helpers::escapeHtml($formatData($hubData->totalMemory, 'memory')) ?></dd>
+
+				<dt>Total Size</dt>
+				<dd><?= Tracy\Helpers::escapeHtml($formatData($hubData->totalSize, 'size')) ?></dd>
 			</dl>
 		</div>
 	</div>
+    <?php endif ?>
+	<?php else: ?>
+    <details class="mercure-details" open>
+		<summary><h2>Live Events</h2></summary>
+		<div style="margin-top: 1rem;">
+			<div id="tracy-mercure-connections"></div>
+			<div id="tracy-mercure-live" class="mercure-live-log">
+				<div class="mercure-live-placeholder">Waiting for events&hellip;</div>
+			</div>
+		</div>
+	</details>
+	<?php endif ?>
 </div>
+<script<?= $nonce ?>>if (!window.tracyMercureEventLoader) window.opener?.tracyMercureEventLoader?.adopt(document);</script>

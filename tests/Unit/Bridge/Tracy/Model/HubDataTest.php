@@ -88,6 +88,7 @@ final class HubDataTest extends TestCase
         Assert::notEqual($datum2->duration, $hubData->totalDuration);
         Assert::equal($totalMemory, $hubData->totalMemory);
         Assert::equal($totalDuration, $hubData->totalDuration);
+        Assert::equal(8.0, $hubData->totalSize);
     }
 }
 

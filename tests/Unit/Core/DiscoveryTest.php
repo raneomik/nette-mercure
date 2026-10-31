@@ -45,6 +45,19 @@ final class DiscoveryTest extends TestCase
             autoDiscovery: true,
         );
 
+        yield 'minimalistic-no-discovery-default' => [
+            'discovery' => new Discovery(
+                new HttpHeaderSerializer(),
+                new DummyRequest(),
+                $response = new DummyResponse(),
+                new ConfigurationRegistry([
+                    'test' => $defaultNoDiscoveryConfig,
+                ]),
+            ),
+            'response' => $response,
+            'expectedHeaders' => [],
+        ];
+
         yield 'minimalistic-default' => [
             'discovery' => new Discovery(
                 new HttpHeaderSerializer(),
@@ -95,7 +108,7 @@ final class DiscoveryTest extends TestCase
             ],
         ];
 
-        yield 'hubName-query-but-fallback-on-no-discovery-hub' => [
+        yield 'hubName-query-unknown-hub-ignored' => [
             'discovery' => new Discovery(
                 new HttpHeaderSerializer(),
                 new DummyRequest(fromUrl: '/?hubName=test2'),
@@ -149,6 +162,22 @@ final class DiscoveryTest extends TestCase
             ),
             'response' => $response,
             'expectedHeaders' => [],
+        ];
+
+        yield 'array-hub-query-falls-back-on-default-hub' => [
+            'discovery' => new Discovery(
+                new HttpHeaderSerializer(),
+                new DummyRequest(fromUrl: '/?hub[]=test'),
+                $response = new DummyResponse(),
+                new ConfigurationRegistry([
+                    'test' => $hub2Config,
+                ])
+            ),
+            'response' => $response,
+            'expectedHeaders' => [
+                'Access-Control-Expose-Headers' => 'Link',
+                'Link' => '<http://hub2.example.com>; rel="mercure"',
+            ],
         ];
 
         yield 'preflight-attempt-with-options-method-only' => [

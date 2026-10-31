@@ -1,0 +1,176 @@
+<?php declare(strict_types=1);
+
+use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
+
+?>
+((debugTopic) => {
+	'use strict';
+
+	// Observes every EventSource opened by the page, plus what Turbo / Naja do with the events.
+	// Installed by the Tracy bar, i.e. before the deferred / module scripts of the page run: a script
+	// opening an EventSource while the page is still being parsed would not be seen.
+	if (window.__mercureDebug || typeof window.EventSource !== 'function') return;
+
+	const MAX_BUFFERED = 300;
+	let connections = 0;
+	const subscribers = new Set();
+	const buffer = [];
+
+	const bytes = (s) => new TextEncoder().encode(s ?? '').length;
+	// the panel's own debug bus and FrankenPHP hot reload are tooling, not page traffic
+	const IGNORED = ['frankenphp.dev/hot-reload'];
+	const isIgnored = (url) => {
+		try { return IGNORED.some((topic) => decodeURIComponent(String(url)).includes(topic)); } catch { return false; }
+	};
+
+	const emit = (entry) => {
+		entry.t = Date.now();
+		buffer.push(entry);
+		if (buffer.length > MAX_BUFFERED) buffer.shift();
+		subscribers.forEach((fn) => {
+			try { fn(entry); } catch (e) { console.error('[mercure-debug]', e); }
+		});
+	};
+
+	// Watches a connection. Call it directly for EventSource polyfills that are imported
+	// as modules (window.__mercureDebug?.track(es, 'turbo')), as the global patch cannot see them.
+	const track = (es, label = 'native') => {
+		const url = String(es.url ?? '');
+		if (isIgnored(url)) return es;
+
+		const connection = {cid: ++connections, url, label}; // identifies this connection among the others
+
+		emit({kind: 'connect', ...connection});
+		es.addEventListener('open', () => emit({kind: 'open', ...connection}));
+		// readyState 0: the browser is retrying by itself, 2: it gave up
+		es.addEventListener('error', () => emit({kind: 'error', ...connection, state: es.readyState}));
+
+		if (typeof es.close === 'function') {
+			const close = es.close.bind(es);
+			es.close = () => {
+				close();
+				emit({kind: 'close', ...connection});
+			};
+		}
+
+		const log = (e) => emit({
+			kind: 'event', ...connection, type: e.type, id: e.lastEventId || null, size: bytes(e.data), data: e.data,
+		});
+		es.addEventListener('message', log); // also covers `es.onmessage = ...`
+
+		// SSE has no wildcard: named events are only delivered to listeners registered for
+		// their name, so we listen to the very same names as the page does.
+		const add = es.addEventListener.bind(es);
+		const seen = new Set();
+		es.addEventListener = (type, listener, options) => {
+			if (!['open', 'error', 'message'].includes(type) && !seen.has(type)) {
+				seen.add(type);
+				add(type, log);
+			}
+			return add(type, listener, options);
+		};
+
+		return es;
+	};
+
+	const Native = window.EventSource;
+	window.EventSource = class extends Native {
+		constructor(...args) {
+			super(...args);
+			track(this);
+		}
+	};
+
+	const targetExists = (stream) => {
+		try {
+			const target = stream.getAttribute('target');
+			const targets = stream.getAttribute('targets');
+			if (target) return document.getElementById(target) !== null;
+			if (targets) return document.querySelector(targets) !== null;
+		} catch { /* invalid selector */ }
+		return true;
+	};
+
+	// Turbo silently ignores a stream whose target does not exist
+	document.addEventListener('turbo:before-stream-render', (e) => {
+		const stream = e.detail?.newStream;
+		if (!stream) return;
+		emit({
+			kind: 'turbo',
+			action: stream.getAttribute('action'),
+			target: stream.getAttribute('target') ?? stream.getAttribute('targets'),
+			found: targetExists(stream),
+		});
+	});
+
+	// Optional: only available when the application exposes the instance (window.naja = naja)
+	document.addEventListener('DOMContentLoaded', () => {
+		const naja = window.naja;
+		if (!naja || typeof naja.addEventListener !== 'function') return;
+		naja.addEventListener('success', (e) => emit({
+			kind: 'naja', phase: 'success', snippets: Object.keys(e.detail?.payload?.snippets ?? {}),
+		}));
+		naja.addEventListener('error', (e) => emit({
+			kind: 'naja', phase: 'error', message: String(e.detail?.error?.message ?? e.detail?.error ?? ''),
+		}));
+	});
+
+    const nativeFetch = window.fetch;
+    window.fetch = function (input, init = {}) {
+        const accept = new Headers(init.headers ?? input?.headers).get('Accept') ?? '';
+        if (!accept.includes('text/event-stream')) return nativeFetch.apply(this, arguments);
+
+        const url = String(input?.url ?? input);
+        if (isIgnored(url)) return nativeFetch.apply(this, arguments);
+
+        const connection = {cid: ++connections, url, label: 'fetch'};
+        emit({kind: 'connect', ...connection});
+
+        return nativeFetch.apply(this, arguments).then((response) => {
+            emit({kind: response.ok ? 'open' : 'error', ...connection, state: response.ok ? 1 : 2});
+            if (response.ok) readSse(response.clone().body, connection);
+            return response;
+        }, (error) => {
+            emit({kind: 'error', ...connection, state: 0});
+            throw error;
+        });
+    };
+
+    // parse the SSE stream: events are separated by a blank line
+    async function readSse(body, connection) {
+        const reader = body.getReader(), decoder = new TextDecoder();
+        let buffer = '';
+        for (;;) {
+            const {done, value} = await reader.read();
+            if (done) return emit({kind: 'error', ...connection, state: 0}); // the polyfill reconnects by itself
+            buffer += decoder.decode(value, {stream: true});
+            const blocks = buffer.split(/\r?\n\r?\n/);
+            buffer = blocks.pop();
+            for (const block of blocks) {
+                const field = {};
+                const data = [];
+                for (const line of block.split(/\r?\n/)) {
+                    const [, name, text = ''] = /^([^:]+):? ?(.*)$/.exec(line) ?? [];
+                    if (name === 'data') data.push(text); else if (name) field[name] = text;
+                }
+                if (!data.length) continue; // comment or heartbeat
+                emit({kind: 'event', ...connection, type: field.event ?? 'message', id: field.id ?? null,
+                    size: bytes(data.join('\n')), data: data.join('\n')});
+            }
+        }
+    }
+
+	window.__mercureDebug = {
+		debugTopic,
+		Native, // untracked constructor, used by the panel for its own connection
+		emit,
+		track,
+		subscribe(fn) {
+			buffer.forEach(fn); // replay what happened before the bar was initialised
+			subscribers.add(fn);
+			return () => subscribers.delete(fn);
+		},
+	};
+})(
+    <?= Tracy\Helpers::jsonEncode(TraceableBroadcaster::DEBUG_TOPIC, true) ?>,
+);

@@ -26,7 +26,7 @@ final class PlainBroadcaster implements BroadcasterInterface
      *     sse_retry?: int,
      * } $resolvedOptions
      */
-    private array $resolvedOptions;
+    private array $resolvedOptions = [];
 
     public function __construct(
         private readonly HubInterface $hub,
@@ -71,7 +71,7 @@ final class PlainBroadcaster implements BroadcasterInterface
         );
 
         $this->resolvedOptions = $options + [
-            'rendered_data' => $options['rendered_data'] ?? $data,
+            'rendered_data' => $data,
         ];
 
         return $this->hub->publish($update);

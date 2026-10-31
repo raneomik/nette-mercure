@@ -39,13 +39,13 @@ final class SubscriberTest extends TestCase
 
         $jwtData = $subscriber->subscribe(topics: 'test');
 
-        Assert::same('dummy-jwt-token-test-provider-token-test-', $jwtData->jwtToken);
+        Assert::same('dummy-jwt-token-test-provider-token-test-', $jwtData->jwt->token);
         Assert::same('http://hub.example.com', $jwtData->hubUrl);
         Assert::same('http://hub.example.com?match=test', $jwtData->subscribeUrl);
-        Assert::type(\DateTimeInterface::class, $jwtData->expiresAt);
+        Assert::type(\DateTimeInterface::class, $jwtData->jwt->ttl);
 
         $jwtData = $subscriber->subscribe();
-        Assert::same('dummy-jwt-token-test-provider-token-*-', $jwtData->jwtToken);
+        Assert::same('dummy-jwt-token-test-provider-token-*-', $jwtData->jwt->token);
     }
 
     public function testRequestTopicsCannotGrantPublish(): void
@@ -53,16 +53,11 @@ final class SubscriberTest extends TestCase
         $provider = new class() implements JWTProviderInterface {
             public mixed $grants = null;
 
-            public function ttl(): \DateTimeInterface
-            {
-                return new \DateTimeImmutable();
-            }
-
-            public function provide(?string $hubName = null, array|string $subscribedTopics = [], array $additionalClaims = []): string
+            public function provide(?string $hubName = null, array|string $subscribedTopics = [], array $additionalClaims = []): \Raneomik\NetteMercure\Core\Subscribe\Value\JWTToken
             {
                 $this->grants = $subscribedTopics;
 
-                return 'token';
+                return new \Raneomik\NetteMercure\Core\Subscribe\Value\JWTToken('token', new \DateTimeImmutable());
             }
         };
         $subscriber = new Subscriber($provider, new ConfigurationRegistry([
@@ -86,14 +81,9 @@ final class SubscriberTest extends TestCase
     public function testSubscribeUrl(): void
     {
         $provider = new class() implements JWTProviderInterface {
-            public function ttl(): ?\DateTimeInterface
+            public function provide(?string $hubName = null, array|string $subscribedTopics = [], array $additionalClaims = []): \Raneomik\NetteMercure\Core\Subscribe\Value\JWTToken
             {
-                return null;
-            }
-
-            public function provide(?string $hubName = null, array|string $subscribedTopics = [], array $additionalClaims = []): string
-            {
-                return 'token';
+                return new \Raneomik\NetteMercure\Core\Subscribe\Value\JWTToken('token', null);
             }
         };
         $subscriber = new Subscriber($provider, new ConfigurationRegistry([

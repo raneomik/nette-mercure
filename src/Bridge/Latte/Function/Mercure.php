@@ -4,37 +4,27 @@ declare(strict_types=1);
 
 namespace Raneomik\NetteMercure\Bridge\Latte\Function;
 
-use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
-use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Raneomik\NetteMercure\Bridge\Utils\SubscriptionQuery;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
-use Raneomik\NetteMercure\Core\Subscribe\JWTProviderInterface;
 
 /**
  * @phpstan-type MercureOptions array{
- *       subscribe?: string|string[],
- *       publish?: string|string[],
- *       additionalClaims?: array<string, mixed>,
  *       lastEventId?: string,
  *       hub?: string,
- *       addJwt?: bool
  *   }
- * /
  */
 final readonly class Mercure
 {
     private Broadcasters $broadcasters;
 
     private function __construct(
-        private JWTProviderInterface $jwtProvider,
-        private BroadcastersLoader $broadcastersLoader,
-        private ConfigurationRegistry $configuredData,
+        private \Closure $broadcastersLoader,
     ) {
     }
 
     /**
      * @param null|array<string,string[]>|string|string[] $topics A topic or an array of topics to subscribe for. If this parameter is omitted or `null` is passed, the URL of the hub will be returned (useful for publishing in JavaScript).
-     * @param MercureOptions $options The options to pass to the JWT factory
+     * @param MercureOptions $options
      *
      * @return string The URL of the hub with the appropriate "topic" query parameters (if any)
      */
@@ -54,12 +44,9 @@ final readonly class Mercure
         );
     }
 
-    public static function build(
-        JWTProviderInterface $jwtProvider,
-        BroadcastersLoader $broadcastersLoader,
-        ConfigurationRegistry $configuredData,
-    ): self {
-        return new self($jwtProvider, $broadcastersLoader, $configuredData);
+    public static function build(\Closure $broadcastersLoader): self
+    {
+        return new self($broadcastersLoader);
     }
 
     private function broadcasters(): Broadcasters
@@ -75,21 +62,13 @@ final readonly class Mercure
     {
         $params = SubscriptionQuery::params(
             $topics,
-            $this->broadcasters()->broadcasterHub($hub)->getProtocolVersion(),
+            $this->broadcasters()
+                ->broadcasterHub($hub)
+                ->getProtocolVersion(),
         );
 
         if ('' !== ($options['lastEventId'] ?? '')) {
             $params[] = 'lastEventID=' . rawurlencode($options['lastEventId']);
-        }
-
-        $hubData = $this->configuredData->getConfiguration($hub);
-
-        if ($hubData->jwtInQueryParam || true === ($options['addJwt'] ?? false)) {
-            $params[] = 'authorization=' . $this->jwtProvider->provide(
-                $hub,
-                $options['subscribe'] ?? $hubData->subscribe,
-                $options['additionalClaims'] ?? [],
-            );
         }
 
         return SubscriptionQuery::build($params);

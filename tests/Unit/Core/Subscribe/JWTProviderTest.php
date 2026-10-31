@@ -10,6 +10,7 @@ use Nette\Utils\Json;
 use Raneomik\NetteMercure\Bridge\DI\Config\Configuration;
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Core\Subscribe\JWTProvider;
+use Raneomik\NetteMercure\Core\Subscribe\Value\JWTToken;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\HubRegistry;
 use Symfony\Component\Mercure\Jwt\Grant;
@@ -43,7 +44,7 @@ final class JWTProviderTest extends TestCase
         ));
 
         Assert::exception(
-            static fn (): string => $jwtProvider->provide(
+            static fn (): JWTToken => $jwtProvider->provide(
                 subscribedTopics: 'test',
             ),
             \LogicException::class,
@@ -51,7 +52,7 @@ final class JWTProviderTest extends TestCase
         );
 
         Assert::exception(
-            static fn (): string => $jwtProvider->provide(
+            static fn (): JWTToken => $jwtProvider->provide(
                 hubName: 'h2',
                 subscribedTopics: 'test',
             ),
@@ -62,38 +63,29 @@ final class JWTProviderTest extends TestCase
 
     public function testMultipleProvisions(): void
     {
-        $jwtProvider = $this->provider(new HubRegistry(
-            self::$defaultHub,
-            [
-                'h1' => self::$defaultHub,
-                'h2' => MockHubFactory::create('http://hub2.example.com', jwtSecret: 'secret2?'),
+        $defaultConfig = new Configuration('default', 'https://hub', 'https://hub', ['*'], ['*']);
+        $jwtProvider = $this->provider(
+            new HubRegistry(
+                self::$defaultHub,
+                [
+                    'h1' => self::$defaultHub,
+                    'h2' => MockHubFactory::create('http://hub2.example.com', jwtSecret: 'secret2?'),
+                ],
+            ),
+            configs: [
+                'default' => $defaultConfig,
+                'h1' => $defaultConfig,
+                'h2' => $defaultConfig,
             ]
-        ));
-
-        Assert::same(
-            'dummy-jwt-token-secret-test-',
-            $jwtProvider->provide(
-                subscribedTopics: 'test',
-            ),
-        );
-        Assert::same(
-            (new \DateTime('+1hour'))->format('Y-m-d H:i:s'),
-            $jwtProvider->ttl()
-                ?->format('Y-m-d H:i:s'),
         );
 
-        Assert::same(
-            'dummy-jwt-token-secret2?-test-',
-            $jwtProvider->provide(
-                hubName: 'h2',
-                subscribedTopics: 'test',
-            ),
-        );
-        Assert::same(
-            (new \DateTime('+1hour'))->format('Y-m-d H:i:s'),
-            $jwtProvider->ttl()
-                ?->format('Y-m-d H:i:s'),
-        );
+        $result = $jwtProvider->provide(subscribedTopics: 'test');
+        Assert::same('dummy-jwt-token-secret-test-', $result->token);
+        Assert::same((new \DateTime('+1hour'))->format('Y-m-d H:i:s'), $result->ttl?->format('Y-m-d H:i:s'));
+
+        $result = $jwtProvider->provide(hubName: 'h2', subscribedTopics: 'test');
+        Assert::same('dummy-jwt-token-secret2?-test-', $result->token);
+        Assert::same((new \DateTime('+1hour'))->format('Y-m-d H:i:s'), $result->ttl?->format('Y-m-d H:i:s'));
     }
 
     /**
@@ -149,7 +141,7 @@ final class JWTProviderTest extends TestCase
      */
     public function testGrants(array|string $grants, string $expected): void
     {
-        Assert::same($expected, $this->provider(new HubRegistry(self::$defaultHub))->provide(subscribedTopics: $grants));
+        Assert::same($expected, $this->provider(new HubRegistry(self::$defaultHub))->provide(subscribedTopics: $grants)->token);
     }
 
     /**
@@ -222,29 +214,42 @@ final class JWTProviderTest extends TestCase
     public function testLifetimeInTheRealToken(?int $lifetime, array $claims, ?int $expectedSeconds): void
     {
         $jwtProvider = $this->provider($this->realHubRegistry(), $lifetime);
-        $payload = $this->payload($jwtProvider->provide(subscribedTopics: 'test', additionalClaims: $claims + [
+        $result = $jwtProvider->provide(subscribedTopics: 'test', additionalClaims: $claims + [
             'iss' => 'i',
             'aud' => 'a',
             'sub' => 's',
             'client_id' => 'c',
-        ]));
+        ]);
+        $payload = $this->payload($result->token);
 
         if (null === $expectedSeconds) {
             Assert::false(isset($payload['exp']));
-            Assert::null($jwtProvider->ttl());
+            Assert::null($result->ttl);
 
             return;
         }
 
         Assert::true(2 >= abs(time() + $expectedSeconds - $payload['exp']));
-        Assert::same($payload['exp'], $jwtProvider->ttl()?->getTimestamp());
+        Assert::same($payload['exp'], $result->ttl?->getTimestamp());
     }
 
-    private function provider(HubRegistry $registry, ?int $lifetime = 0): JWTProvider
+    /**
+     * @param array<string, Configuration>|null $configs
+     */
+    private function provider(HubRegistry $registry, ?int $lifetime = 0, ?array $configs = null): JWTProvider
     {
-        return new JWTProvider($registry, new ConfigurationRegistry([
-            'default' => new Configuration('default', 'https://hub', 'https://hub', ['*'], ['*'], lifetime: $lifetime),
-        ]));
+        $configs ??= [
+            'default' => new Configuration(
+                'default',
+                'https://hub',
+                'https://hub',
+                ['*'],
+                ['*'],
+                lifetime: $lifetime,
+            ),
+        ];
+
+        return new JWTProvider($registry, new ConfigurationRegistry($configs));
     }
 
     private function realHubRegistry(): HubRegistry

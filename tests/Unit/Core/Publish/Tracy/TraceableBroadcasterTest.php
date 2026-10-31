@@ -13,9 +13,11 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\Metrics;
 use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 use Raneomik\NetteMercure\Core\Publish\Tracy\Value\BroadcastData;
 use Symfony\Component\Mercure\HubInterface;
+use Symfony\Component\Mercure\Update;
 use Tester\Assert;
 use Tester\TestCase;
 use Tests\Fixtures\Dummies\Core\MockHubFactory;
+use Tests\Fixtures\Dummies\Core\Publish\DummyBroadcaster;
 
 /**
  * @testCase
@@ -66,7 +68,7 @@ final class TraceableBroadcasterTest extends TestCase
             $this->debugBroadcaster->getDuration(),
         );
         Assert::same(1, $this->debugBroadcaster->count());
-        Assert::count(1, $this->debugBroadcaster->getMessageData());
+        Assert::count(1, $this->debugBroadcaster->broadcastData());
 
         $this->debugBroadcaster->broadcast(
             'test',
@@ -88,39 +90,199 @@ final class TraceableBroadcasterTest extends TestCase
         );
 
         Assert::same(2, $this->debugBroadcaster->count());
-        Assert::count(2, $this->debugBroadcaster->getMessageData());
+        Assert::count(2, $this->debugBroadcaster->broadcastData());
 
         $formatedData = array_map(
             static fn (BroadcastData $data): array => [
-                'topics' => $data->getTopics(),
-                'data' => $data->getData(),
-                'template' => $data->getTemplate(),
-                'action' => $data->getAction(),
-                'options' => $data->getOptions(),
+                'topics' => $data->topics,
+                'data' => $data->data,
+                'template' => $data->template(),
+                'action' => $data->action(),
             ],
-            $this->debugBroadcaster->getMessageData(),
+            $this->debugBroadcaster->broadcastData(),
         );
         Assert::same(
             [
                 [
                     'topics' => ['test'],
                     'data' => 'Hello, World!',
-                    'template' => 'n/a',
-                    'action' => 'n/a',
-                    'options' => [],
+                    'template' => null,
+                    'action' => null,
                 ],
                 [
                     'topics' => ['test'],
                     'data' => 'Hello, another World!',
                     'template' => 'uncosidered_in_plain_broadcaster',
                     'action' => TurboStreamAction::Update,
-                    'options' => [
-                        'metadata' => 'second broadcast',
-                    ],
                 ],
             ],
             $formatedData,
         );
+    }
+
+    public function testErrorLog(): void
+    {
+        $broadcast = new TraceableBroadcaster(
+            new DummyBroadcaster(
+                MockHubFactory::create(
+                    'http://example.com/hub',
+                ),
+                static fn (): string => throw new \RuntimeException('publish error'),
+            ),
+            new Metrics(),
+        );
+
+        $broadcast->broadcast('test', 'Hello, error!');
+
+        $formatedData = array_map(
+            static fn (BroadcastData $data): ?string => $data->error?->getMessage(),
+            $broadcast->broadcastData(),
+        );
+
+        Assert::same(['publish error'], $formatedData);
+    }
+
+    public function testEveryPublicationIsAnnouncedOnTheDebugTopic(): void
+    {
+        $published = [];
+        $hub = MockHubFactory::create(
+            'http://example.com/hub',
+            publisher: static function (Update $update) use (&$published): string {
+                $published[] = $update;
+
+                return 'urn:uuid:' . \count($published);
+            },
+        );
+
+        $broadcaster = new TraceableBroadcaster(new PlainBroadcaster($hub), new Metrics(), 'one');
+
+        Assert::same('urn:uuid:1', $broadcaster->broadcast('game/42', 'é<b>', [
+            'sse_type' => 'chat',
+            'private' => true,
+        ]));
+
+        Assert::count(2, $published, 'the real update, then its announcement');
+        Assert::same(['game/42'], $published[0]->getTopics());
+
+        $announcement = $published[1];
+        Assert::same([TraceableBroadcaster::DEBUG_TOPIC], $announcement->getTopics());
+        Assert::same(TraceableBroadcaster::DEBUG_EVENT, $announcement->getType());
+        Assert::false($announcement->isPrivate(), 'the debug channel itself is public');
+
+        $envelope = Json::decode($announcement->getData(), forceArrays: true);
+        Assert::same('urn:uuid:1', $envelope['id'], 'same id as the one received by the subscribers');
+        Assert::same('one', $envelope['hub']);
+        Assert::same('sent', $envelope['status']);
+        Assert::same(['game/42'], $envelope['topics']);
+        Assert::same('chat', $envelope['type']);
+        Assert::true($envelope['private']);
+        Assert::same(5, (int) $envelope['size'], 'size is expressed in bytes, not in characters');
+        Assert::null($envelope['preview'], 'the debug channel is public: nothing of a private message');
+        Assert::null($envelope['error']);
+        Assert::true(5000 > abs($envelope['sentAt'] - microtime(true) * 1000), 'sentAt is a wall clock, in ms');
+
+        Assert::same(1, $broadcaster->count(), 'the announcement is not traced as a message');
+    }
+
+    public function testTheAnnouncementOfAFailedPublicationCarriesTheError(): void
+    {
+        $published = [];
+        $broadcast = new TraceableBroadcaster(
+            new DummyBroadcaster(
+                MockHubFactory::create(
+                    'http://example.com/hub',
+                    publisher: static function (Update $update) use (&$published): string {
+                        $published[] = $update;
+
+                        return 'debug-id';
+                    },
+                ),
+                static fn (): string => throw new \RuntimeException('publish error'),
+            ),
+            new Metrics(),
+            'one',
+        );
+
+        Assert::same('', $broadcast->broadcast('test', 'Hello, error!'));
+
+        Assert::count(1, $published);
+        $envelope = Json::decode($published[0]->getData(), forceArrays: true);
+        Assert::same('error', $envelope['status']);
+        Assert::null($envelope['id'], 'nothing was published, so nothing will ever be received');
+        Assert::same([
+            'class' => \RuntimeException::class,
+            'message' => 'publish error',
+        ], $envelope['error']);
+    }
+
+    public function testResolvedOptionsWinOverTheArguments(): void
+    {
+        $broadcaster = new TraceableBroadcaster(new PlainBroadcaster(MockHubFactory::create()), new Metrics());
+
+        $broadcaster->broadcast('argument', 'ignored', [
+            'topics' => ['resolved'],
+            'template' => 'resolved.latte',
+            'rendered_data' => 'abc',
+        ], template: 'argument.latte');
+
+        $data = $broadcaster->broadcastData()[0];
+        Assert::same(['resolved'], $data->topics);
+        Assert::same('resolved.latte', $data->template());
+        Assert::same(3.0, $data->size, 'the size of what was rendered, not of the raw data');
+    }
+
+    public function testSizeWithoutRenderedData(): void
+    {
+        $broadcaster = new TraceableBroadcaster(
+            new DummyBroadcaster(MockHubFactory::create(), static fn (): string => 'id'),
+            new Metrics(),
+        );
+
+        $broadcaster->broadcast('test', 'abc');
+        $broadcaster->broadcast('test', [
+            'a' => 1,
+        ]);
+
+        Assert::same(3.0, $broadcaster->broadcastData()[0]->size);
+        Assert::same(7.0, $broadcaster->broadcastData()[1]->size);
+        Assert::same(10.0, $broadcaster->getSize());
+    }
+
+    public function testAnnouncementEncoding(): void
+    {
+        $published = [];
+        $broadcaster = new TraceableBroadcaster(new PlainBroadcaster(MockHubFactory::create(
+            publisher: static function (Update $update) use (&$published): string {
+                $published[] = $update;
+
+                return 'id';
+            },
+        )), new Metrics());
+
+        $broadcaster->broadcast('a/b', "bad\xff");
+
+        Assert::count(2, $published, 'invalid UTF-8 must not silently drop the announcement');
+        Assert::contains('"topics":["a/b"]', $published[1]->getData());
+    }
+
+    public function testAFailingAnnouncementNeverBreaksTheRealPublication(): void
+    {
+        $hub = MockHubFactory::create(
+            'http://example.com/hub',
+            publisher: static function (Update $update): string {
+                if (TraceableBroadcaster::DEBUG_TOPIC === $update->getTopics()[0]) {
+                    throw new \RuntimeException('debug topic is not allowed');
+                }
+
+                return 'urn:uuid:1';
+            },
+        );
+
+        $broadcaster = new TraceableBroadcaster(new PlainBroadcaster($hub), new Metrics());
+
+        Assert::same('urn:uuid:1', $broadcaster->broadcast('test', 'Hello'));
+        Assert::same(1, $broadcaster->count());
+        Assert::same(\Raneomik\NetteMercure\Core\Publish\Tracy\Value\BroadcastStatus::Sent, $broadcaster->broadcastData()[0]->status);
     }
 }
 

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Raneomik\NetteMercure\Bridge\DI\Dependency;
 
 use Nette\DI\ContainerBuilder;
-use Nette\DI\Definitions\Definition;
 use Nette\DI\Definitions\ServiceDefinition;
 use Nette\DI\Definitions\Statement;
 use Raneomik\NetteMercure\Bridge\DI\MercureExtension;
@@ -26,7 +25,7 @@ final readonly class BroadcastersDefiner
         $this->builder = $extension->getContainerBuilder();
     }
 
-    public function broadcasterDefinition(\stdClass $hubConfig, string $hubName, false|ServiceDefinition $latteDefinition): Definition
+    public function broadcasterDefinition(\stdClass $hubConfig, string $hubName, false|ServiceDefinition $latteDefinition): ServiceDefinition
     {
         $plainBroadcasterDef = $this->builder->addDefinition($this->extension->prefix(\sprintf('broadcaster.%s.plain', $hubName)))
             ->setType(PlainBroadcaster::class)
@@ -58,6 +57,7 @@ final readonly class BroadcastersDefiner
                 ->setType(TraceableBroadcaster::class)
                 ->setCreator(TraceableBroadcaster::class, [
                     $latteBroadcasterDef ?? $plainBroadcasterDef,
+                    'hubName' => $hubName,
                 ])
                 ->setAutowired(false)
             ;
@@ -67,7 +67,7 @@ final readonly class BroadcastersDefiner
     }
 
     /**
-     * @param array<string, Definition> $broadcasterDefinitions
+     * @param array<string, ServiceDefinition> $broadcasterDefinitions
      */
     public function postLoad(array $broadcasterDefinitions): void
     {

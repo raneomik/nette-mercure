@@ -12,38 +12,34 @@ use Symfony\Component\Mercure\HubInterface;
  * @implements \IteratorAggregate<string, BroadcasterInterface>
  * @implements \ArrayAccess<string, BroadcasterInterface>
  */
-final readonly class Broadcasters implements BroadcasterInterface, \IteratorAggregate, \ArrayAccess
+final readonly class Broadcasters implements BroadcasterInterface, \ArrayAccess, \IteratorAggregate
 {
     /**
-     * @var \ArrayIterator<string, BroadcasterInterface>
-     */
-    private iterable $broadcasters;
-
-    /**
-     * @param iterable<string, BroadcasterInterface> $broadcasters
+     * @param array<string, BroadcasterInterface> $broadcasters
      */
     public function __construct(
-        iterable $broadcasters,
+        private iterable $broadcasters,
     ) {
-        // @phpstan-ignore-next-line
-        $this->broadcasters = new \ArrayIterator($broadcasters);
     }
 
     public function broadcasterHub(?string $hub = null): HubInterface
     {
-        return $this->pick($hub)->broadcasterHub();
+        return $this->pick($hub)
+            ->broadcasterHub();
     }
 
     #[\Override]
     public function broadcasterUrl(?string $hub = null): string
     {
-        return $this->pick($hub)->broadcasterUrl();
+        return $this->pick($hub)
+            ->broadcasterUrl();
     }
 
     #[\Override]
     public function broadcastOptions(?string $hub = null): array
     {
-        return $this->pick($hub)->broadcastOptions();
+        return $this->pick($hub)
+            ->broadcastOptions();
     }
 
     #[\Override]
@@ -79,14 +75,6 @@ final readonly class Broadcasters implements BroadcasterInterface, \IteratorAggr
     public function count(): int
     {
         return \count($this->broadcasters);
-    }
-
-    /**
-     * @return \ArrayIterator<string, BroadcasterInterface>
-     */
-    public function getIterator(): \ArrayIterator
-    {
-        return $this->broadcasters;
     }
 
     public function first(): BroadcasterInterface
@@ -128,10 +116,15 @@ final readonly class Broadcasters implements BroadcasterInterface, \IteratorAggr
 
     private function getHub(string $name): BroadcasterInterface
     {
-        if (false === ($this[$name] ?? false)) {
+        if (false === $this->offsetExists($name)) {
             throw new BroadcastException(\sprintf('The hub "%s" is not defined.', $name));
         }
 
         return $this[$name];
+    }
+
+    public function getIterator(): \Traversable
+    {
+        yield from $this->broadcasters;
     }
 }

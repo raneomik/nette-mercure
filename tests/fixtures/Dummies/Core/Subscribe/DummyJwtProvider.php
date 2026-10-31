@@ -6,33 +6,25 @@ namespace Tests\Fixtures\Dummies\Core\Subscribe;
 
 use Raneomik\NetteMercure\Bridge\Utils\GrantTopicNormalizer;
 use Raneomik\NetteMercure\Core\Subscribe\JWTProviderInterface;
+use Raneomik\NetteMercure\Core\Subscribe\Value\JWTToken;
 use Symfony\Component\Mercure\Jwt\TokenFactoryInterface;
 use Tests\Fixtures\Dummies\Core\DummyJwtFactory;
 
-/**
- * @testCase
- */
-final class DummyJwtProvider implements JWTProviderInterface
+final readonly class DummyJwtProvider implements JWTProviderInterface
 {
-    private \DateTimeInterface $jwtTtl;
-
     public function __construct(
-        private readonly TokenFactoryInterface $tokenFactory = new DummyJwtFactory('test-provider-token'),
+        private TokenFactoryInterface $tokenFactory = new DummyJwtFactory('test-provider-token'),
     ) {
     }
 
-    public function provide(?string $hubName = null, array|string $subscribedTopics = [], array $additionalClaims = []): string
+    public function provide(?string $hubName = null, array|string $subscribedTopics = [], array $additionalClaims = []): JWTToken
     {
-        $this->jwtTtl = new \DateTimeImmutable(\sprintf('+%s seconds', $additionalClaims['exp'] ?? 3600));
-
-        return $this->tokenFactory->create(
-            GrantTopicNormalizer::normalizeGrants($subscribedTopics),
-            $additionalClaims,
+        return new JWTToken(
+            token: $this->tokenFactory->create(
+                GrantTopicNormalizer::normalizeGrants($subscribedTopics),
+                $additionalClaims,
+            ),
+            ttl: new \DateTimeImmutable(\sprintf('+%s seconds', $additionalClaims['exp'] ?? 3600)),
         );
-    }
-
-    public function ttl(): \DateTimeInterface
-    {
-        return $this->jwtTtl;
     }
 }

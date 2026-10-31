@@ -11,9 +11,6 @@ use Symfony\Component\Mercure\MockHub;
 use Symfony\Component\Mercure\ProtocolVersion;
 use Symfony\Component\Mercure\Update;
 
-/**
- * @testCase
- */
 final class MockHubFactory
 {
     public static function create(
@@ -21,12 +18,13 @@ final class MockHubFactory
         ?string $jwtSecret = null,
         ?string $jwtToken = null,
         bool $withoutJWTFactory = false,
-        ProtocolVersion $protocolVersion = ProtocolVersion::Legacy,
+        ProtocolVersion $protocolVersion = ProtocolVersion::V1,
+        ?callable $publisher = null,
     ): HubInterface {
         return new MockHub(
             $url ?? 'http://hub.example.com',
             new StaticTokenProvider($jwtToken ?? 'dummy-jwt-token'),
-            static fn (Update $update): string => Json::encode([
+            $publisher ?? static fn (Update $update): string => Json::encode([
                 'data' => $update->getData(),
                 'topics' => $update->getTopics(),
             ] + ($update->getType() ? [

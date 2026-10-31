@@ -14,6 +14,7 @@ use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Core\Subscribe\Authorization;
 use Symfony\Component\Mercure\ProtocolVersion;
 use Tester\Assert;
+use Tester\Environment;
 use Tester\TestCase;
 use Tests\Fixtures\Dummies\Core\DummyRequest;
 use Tests\Fixtures\Dummies\Core\DummyResponse;
@@ -86,6 +87,17 @@ final class AuthorizationTest extends TestCase
                 'path' => '/',
                 'domain' => null,
                 'secure' => false,
+            ],
+        ];
+
+        yield 'hub host in another case' => [
+            'requestUrl' => 'https://example.com',
+            'publicUrl' => 'https://HUB.Example.COM',
+            'protocolVersion' => ProtocolVersion::Legacy,
+            'expected' => [
+                'path' => '/',
+                'domain' => 'example.com',
+                'secure' => true,
             ],
         ];
 
@@ -179,6 +191,22 @@ final class AuthorizationTest extends TestCase
             'message' => '~Unable to create authorization cookie for a hub on the different second-level domain~',
         ];
 
+        yield 'hub on a look-alike domain, which is not a subdomain' => [
+            'requestUrl' => 'https://example.com',
+            'publicUrl' => 'https://evilexample.com',
+            'protocolVersion' => ProtocolVersion::Legacy,
+            'exception' => \RuntimeException::class,
+            'message' => '~Unable to create authorization cookie~',
+        ];
+
+        yield 'hub only sharing the top-level domain' => [
+            'requestUrl' => 'https://example.com',
+            'publicUrl' => 'https://hub.other.com',
+            'protocolVersion' => ProtocolVersion::Legacy,
+            'exception' => \RuntimeException::class,
+            'message' => '~Unable to create authorization cookie~',
+        ];
+
         yield 'protocol 1.0 without https' => [
             'requestUrl' => 'http://example.com',
             'publicUrl' => 'http://hub.example.com',
@@ -238,6 +266,30 @@ final class AuthorizationTest extends TestCase
             $authorization = $this->authorization('/', 'http://hub.example.com', response: new Response(), sameSite: $sameSite);
 
             Assert::noError(static fn () => $authorization->setCookie(grants: ['test'], hub: 'test'));
+        }
+    }
+
+    public function testHeaderSentByNetteResponse(): void
+    {
+        // headers_list() stays empty in CLI
+        if (! \function_exists('xdebug_get_headers')) {
+            Environment::skip('Needs Xdebug to read the sent headers.');
+        }
+
+        // null: the default of Nette\Http\Response applies
+        foreach ([[SameSite::Strict, 'Strict'], [null, 'Lax']] as [$sameSite, $expected]) {
+            header_remove();
+            $this->authorization('/', 'http://hub.example.com', response: new Response(), sameSite: $sameSite)
+                ->setCookie(grants: ['test'], hub: 'test');
+
+            $cookies = array_values(array_filter(
+                xdebug_get_headers(),
+                static fn (string $header): bool => str_starts_with($header, 'Set-Cookie: ' . ProtocolVersion::Legacy->getDefaultCookieName() . '='),
+            ));
+
+            Assert::count(1, $cookies);
+            Assert::contains('; HttpOnly', $cookies[0]);
+            Assert::contains('SameSite=' . $expected, $cookies[0]);
         }
     }
 

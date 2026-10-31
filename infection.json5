@@ -18,4 +18,6 @@
         "@default": true
     },
     "threads": "max",
+    // above it, a mutant is skipped without running: its tests add up to more than 10s (the default) on CI runners
+    "timeout": 60,
 }

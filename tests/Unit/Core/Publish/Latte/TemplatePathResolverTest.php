@@ -60,6 +60,14 @@ final class TemplatePathResolverTest extends TestCase
         Assert::same($expected, $this->resolver($basePath)->resolve($template));
     }
 
+    public function testResolvedDirOfAnAbsolutePath(): void
+    {
+        $resolver = $this->resolver(null);
+        $resolver->resolve(self::TEMPLATES . '/example.latte');
+
+        Assert::same(self::TEMPLATES . '/', $resolver->resolvedDir());
+    }
+
     /**
      * @return iterable<string, array{
      *     basePath: ?string,

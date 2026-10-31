@@ -48,9 +48,8 @@ mercure:
 			algorithm: HS256 # Optional, defaults to HS256 with WebTokenFactory, hmac.sha256 with LcobucciFactory
 		publish: ['test-topic'] # Optional, default is ['*']. Topics to narrow in JWT validation.
 		subscribe: ['test-topic'] # Optional, default is ['*']. Topics to narrow in JWT validation (1.0 also accepts matchers, e.g. {urlpattern: ['/books/:id']}).
-		# Optional, defaults to Symfony\Component\Mercure\Jwt\WebTokenFactory with protocol 1.0 (1.0 only),
-		# and to Symfony\Component\Mercure\Jwt\LcobucciFactory with legacy protocol (supports both).
-		# You can implement your own Symfony\Component\Mercure\Jwt\TokenFactoryInterface
+		# Optional, only for custom Symfony\Component\Mercure\Jwt\TokenFactoryInterface implementations.
+		# Use protocolVersion to switch between built-in factories: '1.0' → WebTokenFactory, '0.x' → LcobucciFactory.
 		factory:
 		# Optional, claims added to every token. With protocol 1.0, the RFC 9068 "iss", "aud", "sub" and "client_id" claims are required
 		# and defaults on publicUrl, fallbacked on url, and derived values: set them for production.
@@ -61,7 +60,6 @@ mercure:
 			clientId: nette-app # "client_id" claim
 			additional: # Optional, any other claim
 				tenant: acme
-		useQueryParam: # false by default, to use JWT token in "authorization" query parameter when using {mercure()} function (https://mercure.rocks/spec#uri-query-parameter)
 		lifetime: # Optional, 0 by default (session.cookie_lifetime, or 3600 seconds), null for non expiring tokens. Same value for the publisher token, the subscriber tokens and the cookie (session cookie with null).
     # following option depends on request parameter "hub" (or "hubName") if several hubs are defined in configuration
     autoDiscovery: # false by default, to add Link header for Mercure hub discovery (https://mercure.rocks/spec#discovery)
@@ -151,11 +149,11 @@ _When working with JWT token in Authorisation Header, you may need a [polyfill](
 
 <script type="module">
     /**
-     * use mercure(array|string|null $topics, ?string $hub = null) function to render mercure URL.
+     * use mercure(array|string|null $topics, ?string $hub = null, array $options = []) function to render mercure URL.
      * - "hub" param defines the hub to subscribe to if multiple hubs are defined in configuration, default is first found hub
-     * - "addJwt" option adds jwt token in query url and overrides "useQueryParam: false" (default) configuration option
+     * - "lastEventId" option asks the hub for the events missed since this one
      */
-    const eventSource = new EventSource({mercure('test-topic', hub: 'hubName', [addJwt => true])});
+    const eventSource = new EventSource({mercure('test-topic', hub: 'hubName')});
 
     const containers = document.querySelectorAll('.mercure-container');
     eventSource.onmessage = event => {
@@ -168,14 +166,14 @@ _When working with JWT token in Authorisation Header, you may need a [polyfill](
 
     import { EventSourcePolyfill } from 'event-source-polyfill';
 
-    const es = new EventSourcePolyfill({mercure('test-topic')},
+    const es = new EventSourcePolyfill({mercure('test-topic')}, {
         headers: {
-// use mercureJWTToken(array|string|null $subscribe = ['*'], array|string|null $publish = ['*'], ?string $hub = null) function to render mercure JWT token
-            'Authorization': 'Bearer: ' + {mercureJWTToken('test-topic')}
+// use mercureJWTToken(array|string $subscribe = ['*'], array $additionalClaims = [], ?string $hub = null) function to render mercure JWT token
+            'Authorization': 'Bearer ' + {mercureJWTToken('test-topic')}
         }
-    );
+    });
 
-    eventSource.onmessage = event => {
+    es.onmessage = event => {
         for (const container of containers) {
             container.textContent = event.data;
         }
@@ -345,6 +343,41 @@ You can also subscribe to [turbo-streams](https://turbo.hotwired.dev) :
         eventSource.close();
     };
 ```
+
+### Development mode
+
+Frankenphp [HotReload](https://frankenphp.dev/docs/hot-reload/#enabling-frankenphp-hot-reload) feature requires "anonymous" mercure configuration.
+Tracy bar Live mercure event listening follows this requirement. 
+
+#### Debug bus
+
+An SSE event only carries its type, id and data: topics, visibility, hub name or Turbo Stream
+action never reach the subscribers. On every hub with `debugger: true`, each publication is therefore
+also announced, with its metadata, on the public topic `_debug/mercure`. The Tracy panel listens
+to that single topic and shows, for any publisher (any tab, any request): hub, topics, `private`, SSE type,
+Turbo action and target, template, size in bytes and a preview of the data.
+
+> If you restrict the `publish` grants of a hub, allow the `_debug/mercure` topic too, otherwise the
+> announcements are silently dropped (they never break a real publication).
+
+#### Observing the page itself
+
+The Tracy bar installs a small hook, before the deferred / module scripts of your page run. It observes every
+connection opened by the page (connecting / open / reconnecting / closed, with the events received, their size and
+the latency since publication) and what Turbo does with each stream (including "target not found").
+Nothing to add to your layout.
+
+Two limits:
+
+* a classic script opening an `EventSource` while the page is still being parsed runs before the hook and is not seen;
+* a global patch cannot see an `EventSource` polyfill imported as a module: register it right after its creation.
+
+```js
+window.__mercureDebug?.track(eventSource, 'turbo');
+```
+
+Naja events (`success`, `error`) are reported too when the instance is exposed (`window.naja = naja`).
+
 
 Resources
 ---------

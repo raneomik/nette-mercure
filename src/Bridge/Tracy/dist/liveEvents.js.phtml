@@ -1,0 +1,443 @@
+<?php declare(strict_types=1);
+
+use Raneomik\NetteMercure\Bridge\Tracy\MercurePanel;
+use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
+
+/**
+ * @phpstan-import-type LightHub from MercurePanel
+ *
+ * @var $liveHubs LightHub[]
+ * @var $icon string
+ */
+?>
+((hubs, debugTopic, debugEvent, iconContent) => {
+	'use strict';
+
+	if (window.tracyMercureEventLoader) return;
+
+	const MAX_ROWS = 200;
+	const MAX_PUBLISHED = 300;
+	const MAX_LATENCY = 60_000; // above that, browser and server clocks are not comparable
+
+	// ─── Templating ──────────────────────────────────────────────────────────────
+	// html`…` escapes every interpolated value. A nested html`…`, an array of them, or
+	// null / undefined / false (rendered as nothing) are accepted: `${cond && html`<b>x</b>`}`.
+	class Safe {
+		constructor(markup) { this.markup = markup; }
+
+		toString() { return this.markup; }
+	}
+
+	const esc = (value) => String(value).replace(/[&<>"']/g, (char) => ({
+		'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;',
+	}[char]));
+
+	const markup = (value) => {
+		if (value instanceof Safe) return value.markup;
+		if (Array.isArray(value)) return value.map(markup).join('');
+		return value === null || value === undefined || value === false ? '' : esc(value);
+	};
+
+	const html = (strings, ...values) => new Safe(
+		strings
+			.reduce((out, chunk, i) => out + chunk + (i < values.length ? markup(values[i]) : ''), '')
+			.replace(/>\s+</g, '><') // only raw tags can touch here: every value is escaped
+			.trim(),
+	);
+
+	const icon = new Safe(iconContent); // trusted: our own mercure.svg, read server-side
+
+	// ─── Formatting ──────────────────────────────────────────────────────────────
+	const format = {
+		time: (t) => `${new Date(t).toLocaleTimeString()}.${String(new Date(t).getMilliseconds()).padStart(3, '0')}`,
+		bytes: (n) => n < 1024 ? `${n} B` : `${(n / 1024).toFixed(1)} kB`,
+		ms: (seconds) => `${(seconds * 1000).toFixed(2)} ms`,
+		shortId: (id) => String(id).replace(/^urn:uuid:/, '').slice(0, 8),
+		url: (url) => String(url).replace(/^https?:\/\//, ''),
+		truncate: (text, max) => text.length > max ? `${text.slice(0, max)}…` : text,
+		pretty: (text) => { try { return JSON.stringify(JSON.parse(text), null, 2); } catch { return text; } },
+		describe: (env) => env.action && env.target
+			? `${env.action} → #${env.target}`
+			: env.action || env.type || env.topics.join(', '),
+	};
+
+	// How long after its publication the page received it; null when the clocks are not comparable
+	const latency = (received, env) => {
+		const ms = received.t - env.sentAt;
+		return ms >= 0 && ms < MAX_LATENCY ? Math.round(ms) : null;
+	};
+
+	// ─── Log rows ────────────────────────────────────────────────────────────────
+	const row = (entry, body, modifier = '') =>
+		html`<div class="mercure-live-entry ${modifier}" data-uid="${entry.uid}">${body}</div>`;
+
+	const delivery = (received, env) => {
+		const ms = latency(received, env);
+
+		return html`<span class="mercure-live-latency" title="received by ${received.label}">↓ ${received.label}${ms !== null && ` +${ms} ms`}</span>`;
+	};
+
+	const rows = {
+		// a publication, announced on the debug bus, with what this page received of it
+		pub: (entry) => {
+			const {env, deliveries} = entry;
+			const meta = [env.topics.join(', '), env.private && 'private', format.bytes(env.size), format.ms(env.duration)];
+
+			return row(entry, html`
+				<span class="mercure-live-time">${format.time(env.sentAt)}</span>
+				<span class="mercure-live-up">↑</span>
+				<span class="mercure-live-hub">[${env.hub ?? '?'}]</span>
+				<span class="mercure-live-what">${format.describe(env)}</span>
+				<span class="mercure-live-meta">${meta.filter(Boolean).join(' · ')}</span>
+				${deliveries.map((received) => delivery(received, env))}
+				${env.error
+					? html`<span class="mercure-live-data">${env.error.class}: ${env.error.message}</span>`
+					: env.preview && html`<span class="mercure-live-data">${env.preview}</span>`}
+			`, env.status === 'error' && 'mercure-live-error');
+		},
+
+		// an event received by the page whose publication was never announced (other publisher, no debugger…)
+		recv: (entry) => row(entry, html`
+			<span class="mercure-live-time">${format.time(entry.t)}</span>
+			<span class="mercure-live-down">↓</span>
+			<span class="mercure-live-hub">[${entry.label}]</span>
+			<span class="mercure-live-what">${entry.type}</span>
+			<span class="mercure-live-meta">${entry.id && `${format.shortId(entry.id)} · `}${format.bytes(entry.size)}</span>
+			<span class="mercure-live-data">${entry.data}</span>
+		`),
+
+		// a connection lifecycle: open, reconnecting, closed…
+		conn: (entry) => row(entry, html`
+			<span class="mercure-live-time">${format.time(entry.t)}</span>
+			<span class="mercure-live-down">●</span>
+			<span class="mercure-live-what">${entry.label} ${entry.phase}</span>
+			<span class="mercure-live-meta">${format.url(entry.url)}</span>
+		`, {closed: 'mercure-live-error', reconnecting: 'mercure-live-warn'}[entry.phase]),
+
+		turbo: (entry) => row(entry, html`
+			<span class="mercure-live-time">${format.time(entry.t)}</span>
+			<span class="mercure-live-down">⚙</span>
+			<span class="mercure-live-what">turbo ${entry.action}${entry.target && ` → #${entry.target}`}</span>
+			${!entry.found && html`<span class="mercure-live-meta">target not found: Turbo ignores this stream</span>`}
+		`, !entry.found && 'mercure-live-warn'),
+
+		naja: (entry) => row(entry, html`
+			<span class="mercure-live-time">${format.time(entry.t)}</span>
+			<span class="mercure-live-down">⚙</span>
+			<span class="mercure-live-what">naja ${entry.phase}</span>
+			<span class="mercure-live-meta">${entry.phase === 'error' ? entry.message : entry.snippets.join(', ')}</span>
+		`, entry.phase === 'error' && 'mercure-live-error'),
+
+		hint: (entry) => row(entry, html`<span class="mercure-live-meta">${entry.text}</span>`, 'mercure-live-warn'),
+	};
+
+	// ─── Connections table ───────────────────────────────────────────────────────
+	const connectionsTable = (connections) => html`
+		<table class="mercure-connections">
+			<thead>
+				<tr><th>State</th><th>Connection</th><th>URL</th><th>Events</th><th>Reconnects</th></tr>
+			</thead>
+			<tbody>
+				${connections.map((connection) => html`
+					<tr>
+						<td class="mercure-state mercure-state-${connection.state}">● ${connection.state}</td>
+						<td>${connection.label}</td>
+						<td title="${connection.url}">${format.url(connection.url)}</td>
+						<td>${connection.events}</td>
+						<td>${Math.max(0, connection.opened - 1)}</td>
+					</tr>
+				`)}
+			</tbody>
+		</table>
+	`;
+
+	// ─── Row pushed in the Tracy bar, like an AJAX request ──────────────────────────
+	const field = (label, value) =>
+		value === null || value === undefined || value === '' ? '' : html`
+            <tr>
+                <th>${label}</th>
+                <td>${value}</td>
+            </tr>`;
+
+	const barPanel = (env) => html`
+        <h1 style="display: flex; align-items: center; gap: 1rem;">
+            <span style="width: 32px;">${icon}</span>
+            <span>Mercure Event</span>
+        </h1>
+		<div class="tracy-inner">
+			<table>
+				<tbody>
+					${field('Hub', env.hub)}
+					${field('Time', format.time(env.sentAt))}
+					${field('ID', env.id)}
+                    ${field('Status', env.status)}
+					${field('Topics', env.topics.join(', '))}
+					${field('Type', env.type)}
+					${field('Action', env.action && `${env.action}${env.target ? ` → #${env.target}` : ''}`)}
+					${field('Template', env.template)}
+					${field('Private', env.private ? 'yes' : 'no')}
+					${field('Duration', format.ms(env.duration))}
+					${field('Memory', `${(env.memory / 1024).toFixed(2)} kB`)}
+                    ${field('Size', format.bytes(env.size))}
+					${field('Data', env.preview && html`<pre style="margin:0;white-space:pre;overflow-x:auto;max-width:500px">${format.pretty(env.preview)}</pre>`)}
+                    ${field('Error', env.error && `${env.error.class}: ${env.error.message}`)}
+				</tbody>
+			</table>
+		</div>
+		<div class="tracy-icons">
+			<a href="#" data-tracy-action="window" title="open in window">&curren;</a>
+			<a href="#" data-tracy-action="close" title="close window">&times;</a>
+		</div>
+	`;
+
+	const barRow = (env, id) => {
+		const label = `${env.status === 'error' ? '✗ ' : ''}${format.describe(env)}`;
+
+		return {
+			panels: String(html`
+				<div itemscope>
+					<div class="tracy-panel tracy-panel-ajax" id="${id}" data-tracy-content="${String(barPanel(env))}"></div>
+					<meta itemprop="tracy-snapshot" content="{}">
+				</div>
+			`),
+			bar: String(html`
+				<ul class="tracy-row" data-tracy-group="ajax">
+					<li>Mercure</li>
+					<li>
+                        <a href="#" rel="${id}">
+                            [${env.hub ?? '?'}]
+                            ${format.truncate(label, 40)}
+                            <span style="color:grey"> ⏱ ${format.ms(env.duration)}</span>
+                            <span style="color:grey"> 🖫 ${format.bytes(env.memory)}</span>
+                            <span style="color:grey"> 🛢 ${format.bytes(env.size)}</span>
+                        </a>
+                    </li>
+				</ul>
+			`),
+		};
+	};
+
+	// ─── The panel ─────────────────────────────────────────────────────────────────
+	class MercureEventLoader {
+		#entries = [];            // log entries, newest first
+		#published = new Map();   // publish id -> its 'pub' entry, to attach what the page received
+		#connections = new Map(); // connection id -> state shown in the table
+		#views = new Map();       // document or shadow root -> {log, table}: the panel, and its "window" popups
+		#uid = 0;
+		#barRows = 0;
+		#tableScheduled = false;
+
+		constructor() {
+			new MutationObserver(() => this.#attach()).observe(this.#root(), {childList: true, subtree: true});
+		}
+
+		// Tracy lives in a shadow root: document.getElementById() cannot see the bar
+		#root() {
+			return window.Tracy?.Debug?.shadow ?? document;
+		}
+
+		// The panel content is only inserted by Tracy when it is opened: render what happened until then
+		#attach() {
+			this.#register(this.#root());
+		}
+
+		// Tracy's "window" mode copies the panel into a popup, whose document nothing updates by itself:
+		// the panel calls this from there (the popup is same-origin, it reaches us through window.opener).
+		adopt(doc) {
+			this.#register(doc);
+			doc.defaultView?.addEventListener('pagehide', () => this.#views.delete(doc), {once: true});
+		}
+
+		#register(root) {
+			const log = root.getElementById('tracy-mercure-live');
+			const table = root.getElementById('tracy-mercure-connections');
+			const known = this.#views.get(root);
+
+			if ((!log && !table) || (known?.log === log && known?.table === table)) return;
+
+			const view = {log, table};
+			this.#views.set(root, view);
+			this.#renderConnections(view);
+			if (log && this.#entries.length) log.innerHTML = this.#entries.map((entry) => markup(rows[entry.kind](entry))).join('');
+		}
+
+		// the views still in a document (a closed popup is forgotten)
+		#live() {
+			this.#views.forEach((view, root) => {
+				if (!(view.log ?? view.table).isConnected) this.#views.delete(root);
+			});
+			return [...this.#views.values()];
+		}
+
+		// ── log ──
+		#add(entry) {
+			this.#attach();
+			entry.uid = ++this.#uid;
+			entry.t ??= Date.now();
+
+			this.#entries.unshift(entry);
+			if (this.#entries.length > MAX_ROWS) this.#drop(this.#entries.pop());
+
+			const line = markup(rows[entry.kind](entry));
+			this.#live().forEach(({log}) => {
+				log?.querySelector(':scope > .mercure-live-placeholder')?.remove();
+				log?.insertAdjacentHTML('afterbegin', line);
+			});
+
+			return entry;
+		}
+
+		#drop(entry) {
+			this.#live().forEach(({log}) => log?.querySelector(`[data-uid="${entry.uid}"]`)?.remove());
+			if (entry.kind === 'pub') this.#published.delete(entry.env.id);
+		}
+
+		#refresh(entry) {
+			const line = markup(rows[entry.kind](entry));
+			this.#live().forEach(({log}) => {
+				const el = log?.querySelector(`[data-uid="${entry.uid}"]`);
+				if (el) el.outerHTML = line;
+			});
+		}
+
+		// ── connections ──
+		#renderConnections(view) {
+			if (view.table && this.#connections.size) {
+				view.table.innerHTML = markup(connectionsTable([...this.#connections.values()]));
+			}
+		}
+
+		#scheduleConnections() {
+			if (this.#tableScheduled) return;
+			this.#tableScheduled = true;
+			queueMicrotask(() => {
+				this.#tableScheduled = false;
+				this.#live().forEach((view) => this.#renderConnections(view));
+			});
+		}
+
+		#onConnection(ev) {
+			const connection = this.#connections.get(ev.cid)
+				?? {label: ev.label, url: ev.url, state: 'connecting', opened: 0, events: 0};
+			this.#connections.set(ev.cid, connection);
+
+			const logAs = (phase) => this.#add({kind: 'conn', phase, label: ev.label, url: ev.url, t: ev.t});
+
+			switch (ev.kind) {
+				case 'open':
+					connection.opened++;
+					connection.state = 'open';
+					logAs(connection.opened > 1 ? 'reconnected' : 'open');
+					break;
+				case 'error': // readyState 0: the browser is retrying by itself; 2: it gave up
+					connection.state = ev.state === 2 ? 'closed' : 'reconnecting';
+					logAs(connection.state);
+					break;
+				case 'close':
+					connection.state = 'closed';
+					logAs('closed by the page');
+					break;
+				case 'event':
+					connection.events++;
+					break;
+			}
+
+			this.#scheduleConnections();
+		}
+
+		// ── publications and what the page received ──
+		#onBus(event) {
+			let env;
+			try { env = JSON.parse(event.data); } catch { return; }
+
+			const entry = this.#add({kind: 'pub', env, t: env.sentAt, deliveries: []});
+			// a failed publication has no id: nothing will ever be received for it
+			if (env.id) this.#track(entry);
+			this.#pushToBar(env);
+		}
+
+		#track(entry) {
+			const {id} = entry.env;
+			this.#published.set(id, entry);
+			if (this.#published.size > MAX_PUBLISHED) this.#published.delete(this.#published.keys().next().value);
+
+			// the page may have received the event before its announcement: fold those rows into this one
+			const orphans = this.#entries.filter((e) => e.kind === 'recv' && e.id === id);
+			orphans.forEach((orphan) => {
+				this.#entries.splice(this.#entries.indexOf(orphan), 1);
+				this.#live().forEach(({log}) => log?.querySelector(`[data-uid="${orphan.uid}"]`)?.remove());
+				entry.deliveries.push(orphan);
+			});
+			if (orphans.length) this.#refresh(entry);
+		}
+
+		#onReceived(ev) {
+			const published = ev.id ? this.#published.get(ev.id) : null;
+			if (!published) {
+				this.#add({...ev, kind: 'recv'});
+				return;
+			}
+
+			published.deliveries.push(ev);
+			this.#refresh(published);
+		}
+
+		#onHook(ev) {
+			if (ev.kind === 'turbo' || ev.kind === 'naja') {
+				this.#add(ev);
+				return;
+			}
+
+			this.#onConnection(ev);
+			if (ev.kind === 'event') this.#onReceived(ev);
+		}
+
+		#pushToBar(env) {
+			if (!window.Tracy?.Debug?.bar) return;
+
+			Tracy.Debug.loadAjax(barRow(env, `tracy-debug-panel-mercure-${++this.#barRows}`));
+		}
+
+		// ── start ──
+		#listenToBus(ES, hub) {
+			const url = new URL(hub.url);
+			url.searchParams.append(hub.isLegacy ? 'topic' : 'match', debugTopic);
+
+			const bus = {cid: `bus:${hub.url}`, url: hub.url, label: 'debug bus'};
+			this.#onConnection({kind: 'connect', ...bus});
+
+			const es = new ES(url.toString());
+			es.addEventListener(debugEvent, (event) => {
+				this.#onConnection({kind: 'event', ...bus});
+				this.#onBus(event);
+			});
+			es.addEventListener('open', () => this.#onConnection({kind: 'open', ...bus}));
+			es.addEventListener('error', () => this.#onConnection({kind: 'error', ...bus, state: es.readyState}));
+		}
+
+		start() {
+			// the panel uses the untouched constructor: its own connection must not show up as page traffic
+			const ES = window.__mercureDebug?.Native ?? window.EventSource;
+
+			// hubs sharing the same URL are the same hub: one connection is enough
+			const byUrl = new Map();
+			hubs.forEach((hub) => byUrl.has(hub.url) || byUrl.set(hub.url, hub));
+			byUrl.forEach((hub) => this.#listenToBus(ES, hub));
+
+			if (window.__mercureDebug) {
+				window.__mercureDebug.subscribe((ev) => this.#onHook(ev));
+			} else {
+				this.#add({kind: 'hint', text: 'Page connections are not observed: the page hook did not load before the panel.'});
+			}
+
+			return this;
+		}
+	}
+
+	window.tracyMercureEventLoader = new MercureEventLoader().start();
+})(
+    <?= Tracy\Helpers::jsonEncode($liveHubs, true) ?>,
+    <?= Tracy\Helpers::jsonEncode(TraceableBroadcaster::DEBUG_TOPIC, true) ?>,
+    <?= Tracy\Helpers::jsonEncode(TraceableBroadcaster::DEBUG_EVENT, true) ?>,
+    <?= Tracy\Helpers::jsonEncode($icon, true) ?>,
+);

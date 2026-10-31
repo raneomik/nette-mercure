@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Raneomik\NetteMercure\Bridge\DI\Dependency;
 
 use Nette\DI\ContainerBuilder;
-use Nette\DI\Definitions\Definition;
+use Nette\DI\Definitions\ServiceDefinition;
 use Nette\DI\Definitions\Statement;
 use Nette\DI\InvalidConfigurationException;
 use Raneomik\NetteMercure\Bridge\DI\Config\Claims;
@@ -36,14 +36,14 @@ final readonly class MercureHubsDefiner
     }
 
     /**
-     * @param array<string, Definition> $broadcasterDefinitions
+     * @param array<string, ServiceDefinition> $broadcasterDefinitions
      */
     public function postLoad(array $broadcasterDefinitions): void
     {
         $this->builder->addDefinition($this->extension->prefix('symfony.hub.registry'))
             ->setType(HubRegistry::class)
             ->setCreator(HubRegistry::class, [
-                array_first($broadcasterDefinitions),
+                current($broadcasterDefinitions) ?: null,
                 $broadcasterDefinitions,
             ])
             ->setAutowired(false)
@@ -56,7 +56,7 @@ final readonly class MercureHubsDefiner
         ;
     }
 
-    public function hubDefinition(\stdClass $config, string $name): Definition
+    public function hubDefinition(\stdClass $config, string $name): ServiceDefinition
     {
         $protocol = $config->protocolVersion;
         $publicUrl = $config->publicUrl ?? $config->url;
@@ -73,7 +73,7 @@ final readonly class MercureHubsDefiner
             ->setType(TokenFactoryInterface::class)
             ->setCreator(new Statement(DefaultClaimsTokenFactory::class, [
                 $decoratedFactoryDefinition,
-                new Statement([self::claimsStatement($name, $config), 'toArray']),
+                new Statement([self::claimsStatement($config), 'toArray']),
             ]))
             ->setAutowired(false)
         ;
@@ -115,7 +115,7 @@ final readonly class MercureHubsDefiner
      * Claims are built at runtime, as they may come from dynamic parameters.
      * With the Mercure protocol 1.0, missing RFC 9068 claims fall back to defaults.
      */
-    public static function claimsStatement(string $hubName, \stdClass $config): Statement
+    public static function claimsStatement(\stdClass $config): Statement
     {
         $claims = new Statement(Claims::class, [
             'iss' => $config->jwt->claims->iss,
@@ -132,11 +132,15 @@ final readonly class MercureHubsDefiner
 
     private function tokenFactoryStatement(\stdClass $jwt, ProtocolVersion $protocol, string $name): Statement
     {
-        $factory = $jwt->factory ?? (ProtocolVersion::V1 === $protocol ? WebTokenFactory::class : LcobucciFactory::class);
+        $factory = $jwt->factory ?? (
+            ProtocolVersion::V1 === $protocol
+            ? WebTokenFactory::class
+            : LcobucciFactory::class
+        );
 
-        if (WebTokenFactory::class === $factory && ProtocolVersion::V1 !== $protocol) {
+        if (null !== $jwt->factory && \in_array($factory, [WebTokenFactory::class, LcobucciFactory::class], true)) {
             throw new InvalidConfigurationException(\sprintf(
-                'Hub "%s": %s only supports the Mercure protocol 1.0, use %s for the legacy protocol.',
+                'Hub "%s": use `protocolVersion` to control the token factory (V1 → %s, legacy → %s); set `jwt.factory` only for custom implementations.',
                 $name,
                 WebTokenFactory::class,
                 LcobucciFactory::class,

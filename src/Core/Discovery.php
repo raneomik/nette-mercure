@@ -38,7 +38,13 @@ final readonly class Discovery
             ?? $this->request->getQuery('hubName')
         ;
 
-        $hubData = $this->config->getConfiguration($hub);
+        try {
+            // comes from the URL: "?hub[]=a" gives an array
+            $hubData = $this->config->getConfiguration(\is_string($hub) ? $hub : null);
+        } catch (\InvalidArgumentException) {
+            return;
+        }
+
         if (false === $hubData->autoDiscovery) {
             return;
         }

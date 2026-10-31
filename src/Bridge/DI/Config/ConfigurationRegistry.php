@@ -4,24 +4,35 @@ declare(strict_types=1);
 
 namespace Raneomik\NetteMercure\Bridge\DI\Config;
 
-final readonly class ConfigurationRegistry
+/**
+ * @implements \IteratorAggregate<string, Configuration>
+ */
+final readonly class ConfigurationRegistry implements \IteratorAggregate
 {
     /**
-     * @param array<string, Configuration> $configuredData
+     * @param array<string, Configuration> $configurations
      */
     public function __construct(
-        private iterable $configuredData,
+        private iterable $configurations,
     ) {
     }
 
     public function getConfiguration(?string $hubName = null): Configuration
     {
-        /** @var Configuration $defaultData */
-        $defaultData = array_first($this->configuredData);
         if (null === $hubName) {
-            return $defaultData;
+            /** @var string $firstKey */
+            $firstKey = array_key_first($this->configurations);
+
+            return $this->configurations[$firstKey];
         }
 
-        return $this->configuredData[$hubName] ?? $defaultData;
+        return $this->configurations[$hubName]
+            ?? throw new \InvalidArgumentException(sprintf('"%s" is not a known hub', $hubName))
+        ;
+    }
+
+    public function getIterator(): \Traversable
+    {
+        yield from $this->configurations;
     }
 }

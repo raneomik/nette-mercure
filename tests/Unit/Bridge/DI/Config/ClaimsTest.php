@@ -91,6 +91,13 @@ final class ClaimsTest extends TestCase
             ],
         ), $claims);
         Assert::equal(Claims::fromPublicUrl($hubUrl), (new Claims())->withPublicUrl($hubUrl));
+
+        // a pre-set aud must not be overwritten by the default
+        Assert::same(
+            'https://custom-aud.example.com',
+            (new Claims(aud: 'https://custom-aud.example.com'))->withPublicUrl($hubUrl)
+                ->aud,
+        );
     }
 }
 

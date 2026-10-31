@@ -64,13 +64,6 @@ final class TokenFactoryTest extends ContainerTestCase
             'assertPayload' => $assertV1,
         ];
 
-        yield 'v1 lcobucci' => [
-            'protocolVersion' => '1.0',
-            'factory' => LcobucciFactory::class,
-            'expectedFactory' => LcobucciFactory::class,
-            'assertPayload' => $assertV1,
-        ];
-
         yield 'legacy default factory' => [
             'protocolVersion' => '0.x',
             'factory' => null,
@@ -120,21 +113,20 @@ final class TokenFactoryTest extends ContainerTestCase
         $assertPayload($this->decodeJwtPayload($hub->getProvider()->getJwt()));
     }
 
-    public function testWebTokenFactoryRejectsLegacyProtocol(): void
+    public function testBuiltinFactoryOverrideIsRejected(): void
     {
-        $webTokenFactory = WebTokenFactory::class;
-
-        Assert::exception(
-            fn (): Container => $this->createContainer("
-            mercure:
-                protocolVersion: '0.x'
-                jwt:
-                    key: jwt-secret
-                    factory: {$webTokenFactory}
-            "),
-            InvalidConfigurationException::class,
-            '~only supports the Mercure protocol 1.0~',
-        );
+        foreach ([WebTokenFactory::class, LcobucciFactory::class] as $factory) {
+            Assert::exception(
+                fn (): Container => $this->createContainer("
+                mercure:
+                    jwt:
+                        key: jwt-secret
+                        factory: {$factory}
+                "),
+                InvalidConfigurationException::class,
+                '~use `protocolVersion`~',
+            );
+        }
     }
 
     public function testFullSigningKeyAndClaimsConfiguration(): void

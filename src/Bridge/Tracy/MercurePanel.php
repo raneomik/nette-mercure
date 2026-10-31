@@ -4,30 +4,32 @@ declare(strict_types=1);
 
 namespace Raneomik\NetteMercure\Bridge\Tracy;
 
+use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Bridge\Tracy\Value\HubData;
-use Raneomik\NetteMercure\Bridge\Utils\BroadcastersLoader;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
+use Symfony\Component\Mercure\ProtocolVersion;
 use Tracy;
 
+/**
+ * @phpstan-type LightHub array{name: string, url: string, isLegacy: bool}
+ */
 final readonly class MercurePanel implements Tracy\IBarPanel
 {
     private Broadcasters $broadcasters;
 
+    /**
+     * @var LightHub[]
+     */
+    private array $liveHubs;
+
     private string $icon;
 
-    private string $jsFilename;
-
     public function __construct(
-        private BroadcastersLoader $broadcastersLoader,
-        private ?string $hotReloadUrl = null,
-        ?string $jsFilename = null,
+        private \Closure $broadcastersLoader,
+        private ConfigurationRegistry $hubsConfig,
+        private CustomScriptsLoader $customScriptsLoader,
     ) {
         $this->icon = file_get_contents(__DIR__ . '/dist/mercure.svg') ?: '';
-
-        if (null !== $hotReloadUrl) {
-            $this->jsFilename = $jsFilename ?? __DIR__ . '/dist/hotReload.js';
-            Tracy\Debugger::$customJsFiles[] = $this->hotReloadScript();
-        }
     }
 
     public function getTab(): string
@@ -36,8 +38,12 @@ final readonly class MercurePanel implements Tracy\IBarPanel
             $name = 'Mercure';
             $icon = $this->icon;
             $count = $this->broadcasters()
-                ->count()
-            ;
+                ->count();
+            $scripts = $this->customScriptsLoader->scripts(
+                $this->liveEventsHubs(),
+                $icon,
+            );
+            $nonce = Tracy\Helpers::getNonce(true);
 
             require __DIR__ . '/dist/tab.phtml';
         });
@@ -47,7 +53,10 @@ final readonly class MercurePanel implements Tracy\IBarPanel
     {
         return Tracy\Helpers::capture(function (): void {
             $hubData = new HubData($this->broadcasters());
+            $hubsConfig = $this->hubsConfig;
             $icon = $this->icon;
+            $isAjax = $this->isAjax();
+            $nonce = Tracy\Helpers::getNonce(true);
 
             require __DIR__ . '/dist/panel.phtml';
         });
@@ -58,19 +67,29 @@ final readonly class MercurePanel implements Tracy\IBarPanel
         return $this->broadcasters ??= ($this->broadcastersLoader)();
     }
 
-    private function hotReloadScript(): string
+    /**
+     * @return LightHub[]
+     */
+    private function liveEventsHubs(): array
     {
-        $js = Tracy\Helpers::capture(function (): void {
-            $hotReloadUrl = $this->hotReloadUrl;
-
-            require __DIR__ . '/dist/hotReload.js.phtml';
-        });
-
-        // rewritten when FRANKENPHP_HOT_RELOAD changes, untouched otherwise
-        if (@file_get_contents($this->jsFilename) !== $js) {
-            file_put_contents($this->jsFilename, $js);
+        if (isset($this->liveHubs)) {
+            return $this->liveHubs;
         }
 
-        return $this->jsFilename;
+        $hubs = [];
+        foreach ($this->hubsConfig as $hubName => $config) {
+            $hubs[] = [
+                'name' => $hubName,
+                'url' => $config->hubUrl,
+                'isLegacy' => ProtocolVersion::Legacy === $config->protocolVersion,
+            ];
+        }
+
+        return $this->liveHubs = $hubs;
+    }
+
+    private function isAjax(): bool
+    {
+        return isset($_SERVER['HTTP_X_REQUESTED_WITH']) || isset($_SERVER['HTTP_X_TRACY_AJAX']);
     }
 }
