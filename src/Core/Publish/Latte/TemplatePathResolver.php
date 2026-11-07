@@ -31,21 +31,16 @@ final class TemplatePathResolver
         }
 
         $templateCandidates = [];
-        foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 4) as $trace) {
+        foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 5) as $trace) {
             $file = $trace['file'] ?? '';
 
-            $this->resolvedDir = \dirname($file, 1) . '/';
-            $templateCandidates[] = $templateCandidate = $this->resolvedDir . ltrim($templatePath, '/');
+            foreach ([1, 2, 3] as $position) {
+                $this->resolvedDir = \dirname($file, $position) . '/';
+                $templateCandidates[] = $templateCandidate = $this->resolvedDir . ltrim($templatePath, '/');
 
-            if (file_exists($templateCandidate)) {
-                return $templateCandidate;
-            }
-
-            $this->resolvedDir = \dirname($file, 2) . '/';
-            $templateCandidates[] = $templateCandidate = $this->resolvedDir . ltrim($templatePath, '/');
-
-            if (file_exists($templateCandidate)) {
-                return $templateCandidate;
+                if (file_exists($templateCandidate)) {
+                    return $templateCandidate;
+                }
             }
         }
 

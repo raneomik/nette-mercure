@@ -77,11 +77,9 @@ final readonly class BroadcastersDefiner
      */
     public function postLoad(array $broadcasterDefinitions): void
     {
-        $appDir = $this->builder->parameters['appDir'] ?? false;
-
         $this->builder->addDefinition('latte.templatePathResolver')
             ->setType(TemplatePathResolver::class)
-            ->setCreator(TemplatePathResolver::class, $appDir ? [$appDir] : [])
+            ->setCreator(TemplatePathResolver::class)
             ->setAutowired(false)
         ;
 
