@@ -44,7 +44,7 @@ final class SubscriberTest extends TestCase
         Assert::same('http://hub.example.com?match=test', $jwtData->subscribeUrl);
         Assert::type(\DateTimeInterface::class, $jwtData->jwt->ttl);
 
-        $jwtData = $subscriber->subscribe();
+        $jwtData = $subscriber->subscribe('*');
         Assert::same('dummy-jwt-token-test-provider-token-*-', $jwtData->jwt->token);
     }
 
@@ -66,13 +66,13 @@ final class SubscriberTest extends TestCase
 
         parse_str('topics[0][actions][]=publish&topics[0][topics][]=*', $query);
         Assert::exception(
-            static fn (): \Raneomik\NetteMercure\Core\Subscribe\Value\SubscriptionData => $subscriber->subscribe(null, $query['topics']),
+            static fn (): \Raneomik\NetteMercure\Core\Subscribe\Value\SubscriptionData => $subscriber->subscribe($query['topics']),
             InvalidArgumentException::class,
         );
         Assert::null($provider->grants, 'no token for a Grant-shaped request');
 
         parse_str('topics[actions][]=publish', $query);
-        $subscriber->subscribe(null, $query['topics']);
+        $subscriber->subscribe($query['topics']);
 
         Assert::count(1, $provider->grants);
         Assert::same([Grant::ACTION_SUBSCRIBE], $provider->grants[0]->actions);
@@ -92,7 +92,7 @@ final class SubscriberTest extends TestCase
         ]));
 
         // the query itself is covered by SubscriptionQueryTest: only the hub and its protocol are picked here
-        Assert::same('https://hub?topic=%2Fchats%2F1', $subscriber->subscribe('legacy', '/chats/1')->subscribeUrl);
+        Assert::same('https://hub?topic=%2Fchats%2F1', $subscriber->subscribe('/chats/1', 'legacy')->subscribeUrl);
     }
 }
 

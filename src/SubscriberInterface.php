@@ -12,5 +12,5 @@ interface SubscriberInterface
      * @param array<string, string[]>|string|string[] $topics a topic, topics, or matcher type => patterns (protocol 1.0)
      * @param array<string, mixed> $extraClaims
      */
-    public function subscribe(?string $hubName, array|string $topics, array $extraClaims = []): SubscriptionData;
+    public function subscribe(array|string $topics, ?string $hubName = null, array $extraClaims = []): SubscriptionData;
 }

@@ -22,6 +22,14 @@ abstract class ContainerTestCase extends TestCase
     {
         mkdir($this->tmpDir(), recursive: true);
 
+        // Tracy's strict mode exit()s on a warning (e.g. under a mutant), skipping tearDown(): clean up at shutdown too
+        $tmpDir = $this->tmpDir();
+        register_shutdown_function(static function () use ($tmpDir): void {
+            if (is_dir($tmpDir)) {
+                Helpers::purge($tmpDir);
+                rmdir($tmpDir);
+            }
+        });
     }
 
     protected function tearDown(): void

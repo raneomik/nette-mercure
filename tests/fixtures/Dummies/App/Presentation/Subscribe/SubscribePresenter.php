@@ -35,7 +35,7 @@ final class SubscribePresenter extends Nette\Application\UI\Presenter
         }
 
         $this->sendJson(
-            $this->subscriber->subscribe($this->hub, $this->topics),
+            $this->subscriber->subscribe($this->topics, $this->hub),
         );
     }
 }

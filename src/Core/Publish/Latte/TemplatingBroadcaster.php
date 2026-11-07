@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Raneomik\NetteMercure\Core\Publish\Latte;
 
+use Latte\Attributes\TemplateFilter;
+use Latte\Attributes\TemplateFunction;
 use Latte\Engine;
+use Nette\Application\LinkGenerator;
 use Raneomik\NetteMercure\BroadcasterInterface;
 use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
 use Symfony\Component\Mercure\HubInterface;
@@ -18,7 +21,15 @@ final readonly class TemplatingBroadcaster implements BroadcasterInterface
         private BroadcasterInterface $decorated,
         private TemplatePathResolver $templatePathResolver,
         private Engine $latte,
+        ?LinkGenerator $linkGenerator = null,
     ) {
+        if ($linkGenerator instanceof LinkGenerator) {
+            $links = new BroadcastLinks($linkGenerator);
+            $this->latte
+                ->addProvider('uiControl', $links)
+                ->addProvider('uiPresenter', $links)
+            ;
+        }
     }
 
     #[\Override]
@@ -52,7 +63,11 @@ final readonly class TemplatingBroadcaster implements BroadcasterInterface
             return $this->decorated->broadcast($topics, $data, $options);
         }
 
-        $data = \is_object($data) ? get_object_vars($data) : $data;
+        if (\is_object($data)) {
+            $this->registerTemplateHelpers($data);
+            $data = get_object_vars($data);
+        }
+
         $data = \is_string($data)
             ? [
                 'data' => $data,
@@ -79,6 +94,23 @@ final readonly class TemplatingBroadcaster implements BroadcasterInterface
             $renderedData,
             $options,
         );
+    }
+
+    /**
+     *  #[TemplateFilter] / #[TemplateFunction] support for provided element
+     */
+    private function registerTemplateHelpers(object $parameters): void
+    {
+        // matched by name, without autoloading: no match on a Latte that predates the attributes
+        foreach ((new \ReflectionObject($parameters))->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
+            if ([] !== $method->getAttributes(TemplateFilter::class)) {
+                $this->latte->addFilter($method->name, $method->getClosure($parameters));
+            }
+
+            if ([] !== $method->getAttributes(TemplateFunction::class)) {
+                $this->latte->addFunction($method->name, $method->getClosure($parameters));
+            }
+        }
     }
 
     private function resolveContentType(string $template): ContentType

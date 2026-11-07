@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Raneomik\NetteMercure\Bridge\DI\Dependency;
 
+use Nette\Application\LinkGenerator;
 use Nette\DI\ContainerBuilder;
 use Nette\DI\Definitions\ServiceDefinition;
 use Nette\DI\Definitions\Statement;
@@ -37,6 +38,9 @@ final readonly class BroadcastersDefiner
 
         $latteBroadcasterDef = null;
         if (false !== $latteDefinition) {
+            // null as well when nette/application is not installed
+            $linkGeneratorName = $this->builder->getByType(LinkGenerator::class);
+
             $latteBroadcasterDef = $this->builder->addDefinition($this->extension->prefix(\sprintf('broadcaster.%s.latte', $hubName)))
                 ->setType(TemplatingBroadcaster::class)
                 ->setCreator(TemplatingBroadcaster::class)
@@ -44,7 +48,9 @@ final readonly class BroadcastersDefiner
                     $plainBroadcasterDef,
                     '@latte.templatePathResolver',
                     new Statement('@latte.latteFactory::create'),
-                ])
+                ] + (null === $linkGeneratorName ? [] : [
+                    'linkGenerator' => '@' . $linkGeneratorName,
+                ]))
                 ->setAutowired(false)
             ;
         }
@@ -73,7 +79,7 @@ final readonly class BroadcastersDefiner
     {
         $this->builder->addDefinition('latte.templatePathResolver')
             ->setType(TemplatePathResolver::class)
-            ->setCreator(TemplatePathResolver::class)
+            ->setCreator(TemplatePathResolver::class, ['%appDir%'])
             ->setAutowired(false)
         ;
 
