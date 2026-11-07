@@ -20,8 +20,8 @@ final readonly class Subscriber implements SubscriberInterface
 
     #[\Override]
     public function subscribe(
+        array|string $topics,
         ?string $hubName = null,
-        array|string $topics = ['*'],
         array $extraClaims = [],
     ): SubscriptionData {
         $hubData = $this->config->getConfiguration($hubName);

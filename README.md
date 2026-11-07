@@ -1,5 +1,5 @@
 Nette Mercure Extension
-=================
+=======================
 
 [![.github/workflows/ci.yml](https://github.com/raneomik/nette-mercure/actions/workflows/ci.yml/badge.svg?style=flat-square)](https://github.com/raneomik/nette-mercure/actions/workflows/ci.yml)
 [![.github/workflows/coverage.yml](https://github.com/raneomik/nette-mercure/actions/workflows/coverage.yml/badge.svg?style=flat-square)](https://github.com/raneomik/nette-mercure/actions/workflows/coverage.yml)
@@ -35,7 +35,7 @@ extensions:
 
 _JWT options to set. Secret, publish & subscribe can be configured at [jwt.io](https://www.jwt.io/#token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZXJjdXJlIjp7InB1Ymxpc2giOlsiKiJdfX0.iHLdpAEjX4BqCsHJEegxRmO-Y6sMxXwNATrQyRNt3GY)_
 ```neon
-# Configure one default Mercure hub (e.g.:  hub is confgigured to be on same host in frankenphp environment)
+# Configure one default Mercure hub (e.g.:  hub is configured to be on same host in frankenphp environment)
 mercure:
 	url: '%baseUrl%/.well-known/mercure' # URL used by the server to publish updates
 	publicUrl: 'https://example.com/.well-known/mercure' # Optional, defaults to "url". URL used by browsers (discovery, subscription, cookie)
@@ -61,17 +61,18 @@ mercure:
 			additional: # Optional, any other claim
 				tenant: acme
 		lifetime: # Optional, 0 by default (session.cookie_lifetime, or 3600 seconds), null for non expiring tokens. Same value for the publisher token, the subscriber tokens and the cookie (session cookie with null).
-    # following option depends on request parameter "hub" (or "hubName") if several hubs are defined in configuration
-    autoDiscovery: # false by default, to add Link header for Mercure hub discovery (https://mercure.rocks/spec#discovery)
+	# following option depends on request parameter "hub" (or "hubName") if several hubs are defined in configuration
+	autoDiscovery: # false by default, to add Link header for Mercure hub discovery (https://mercure.rocks/spec#discovery)
+	debugger: # Optional, defaults to %debugMode%. Tracy panel and "_debug/mercure" announcements (see Debug bus)
 
 # several Mercure hubs
 mercure:
-	one
+	one:
 		url: 'https://hub1.mercure.dev/.well-known/mercure'
 		jwt:
 			key: n3tt3-m3rcµr3-fr4nk3nphP-jwT-s3cr3t-k3y
 
-	two
+	two:
 		url: 'https://hub2.mercure.dev/.well-known/mercure'
 		jwt:
 			key: n3tt3-m3rcµr3-fr4nk3nphP-jwT-s3cr3t-k3y
@@ -103,8 +104,8 @@ final class SomeService
 
 		// minimalist broadcast to default hub
 		$this->broadcaster->broadcast(
-			data: 'Hello Nette from Mercure!', // ['message' => 'message'] / new Class('message')
-			topics: 'test-topic' // ['test-topic']),
+			data: 'Hello Nette from Mercure!', // or ['message' => 'message'] / new SomeParameters('message')
+			topics: 'test-topic', // or ['test-topic']
 		);
 
 		// broadcast to specific hub
@@ -240,7 +241,7 @@ final class SubscribePresenter extends Nette\Application\UI\Presenter
     public ?string $hub = null;
 
     #[Parameter]
-    public string|array $topics = ['*'];
+    public string|array $topics = ['*']; // avoid ['*'] as default: the token would grant every topic (for 3600s by default, see jwt.lifetime)
 
     public function __construct(
         private readonly SubscriberInterface $subscriber,
@@ -254,7 +255,7 @@ final class SubscribePresenter extends Nette\Application\UI\Presenter
         }
 
         $this->sendJson(
-            $this->subscriber->subscribe($this->hub, $this->topics),
+            $this->subscriber->subscribe($this->topics, $this->hub),
         );
     }
 }
@@ -269,12 +270,12 @@ import { EventSourcePolyfill } from 'event-source-polyfill';
 const response = await fetch('/subscribe?topics[]=/chats/1&topics[]=/chats/2', {
     headers: {'X-Requested-With': 'XMLHttpRequest'},
 });
-// {jwtToken, hubUrl, subscribeUrl, expiresAt, jwtExtraClaims}
+// {jwt: {token, ttl, extraClaims}, hubUrl, subscribeUrl}
 // subscribeUrl: hubUrl with the "match" (protocol 1.0) or "topic" (legacy) query, as built by {mercure()}
-const {jwtToken, subscribeUrl} = await response.json();
+const {jwt, subscribeUrl} = await response.json();
 
 const es = new EventSourcePolyfill(subscribeUrl, {
-    headers: {'Authorization': `Bearer ${jwtToken}`},
+    headers: {'Authorization': `Bearer ${jwt.token}`},
 });
 
 es.onmessage = event => {
@@ -300,8 +301,8 @@ You can also subscribe to [turbo-streams](https://turbo.hotwired.dev) :
 			template: 'test.stream.latte',
 			options: [
 /** @see \Raneomik\NetteMercure\Core\Publish\Latte\TurboStreamAction for available action blocks */
-				'action' => TurboStreamAction::Update
-				'target' => 'stream-container' // target container id to update in client side. Default is "stream-container"
+				'action' => TurboStreamAction::Update,
+				'target' => 'stream-container', // target container id to update client side, passed to the template as $target (null if not set)
 			],
 		);
 //...
@@ -325,7 +326,7 @@ You can also subscribe to [turbo-streams](https://turbo.hotwired.dev) :
     import * as Turbo from '@hotwired/turbo'; //npm install @hotwired/turbo
     Turbo.session.drive = false; // disable turbo-drive to avoid conflicts with naja forms
 
-    const eventSource = new EventSource($mercureUrl);
+    const eventSource = new EventSource(mercureUrl); // rendered by {mercure()} in your template
 
     eventSource.addEventListener('turbo-stream', event => {
         Turbo.renderStreamMessage(event.data);
@@ -337,17 +338,47 @@ You can also subscribe to [turbo-streams](https://turbo.hotwired.dev) :
         Turbo.disconnectStreamSource(eventSource);
     }
 
-    document.onclose = () => {
+    window.addEventListener('pagehide', () => {
         console.info("Bye !");
         Turbo.disconnectStreamSource(eventSource);
         eventSource.close();
-    };
+    });
+```
+
+### Links and helpers in broadcast templates
+
+A broadcast template is rendered once, for every subscriber, outside of any presenter.
+
+- With `nette/application`, `n:href`, `{link}` and `{plink}` work, as they do in Nette e-mails. The destination must be complete
+  (`Module:Presenter:action`, not `action` or `this`), the URLs are absolute (scheme and host of the request that broadcasts: behind a
+  proxy, configure `http: proxy:`; from the CLI, provide your own `LinkGenerator` with the public URL).
+- What needs a presenter or a control (`{control}`, `{form}`, ...) fails with an explicit `BroadcastException`: render it in the template
+  or pass the result as a parameter.
+- `n:nonce` is not meant for a broadcast: a nonce belongs to one response.
+- Translations are not supported yet: a publication is rendered once and sent as is to every subscriber of the topic,
+  so it cannot follow the language of each of them. For now, publish once per locale on a topic per locale (e.g. `/chats/1/fr`).
+- Pass an object as data to give a template its own helpers: its public methods marked `#[Latte\Attributes\TemplateFunction]` or
+  `#[Latte\Attributes\TemplateFilter]` become functions and filters (they stay registered on the broadcaster's engine until the next
+  object registers the same names):
+
+```php
+use Latte\Attributes\TemplateFunction;
+
+final class WaitingRoomsStream
+{
+    public function __construct(public array $rooms) {}
+
+    #[TemplateFunction]
+    public function gameLink(string $id): string { /* ... */ }
+}
+
+$broadcaster->broadcast('lobby', new WaitingRoomsStream($rooms), template: 'waitingRooms.stream.latte');
 ```
 
 ### Development mode
 
-Frankenphp [HotReload](https://frankenphp.dev/docs/hot-reload/#enabling-frankenphp-hot-reload) feature requires "anonymous" mercure configuration.
-Tracy bar Live mercure event listening follows this requirement. 
+FrankenPHP [HotReload](https://frankenphp.dev/docs/hot-reload/#enabling-frankenphp-hot-reload) feature requires "anonymous" mercure configuration.
+Tracy bar Live mercure event listening follows this requirement.
 
 #### Debug bus
 
@@ -386,11 +417,12 @@ Resources
 * [<img src="https://frankenphp.dev/favicon.ico" width="13"> FrankenPHP Real-time](https://frankenphp.dev/docs/mercure/)
 and [Hot-Reload](https://frankenphp.dev/docs/hot-reload/)
 * [<img src="https://nette.org/favicon.ico" width="13"> Nette](https://nette.org), [<img src="https://latte.nette.org/favicon.ico" width="13"> Latte](https://latte.nette.org), [<img src="https://tester.nette.org/favicon.ico" width="13"> Tester](https://tester.nette.org/en), [<img src="https://tracy.nette.org/favicon.ico" width="13"> Tracy](https://tracy.nette.org/en/)
+* [<img src="https://infection.github.io/images/logo-dark.svg" width="13"> Infection](https://infection.github.io) & [home-made Tester adapter](https://github.com/raneomik/infection-tester-adapter)
 
 Known issues
 ------------
 
-- "anonymous" option for mercure in Caddy configuration seems to work only with Symfony\Mercure\FrankenPhpHub and the FrankenPHP built-in `mercure_publish` function.
+- "anonymous" option for mercure in Caddy configuration seems to work only with Symfony\Component\Mercure\FrankenPhpHub and the FrankenPHP built-in `mercure_publish` function.
   HttpClient shows errors such as "405 Method Not Allowed" in this case.
 
 - [TODO](TODO.md)
