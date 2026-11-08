@@ -29,22 +29,10 @@ jobs:
           coverage: pcov
           tools: ${{ env.tools }}
 
-      - name: Get composer cache directory
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
-
-      - name: Cache dependencies
-        uses: actions/cache@v6
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: composer-${{ runner.os }}-${{ matrix.php-version }}-${{ hashFiles('composer.*') }}
-          restore-keys: |
-            composer-${{ runner.os }}-${{ matrix.php-version }}-
-            composer-${{ runner.os }}-
-            composer-
-
       - name: Install dependencies
-        run: composer install --no-interaction --no-progress --prefer-dist
+        uses: ramsey/composer-install@4.0.0
+        with:
+          composer-options: --prefer-dist
 
       - name: Run Infection
         run: composer infection -- --logger-github
