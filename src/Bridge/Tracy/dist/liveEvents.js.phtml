@@ -8,9 +8,10 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
  *
  * @var $liveHubs LightHub[]
  * @var $icon string
+ * @var $css string
  */
 ?>
-((hubs, debugTopic, debugEvent, iconContent) => {
+((hubs, debugTopic, debugEvent, iconContent, css) => {
 	'use strict';
 
 	if (window.tracyMercureEventLoader) return;
@@ -131,17 +132,24 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 		hint: (entry) => row(entry, html`<span class="mercure-live-meta">${entry.text}</span>`, 'mercure-live-warn'),
 	};
 
+	const AUTH_HINTS = {
+		JWT: 'Authorization: Bearer header',
+		cookie: 'the browser sends the authorization cookie, if one is set',
+		anonymous: 'cross-origin without credentials: no cookie, no token',
+	};
+
 	// ─── Connections table ───────────────────────────────────────────────────────
 	const connectionsTable = (connections) => html`
 		<table class="mercure-connections">
 			<thead>
-				<tr><th>State</th><th>Connection</th><th>URL</th><th>Events</th><th>Reconnects</th></tr>
+				<tr><th>State</th><th>Connection</th><th>Auth</th><th>URL</th><th>Events</th><th>Reconnects</th></tr>
 			</thead>
 			<tbody>
 				${connections.map((connection) => html`
 					<tr>
 						<td class="mercure-state mercure-state-${connection.state}">● ${connection.state}</td>
 						<td>${connection.label}</td>
+						<td title="${AUTH_HINTS[connection.auth]}">${connection.auth ?? '–'}</td>
 						<td title="${connection.url}">${format.url(connection.url)}</td>
 						<td>${connection.events}</td>
 						<td>${Math.max(0, connection.opened - 1)}</td>
@@ -154,41 +162,62 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 	// ─── Row pushed in the Tracy bar, like an AJAX request ──────────────────────────
 	const field = (label, value) =>
 		value === null || value === undefined || value === '' ? '' : html`
-            <tr>
-                <th>${label}</th>
-                <td>${value}</td>
-            </tr>`;
+            <dt>${label}</dt>
+            <dd>${value}</dd>
+        `;
 
-	const barPanel = (env) => html`
-        <h1 style="display: flex; align-items: center; gap: 1rem;">
-            <span style="width: 32px;">${icon}</span>
-            <span>Mercure Event</span>
-        </h1>
-		<div class="tracy-inner">
-			<table>
-				<tbody>
-					${field('Hub', env.hub)}
-					${field('Time', format.time(env.sentAt))}
-					${field('ID', env.id)}
-                    ${field('Status', env.status)}
-					${field('Topics', env.topics.join(', '))}
-					${field('Type', env.type)}
-					${field('Action', env.action && `${env.action}${env.target ? ` → #${env.target}` : ''}`)}
-					${field('Template', env.template)}
-					${field('Private', env.private ? 'yes' : 'no')}
-					${field('Duration', format.ms(env.duration))}
-					${field('Memory', `${(env.memory / 1024).toFixed(2)} kB`)}
-                    ${field('Size', format.bytes(env.size))}
-					${field('Data', env.preview && html`<pre style="margin:0;white-space:pre;overflow-x:auto;max-width:500px">${format.pretty(env.preview)}</pre>`)}
-                    ${field('Error', env.error && `${env.error.class}: ${env.error.message}`)}
-				</tbody>
-			</table>
-		</div>
-		<div class="tracy-icons">
-			<a href="#" data-tracy-action="window" title="open in window">&curren;</a>
-			<a href="#" data-tracy-action="close" title="close window">&times;</a>
-		</div>
-	`;
+	// same markup and stylesheet as the panel: Tracy only inserts a panel's content when it is opened
+	const barPanel = (env) => {
+		const titled = Boolean(env.action || env.type); // otherwise the topics are the title
+		const meta = [env.hub, titled && env.topics.join(', '), env.private && 'private', env.template, format.bytes(env.size)];
+
+		return html`
+			${new Safe(`<style class="tracy-debug">${css}</style>`)}
+			<h1 style="display: flex; align-items: center; gap: 10px;">
+				<span style="width: 28px; height: 28px;">${icon}</span>
+				<span>Mercure</span>
+			</h1>
+			<div class="tracy-inner">
+				<div class="tracy-inner-container mercure">
+					<section class="mercure-section">
+						<header>
+							<h2>Published</h2>
+							<small>${format.time(env.sentAt)}</small>
+							${env.status === 'error' && html`<small class="mercure-failure">failed</small>`}
+						</header>
+						<div class="mercure-body">
+							<div class="mercure-message ${env.status === 'error' && 'mercure-failed'}">
+								<div class="mercure-message-title">
+									<b>${format.describe(env)}</b>
+									<small>${format.ms(env.duration)}</small>
+								</div>
+								<div class="mercure-meta">${meta.filter(Boolean).join(' · ')}</div>
+								${env.error && html`<div class="mercure-meta mercure-failure">${env.error.class}: ${env.error.message}</div>`}
+								${env.preview
+									? html`<pre class="mercure-preview">${format.pretty(env.preview)}</pre>`
+									: env.private && html`<div class="mercure-meta">private: its content is not announced on the debug topic</div>`}
+							</div>
+						</div>
+					</section>
+					<section class="mercure-section">
+						<header><h2>Details</h2></header>
+						<div class="mercure-body">
+							<dl class="mercure-config">
+								${field('ID', env.id)}
+								${field('SSE type', env.type)}
+								${field('Topics', env.topics.join(', '))}
+								${field('Memory', format.bytes(env.memory))}
+							</dl>
+						</div>
+					</section>
+				</div>
+			</div>
+			<div class="tracy-icons">
+				<a href="#" data-tracy-action="window" title="open in window">&curren;</a>
+				<a href="#" data-tracy-action="close" title="close window">&times;</a>
+			</div>
+		`;
+	};
 
 	const barRow = (env, id) => {
 		const label = `${env.status === 'error' ? '✗ ' : ''}${format.describe(env)}`;
@@ -204,14 +233,11 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 				<ul class="tracy-row" data-tracy-group="ajax">
 					<li>Mercure</li>
 					<li>
-                        <a href="#" rel="${id}">
-                            [${env.hub ?? '?'}]
-                            ${format.truncate(label, 40)}
-                            <span style="color:grey"> ⏱ ${format.ms(env.duration)}</span>
-                            <span style="color:grey"> 🖫 ${format.bytes(env.memory)}</span>
-                            <span style="color:grey"> 🛢 ${format.bytes(env.size)}</span>
-                        </a>
-                    </li>
+						<a href="#" rel="${id}">
+							[${env.hub ?? '?'}] ${format.truncate(label, 40)}
+							<span style="color:grey"> ${format.ms(env.duration)} · ${format.bytes(env.size)}</span>
+						</a>
+					</li>
 				</ul>
 			`),
 		};
@@ -318,7 +344,7 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 
 		#onConnection(ev) {
 			const connection = this.#connections.get(ev.cid)
-				?? {label: ev.label, url: ev.url, state: 'connecting', opened: 0, events: 0};
+				?? {label: ev.label, url: ev.url, auth: ev.auth, state: 'connecting', opened: 0, events: 0};
 			this.#connections.set(ev.cid, connection);
 
 			const logAs = (phase) => this.#add({kind: 'conn', phase, label: ev.label, url: ev.url, t: ev.t});
@@ -440,4 +466,5 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
     <?= Tracy\Helpers::jsonEncode(TraceableBroadcaster::DEBUG_TOPIC, true) ?>,
     <?= Tracy\Helpers::jsonEncode(TraceableBroadcaster::DEBUG_EVENT, true) ?>,
     <?= Tracy\Helpers::jsonEncode($icon, true) ?>,
+    <?= Tracy\Helpers::jsonEncode($css, true) ?>,
 );

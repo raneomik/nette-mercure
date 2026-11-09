@@ -39,9 +39,10 @@ final class CustomScriptsLoaderTest extends TestCase
 
     public function testThePageHookIsInstalledBeforeThePanelListensToIt(): void
     {
-        $scripts = (new CustomScriptsLoader())->scripts(self::HUBS, 'icon');
+        $scripts = (new CustomScriptsLoader())->scripts(self::HUBS, 'icon', '.mercure{}');
 
         Assert::count(2, $scripts);
+        Assert::contains('.mercure{}', $scripts[1], 'the rows pushed in the bar carry the panel stylesheet');
         Assert::contains('window.__mercureDebug =', $scripts[0], 'the hook comes first');
         Assert::contains('window.tracyMercureEventLoader =', $scripts[1], 'then the panel, which subscribes to it at start');
         Assert::contains(TraceableBroadcaster::DEBUG_TOPIC, $scripts[0]);

@@ -23,6 +23,13 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 		try { return IGNORED.some((topic) => decodeURIComponent(String(url)).includes(topic)); } catch { return false; }
 	};
 
+	// How a connection authenticates: a bearer token (polyfill), or the authorization cookie, which the browser
+	// sends by itself to a same-origin hub or with credentials (HttpOnly: whether it is set cannot be read here).
+	const sameOrigin = (url) => {
+		try { return new URL(url, location.href).origin === location.origin; } catch { return false; }
+	};
+	const authOf = (url, credentials, bearer = false) => bearer ? 'JWT' : credentials || sameOrigin(url) ? 'cookie' : 'anonymous';
+
 	const emit = (entry) => {
 		entry.t = Date.now();
 		buffer.push(entry);
@@ -38,7 +45,7 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 		const url = String(es.url ?? '');
 		if (isIgnored(url)) return es;
 
-		const connection = {cid: ++connections, url, label}; // identifies this connection among the others
+		const connection = {cid: ++connections, url, label, auth: authOf(url, es.withCredentials)}; // identifies this connection among the others
 
 		emit({kind: 'connect', ...connection});
 		es.addEventListener('open', () => emit({kind: 'open', ...connection}));
@@ -117,13 +124,15 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 
     const nativeFetch = window.fetch;
     window.fetch = function (input, init = {}) {
-        const accept = new Headers(init.headers ?? input?.headers).get('Accept') ?? '';
+        const headers = new Headers(init.headers ?? input?.headers);
+        const accept = headers.get('Accept') ?? '';
         if (!accept.includes('text/event-stream')) return nativeFetch.apply(this, arguments);
 
         const url = String(input?.url ?? input);
         if (isIgnored(url)) return nativeFetch.apply(this, arguments);
 
-        const connection = {cid: ++connections, url, label: 'fetch'};
+        const credentials = (init.credentials ?? input?.credentials) === 'include';
+        const connection = {cid: ++connections, url, label: 'fetch', auth: authOf(url, credentials, headers.has('Authorization'))};
         emit({kind: 'connect', ...connection});
 
         return nativeFetch.apply(this, arguments).then((response) => {

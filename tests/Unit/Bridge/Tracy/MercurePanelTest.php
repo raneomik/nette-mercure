@@ -110,26 +110,54 @@ final class MercurePanelTest extends TestCase
             ],
         ], true), $panel->getTab());
 
-        // current page: live events and config, no metrics
+        // current page: live events and config; what was published was drained by the bars rendered above
         $page = $panel->getPanel();
-        Assert::contains('tracy-mercure-live', $page);
-        Assert::contains('mercure-config', $page);
+        Assert::contains('id="tracy-mercure-live"', $page);
+        Assert::contains('class="mercure-config"', $page);
         Assert::contains('Public URL', $page);
+        Assert::contains('__Secure-mercure_access_token: not set by this response', $page);
+        Assert::contains('mercureAuthorization: not set by this response', $page, 'legacy hub');
         Assert::contains('http://nullhub.example.com', $page);
-        Assert::notContains('Total Size', $page);
+        Assert::contains('Nothing published by this request.', $page);
 
-        // ajax: metrics of the hubs that sent something and config, no live events
+        // the tab counts what the request published, the panel rendered after it shows the same messages
+        $broadcaster->broadcast('test', 'Hello, Mercure!');
+        $panel = new MercurePanel(...$params);
+        Assert::contains('<span style="font-weight:bold">1</span>', $panel->getTab());
+        $page = $panel->getPanel();
+        Assert::contains('1 message', $page);
+        Assert::contains('15 B', $page);
+        Assert::notContains('15 B', $panel->getPanel(), 'drained: a worker must not show them in the next bar');
+
+        // ajax: a row of the page bar, without live events nor scripts
+        $broadcaster->broadcast('test', 'Hello, Mercure!');
         $_SERVER['HTTP_X_TRACY_AJAX'] = '1';
         try {
-            $ajax = (new MercurePanel(...$params))->getPanel();
+            $panel = new MercurePanel(...$params);
+            Assert::notContains('<script', $panel->getTab());
+            $ajax = $panel->getPanel();
         } finally {
             unset($_SERVER['HTTP_X_TRACY_AJAX']);
         }
 
-        Assert::contains('Total Size', $ajax);
         Assert::contains('15 B', $ajax);
-        Assert::contains('mercure-config', $ajax);
-        Assert::notContains('tracy-mercure-live', $ajax);
+        Assert::contains('class="mercure-config"', $ajax);
+        Assert::notContains('id="tracy-mercure-live"', $ajax);
+    }
+
+    public function testAuthorizationCookieOfTheResponse(): void
+    {
+        $claims = '{"mercure":{"subscribe":["/chats/1"]}}';
+        $token = 'eyJhbGciOiJIUzI1NiJ9.' . rtrim(strtr(base64_encode($claims), '+/', '-_'), '=') . '.signature';
+
+        Assert::same($claims, MercurePanel::cookiePayload('mercureAuthorization', [
+            'Content-Type: text/html',
+            'Set-Cookie: other=a.b.c; path=/',
+            "Set-Cookie: mercureAuthorization={$token}; path=/.well-known/mercure; HttpOnly",
+        ]));
+        Assert::null(MercurePanel::cookiePayload('mercureAuthorization', ['Set-Cookie: mercureAuthorization=deleted; Max-Age=0']), 'cleared');
+        Assert::null(MercurePanel::cookiePayload('mercureAuthorization', ["Set-Cookie: __Secure-mercure_access_token={$token}"]), 'another hub protocol');
+        Assert::null(MercurePanel::cookiePayload('mercureAuthorization', []));
     }
 }
 

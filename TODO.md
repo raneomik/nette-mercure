@@ -3,15 +3,15 @@ TODO
 
 - [x] ~~Leverage confusions by separating clearly the active publish/broadcast from the passive subscribe/consume and discovery parts~~
 - [x] ~~Cleanup & refactor codebase and tests & remove unnecessary parts (eg. BroadcastContext related)~~
-- [ ] Enhance tests & codebase
+- [x] ~~Enhance tests & codebase~~
   - [x] ~~Add functional smoke test to check correct service integration, as Integration tests seems insufficient~~
   - [x] ~~Add mutation testing - Infection~~
   - [x] ~~Rework tests & codebase to augment mutation score~~
 - [x] ~~Provide a subscribing service (add discovery Link header, JWT and auth cookie generations, ...)~~
 - [x] ~~Add more documentation & examples (eg. subscribing endpoint setup, turbo streams,...) to README.md~~
-- [ ] Enhance Tracy panel
+- [x] ~~Enhance Tracy panel~~
   -  [x] ~~Add "received messages" using event source & subscriber for each hub~~
-  -  [ ] Add config (discovery) & auth data type (cookie, jwt)
+  -  [x] ~~Add config (discovery) & auth data type (cookie, jwt)~~
 - [ ] Translations in broadcast templates (one rendering and topic per locale ?) - to see while translating the rock-paper-scissors game
 - [ ] Integration examples & demos
     - [ ] Shared TODO list/"document" editor, with simple eventsource

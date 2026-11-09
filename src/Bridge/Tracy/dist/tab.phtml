@@ -1,14 +1,22 @@
 <?php declare(strict_types=1);
 
+use Raneomik\NetteMercure\Bridge\Tracy\Value\HubData;
+
 /**
  * @var $icon string
- * @var $name string
- * @var $count int
+ * @var $hubData HubData publications of this request (worker mode: of the requests without a bar before it too)
  * @var $scripts string[]
  * @var $nonce string
  */
+$sent = $hubData->messageCount;
+$failed = $hubData->errorCount;
 ?>
-<span title="Raneomik\NetteMercure <?= Tracy\Helpers::escapeHtml($name) ?>">
-	<?= $icon ?>
+<span title="Mercure<?= $sent ? ': ' . $sent . ' published' . ($failed ? ', ' . $failed . ' failed' : '') : '' ?>">
+	<?= $icon ?><?php
+	// no empty label: its margin (.2em) would pad the icon on the right only
+	if ($sent): ?><span class="tracy-label"><?php
+		if ($sent > $failed): ?><span style="font-weight:bold"><?= $sent - $failed ?></span><?php endif ?><?php
+		if ($failed): ?> <span style="color:#fff;background:#c00;border-radius:3px;padding:0 3px;font-weight:bold"><?= $failed ?></span><?php endif
+	?></span><?php endif ?>
 </span>
 <?php foreach ($scripts as $js): ?><script<?= $nonce ?>><?= $js ?></script><?php endforeach ?>

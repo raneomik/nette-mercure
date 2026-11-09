@@ -22,6 +22,12 @@ final class TraceableBroadcaster implements BroadcasterInterface
     public const string DEBUG_EVENT = 'mercure-debug';
 
     /**
+     * In worker mode (FrankenPHP) this service outlives the request: the panel drains the trace when rendered,
+     * a request without a bar (API, CLI) does not, hence the cap.
+     */
+    private const int MAX_TRACED = 50;
+
+    /**
      * @var BroadcastData[]
      */
     private array $broadcastData = [];
@@ -92,6 +98,8 @@ final class TraceableBroadcaster implements BroadcasterInterface
             $this->hubName,
         );
 
+        $this->broadcastData = \array_slice($this->broadcastData, -self::MAX_TRACED);
+
         $this->publishDebug($broadcastData);
 
         return $messageId;
@@ -103,6 +111,18 @@ final class TraceableBroadcaster implements BroadcasterInterface
     public function broadcastData(): array
     {
         return $this->broadcastData;
+    }
+
+    /**
+     * The traced publications, forgotten once read: each one is shown by a single Tracy bar.
+     *
+     * @return BroadcastData[]
+     */
+    public function drain(): array
+    {
+        [$drained, $this->broadcastData] = [$this->broadcastData, []];
+
+        return $drained;
     }
 
     public function count(): int

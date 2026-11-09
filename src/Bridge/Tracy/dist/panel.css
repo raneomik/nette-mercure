@@ -1,0 +1,106 @@
+/* px, not rem: rem follows the host page's root font size.
+   Text and rules derive from the panel's text color: Tracy's light theme and custom dark ones alike. */
+#tracy-debug .mercure {
+	--mercure-muted: color-mix(in srgb, currentColor 62%, transparent);
+	--mercure-rule: color-mix(in srgb, currentColor 14%, transparent);
+	--mercure-tint: color-mix(in srgb, currentColor 4%, transparent);
+	--mercure-accent: color-mix(in srgb, #0b7285 80%, currentColor);
+	--mercure-error: #e0352b;
+	--mercure-warning: #c77d0a;
+	--mercure-ok: #2f9e5c;
+	min-width: 520px;
+}
+#tracy-debug .mercure :is(p, ul, dl, dd, h2, pre, table, details) { margin: 0; padding: 0; }
+#tracy-debug .mercure-section {
+	display: grid;
+	grid-template-columns: 7.5em minmax(0, 1fr);
+	column-gap: 18px;
+	padding: 14px 0;
+	border-top: 1px solid var(--mercure-rule);
+}
+#tracy-debug .mercure-section:first-child { border-top: 0; padding-top: 6px; }
+#tracy-debug .mercure-section > header h2 { font-size: 13px; line-height: 1.4; }
+#tracy-debug .mercure-section > header small { display: block; margin-top: 2px; color: var(--mercure-muted); font-size: 11px; }
+#tracy-debug .mercure-section > header small.mercure-failure { color: var(--mercure-error); }
+#tracy-debug .mercure-body { display: grid; gap: 10px; align-content: start; min-width: 0; }
+#tracy-debug .mercure-muted { color: var(--mercure-muted); }
+
+/* published messages */
+#tracy-debug .mercure-sent { display: grid; gap: 10px; list-style: none; }
+#tracy-debug .mercure-message { display: grid; gap: 3px; min-width: 0; padding-left: 10px; border-left: 2px solid var(--mercure-accent); }
+#tracy-debug .mercure-message.mercure-failed { border-left-color: var(--mercure-error); }
+#tracy-debug .mercure-message-title { display: flex; justify-content: space-between; gap: 12px; }
+#tracy-debug .mercure-message-title b { overflow-wrap: anywhere; }
+#tracy-debug .mercure-message-title small { color: var(--mercure-muted); font-size: 11px; white-space: nowrap; }
+#tracy-debug .mercure-meta { color: var(--mercure-muted); font-size: 11px; overflow-wrap: anywhere; }
+#tracy-debug .mercure-failure { color: var(--mercure-error); }
+#tracy-debug .mercure-message .tracy-dump { padding: 0; }
+
+/* hubs */
+#tracy-debug .mercure-hub > summary { cursor: pointer; overflow-wrap: anywhere; list-style: none; }
+/* Tracy's reset drops the native marker */
+#tracy-debug .mercure-hub > summary::before { content: '▸'; display: inline-block; width: 1.2em; color: var(--mercure-muted); }
+#tracy-debug .mercure-hub[open] > summary::before { content: '▾'; }
+#tracy-debug .mercure-hub > .mercure-config { margin-left: 1.2em; }
+#tracy-debug .mercure-hub > summary small { color: var(--mercure-muted); font-size: 11px; }
+#tracy-debug .mercure-config { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 14px; margin-top: 6px; }
+#tracy-debug .mercure-config dt { color: var(--mercure-muted); }
+#tracy-debug .mercure-config dd { overflow-wrap: anywhere; }
+
+/* live: connections */
+#tracy-debug .mercure-connections { background: none; font-size: 11px; }
+#tracy-debug .mercure-connections :is(th, td) {
+	border: 0;
+	border-bottom: 1px solid var(--mercure-rule);
+	background: none;
+	padding: 3px 12px 3px 0;
+}
+#tracy-debug .mercure-connections th { color: var(--mercure-muted); font-size: 11px; font-weight: normal; }
+#tracy-debug .mercure-connections td[title] { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#tracy-debug .mercure-state { white-space: nowrap; }
+#tracy-debug .mercure-state-open { color: var(--mercure-ok); }
+#tracy-debug .mercure-state-connecting,
+#tracy-debug .mercure-state-reconnecting { color: var(--mercure-warning); }
+#tracy-debug .mercure-state-closed { color: var(--mercure-error); }
+
+/* live: log, newest first */
+#tracy-debug .mercure-live-log {
+	max-height: 280px;
+	overflow-y: auto;
+	font: 11px/1.5 Consolas, Menlo, monospace;
+	background: var(--mercure-tint);
+	border-left: 2px solid var(--mercure-rule);
+}
+#tracy-debug .mercure-live-entry {
+	display: flex;
+	flex-wrap: wrap;
+	column-gap: 8px;
+	padding: 3px 8px;
+	border-bottom: 1px solid var(--mercure-rule);
+	overflow-wrap: anywhere;
+}
+#tracy-debug .mercure-live-entry:last-child { border-bottom: 0; }
+#tracy-debug .mercure-live-time,
+#tracy-debug .mercure-live-meta,
+#tracy-debug .mercure-live-placeholder { color: var(--mercure-muted); }
+#tracy-debug .mercure-live-placeholder { padding: 3px 8px; font-style: italic; }
+#tracy-debug .mercure-live-hub,
+#tracy-debug .mercure-live-up { color: var(--mercure-accent); }
+#tracy-debug .mercure-live-down,
+#tracy-debug .mercure-live-latency { color: var(--mercure-ok); }
+#tracy-debug .mercure-live-up,
+#tracy-debug .mercure-live-down,
+#tracy-debug .mercure-live-what { font-weight: bold; }
+#tracy-debug .mercure-live-data {
+	flex-basis: 100%;
+	color: var(--mercure-muted);
+	white-space: pre;
+	overflow-x: auto;
+}
+#tracy-debug .mercure-live-warn,
+#tracy-debug .mercure-live-warn :is(.mercure-live-what, .mercure-live-meta, .mercure-live-down) { color: var(--mercure-warning); }
+#tracy-debug .mercure-live-error,
+#tracy-debug .mercure-live-error :is(.mercure-live-what, .mercure-live-up, .mercure-live-down, .mercure-live-data) { color: var(--mercure-error); }
+
+/* a publication announced on the debug bus: only a preview of its content travels */
+#tracy-debug .mercure-preview { font: 11px/1.5 Consolas, Menlo, monospace; white-space: pre; overflow-x: auto; background: var(--mercure-tint); padding: 3px 8px; }

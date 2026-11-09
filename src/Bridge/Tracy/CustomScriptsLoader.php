@@ -23,6 +23,7 @@ final readonly class CustomScriptsLoader
     public function scripts(
         array $liveHubs,
         string $icon,
+        string $css = '',
     ): array {
         $scripts = [];
         if (null !== $this->hotReloadUrl) {
@@ -38,7 +39,7 @@ final readonly class CustomScriptsLoader
                 require __DIR__ . '/dist/debugHook.js.phtml';
             });
 
-            $scripts[] = Tracy\Helpers::capture(static function () use ($liveHubs, $icon): void {
+            $scripts[] = Tracy\Helpers::capture(static function () use ($liveHubs, $icon, $css): void {
                 require __DIR__ . '/dist/liveEvents.js.phtml';
             });
         }

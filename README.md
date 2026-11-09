@@ -20,8 +20,8 @@ _Work In Progress_
 Getting Started
 ---------------
 
-```
-$ composer require raneomik/nette-mercure
+```bash
+composer require raneomik/nette-mercure
 ```
 
 ### Configuration
@@ -33,9 +33,9 @@ extensions:
     mercure: Raneomik\NetteMercure\Bridge\DI\MercureExtension(%debugMode%)
 ````
 
-_JWT options to set. Secret, publish & subscribe can be configured at [jwt.io](https://www.jwt.io/#token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZXJjdXJlIjp7InB1Ymxpc2giOlsiKiJdfX0.iHLdpAEjX4BqCsHJEegxRmO-Y6sMxXwNATrQyRNt3GY)_
+_JWT options to set. A token signed with your secret, `publish` and `subscribe` can be checked at [jwt.io](https://www.jwt.io/#token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZXJjdXJlIjp7InB1Ymxpc2giOlsiKiJdfX0.iHLdpAEjX4BqCsHJEegxRmO-Y6sMxXwNATrQyRNt3GY)_
 ```neon
-# Configure one default Mercure hub (e.g.:  hub is configured to be on same host in frankenphp environment)
+# Configure one default Mercure hub (e.g. the hub built in FrankenPHP, on the same host)
 mercure:
 	url: '%baseUrl%/.well-known/mercure' # URL used by the server to publish updates
 	publicUrl: 'https://example.com/.well-known/mercure' # Optional, defaults to "url". URL used by browsers (discovery, subscription, cookie)
@@ -43,7 +43,7 @@ mercure:
 	jwt:
 		# Signing key, never part of the token. "key: <secret>" is a shorthand for "key: {secret: <secret>}"
 		key:
-			secret: n3tt3-m3rcµr3-fr4nk3nphP-jwT-s3cr3t-k3y # HMAC secret (at least 32 characters long) or asymmetric private key
+			secret: n3tt3-m3rcµr3-fr4nk3nphP-jwT-s3cr3t-k3y # HMAC secret (at least 32 bytes) or asymmetric private key, see "Signing key" below
 			passphrase: # Optional, for an encrypted asymmetric private key
 			algorithm: HS256 # Optional, defaults to HS256 with WebTokenFactory, hmac.sha256 with LcobucciFactory
 		publish: ['test-topic'] # Optional, default is ['*']. Topics to narrow in JWT validation.
@@ -52,16 +52,16 @@ mercure:
 		# Use protocolVersion to switch between built-in factories: '1.0' → WebTokenFactory, '0.x' → LcobucciFactory.
 		factory:
 		# Optional, claims added to every token. With protocol 1.0, the RFC 9068 "iss", "aud", "sub" and "client_id" claims are required
-		# and defaults on publicUrl, fallbacked on url, and derived values: set them for production.
+		# and default to values derived from publicUrl (or url): set them for production.
 		claims:
-			iss: https://example.com #
+			iss: https://example.com
 			aud: https://example.com/.well-known/mercure
 			sub: https://example.com
 			clientId: nette-app # "client_id" claim
 			additional: # Optional, any other claim
 				tenant: acme
 		lifetime: # Optional, 0 by default (session.cookie_lifetime, or 3600 seconds), null for non expiring tokens. Same value for the publisher token, the subscriber tokens and the cookie (session cookie with null).
-	# following option depends on request parameter "hub" (or "hubName") if several hubs are defined in configuration
+	# the following option depends on the request parameter "hub" (or "hubName") if several hubs are defined in configuration
 	autoDiscovery: # false by default, to add Link header for Mercure hub discovery (https://mercure.rocks/spec#discovery)
 	debugger: # Optional, defaults to %debugMode%. Tracy panel and "_debug/mercure" announcements (see Debug bus)
 
@@ -79,6 +79,25 @@ mercure:
 
 	# ...
 ```
+
+#### Signing key
+
+`jwt.key.secret` signs the tokens of the publisher and of the subscribers: the hub must verify them with the same key
+(`publisher_jwt` / `subscriber_jwt` of the `mercure` Caddy directive, or the `MERCURE_PUBLISHER_JWT_KEY` /
+`MERCURE_SUBSCRIBER_JWT_KEY` environment variables). Do not invent it, generate it:
+
+```bash
+# HMAC (HS256, default): 32 random bytes at least, a shorter secret fails with "Invalid key length."
+openssl rand -hex 32
+
+# or asymmetric (algorithm: RS256): the app signs with the private key, the hub only gets the public one
+openssl genrsa -out mercure.key 4096
+openssl rsa -in mercure.key -pubout -out mercure.pub
+```
+
+Keep it out of the repository (local config, environment variable): `secret`, `passphrase`, the URLs, `lifetime`
+and the claims accept [dynamic parameters](https://doc.nette.org/en/bootstrap#toc-dynamic-parameters).
+With an asymmetric key, `secret` is the content of the private key file (PEM), not its path.
 
 _Hub implementation is picked at runtime: when the FrankenPHP built-in Mercure hub is available (`mercure_publish()` function),
 updates are published through it (`Symfony\Component\Mercure\FrankenPhpHub`), otherwise through HTTP to `url` (`Symfony\Component\Mercure\Hub`).
@@ -102,13 +121,13 @@ final class SomeService
 	{
 		// ...
 
-		// minimalist broadcast to default hub
+		// minimal broadcast to the default hub
 		$this->broadcaster->broadcast(
 			data: 'Hello Nette from Mercure!', // or ['message' => 'message'] / new SomeParameters('message')
 			topics: 'test-topic', // or ['test-topic']
 		);
 
-		// broadcast to specific hub
+		// broadcast to a specific hub
 		$this->broadcaster->broadcast(
 			data: 'Hello Nette from Mercure!',
 			topics: ['test-topic'],
@@ -137,11 +156,11 @@ final class SomeService
 
 ### Subscribe to updates
 
-Generate mercure url in Latte templates,
-setup your JavaScript client to listen to Mercure updates
-and render them in selected containers :
+Generate the Mercure URL in Latte templates,
+set up your JavaScript client to listen to Mercure updates
+and render them in selected containers:
 
-_When working with JWT token in Authorisation Header, you may need a [polyfill](https://github.com/Yaffle/EventSource)._
+_When sending the JWT in the `Authorization` header, you need a [polyfill](https://github.com/Yaffle/EventSource)._
 
 ```html
 <div class="mercure-container">
@@ -224,7 +243,7 @@ and on the same site as the app. The cookie is "SameSite=Strict" by default.
 
 You can subscribe to specific topic(s) and hub using [Discovery mechanism](https://symfony.com/doc/current/mercure.html#discovery).
 
-- Setup a `/subscribe` endpoint :
+- Set up a `/subscribe` endpoint:
 
 > `$topics` comes from the visitor: the token only grants "subscribe", but to any requested topic.
 > Check that the current user may read them before calling `subscribe()`.
@@ -261,7 +280,7 @@ final class SubscribePresenter extends Nette\Application\UI\Presenter
 }
 ```
 
-- Setup the listening client :
+- Set up the listening client:
 
 ```js
 import { EventSourcePolyfill } from 'event-source-polyfill';
@@ -286,11 +305,11 @@ es.onmessage = event => {
 
 ### Broadcast & Subscribe to turbo-streams
 
-You can also subscribe to [turbo-streams](https://turbo.hotwired.dev) :
+You can also subscribe to [turbo-streams](https://turbo.hotwired.dev):
 
-*NB: turbo needs mercure's `<Link>` headers - enable it using `autoDiscovery: yes` hub config*
+*NB: Turbo needs Mercure's `Link` header: enable it with the `autoDiscovery: true` hub option*
 
-- Server side :
+- Server side:
 
 ```php
 //...
@@ -309,7 +328,7 @@ You can also subscribe to [turbo-streams](https://turbo.hotwired.dev) :
 ```
 
 ```html
-<!-- test.stream.latte template, near to the broadcaster call -->
+<!-- test.stream.latte template, next to the class calling the broadcaster -->
 {contentType $contentType ?? 'text/html'}
 
 {block update}
@@ -321,7 +340,7 @@ You can also subscribe to [turbo-streams](https://turbo.hotwired.dev) :
 {/block}
 ```
 
-- Client side :
+- Client side:
 ```js
     import * as Turbo from '@hotwired/turbo'; //npm install @hotwired/turbo
     Turbo.session.drive = false; // disable turbo-drive to avoid conflicts with naja forms
@@ -377,8 +396,22 @@ $broadcaster->broadcast('lobby', new WaitingRoomsStream($rooms), template: 'wait
 
 ### Development mode
 
-FrankenPHP [HotReload](https://frankenphp.dev/docs/hot-reload/#enabling-frankenphp-hot-reload) feature requires "anonymous" mercure configuration.
-Tracy bar Live mercure event listening follows this requirement.
+FrankenPHP [hot reload](https://frankenphp.dev/docs/hot-reload/#enabling-frankenphp-hot-reload) requires the `anonymous` Mercure
+option, and so does the live part of the Tracy panel: both subscribe without a token.
+
+#### Tracy panel
+
+- the tab counts what the request published, failures in red;
+- **Published**: the messages of the request (topics, Turbo action and target, template, size, duration, content, error),
+  also in the rows of AJAX requests and redirects;
+- **Live**: the connections of the page and the events of every publisher, see below. The "Auth" column tells how each
+  connection authenticates: `JWT` (`Authorization` header), `cookie` (same origin or `withCredentials`) or `anonymous`;
+- **Hubs**: the resolved configuration of each hub, the transport actually used (`FrankenPhpHub` or `Hub` over HTTP), and
+  the authorization cookie with the claims of its token when the response sets it (its path is the hub's one: the browser
+  never sends it back to the application).
+
+Tracy's bar has no dark theme; `tracy: dumpTheme: dark` only restyles the dumps, the panel's ones included.
+The panel derives its colors from the text color, so it follows a bar restyled by your own CSS.
 
 #### Debug bus
 

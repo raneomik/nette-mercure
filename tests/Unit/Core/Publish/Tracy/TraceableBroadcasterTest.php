@@ -118,6 +118,9 @@ final class TraceableBroadcasterTest extends TestCase
             ],
             $formatedData,
         );
+
+        Assert::count(2, $this->debugBroadcaster->drain());
+        Assert::same(0, $this->debugBroadcaster->count(), 'drained: a worker shows a publication in one bar only');
     }
 
     public function testErrorLog(): void
