@@ -67,6 +67,7 @@ final class MercurePanel implements Tracy\IBarPanel
             $css = $this->css;
             $transports = [];
             $cookies = [];
+
             foreach ($hubsConfig as $hubName => $config) {
                 $transports[$hubName] = (new \ReflectionClass($this->broadcasters()[$hubName]->broadcasterHub()))->getShortName();
                 $cookieName = $config->protocolVersion->getDefaultCookieName();
