@@ -57,9 +57,8 @@ final readonly class LocalizationDefiner
      */
     private function contributteSwitcher(array $localizedHubs): string
     {
-        $translatorName = class_exists(Translator::class)
-            ? $this->builder->getByType(Translator::class)
-            : null;
+        // no class_exists() needed: the name is only a string, and an unknown type has no service
+        $translatorName = $this->builder->getByType(Translator::class);
 
         if (null === $translatorName) {
             throw new InvalidConfigurationException(\sprintf(

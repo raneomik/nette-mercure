@@ -140,6 +140,18 @@ final class LocalizedBroadcasterTest extends TestCase
         Assert::same([], $this->updates);
     }
 
+    public function testEmptyLocalesFailLoudly(): void
+    {
+        Assert::exception(
+            fn (): string => $this->broadcaster->broadcast('room/42', [], [
+                'locales' => [],
+            ], 'localizedStream.latte'),
+            BroadcastException::class,
+            'A localized publication needs at least one locale.',
+        );
+        Assert::same([], $this->updates);
+    }
+
     public function testLocaleRestoredWhenARenderingFails(): void
     {
         Assert::exception(

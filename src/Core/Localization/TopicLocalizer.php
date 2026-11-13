@@ -25,11 +25,6 @@ final readonly class TopicLocalizer
     ) {
     }
 
-    public function switcher(): LocaleSwitcherInterface
-    {
-        return $this->switcher;
-    }
-
     public function isLocalized(?string $hubName = null): bool
     {
         return $this->config->getConfiguration($hubName)
