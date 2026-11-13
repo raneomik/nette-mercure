@@ -11,6 +11,7 @@
 - [Subscribe using discovery](#subscribe-using-discovery)
 - [Broadcast Turbo Streams](#broadcast-turbo-streams)
 - [Use links and helpers in broadcast templates](#use-links-and-helpers-in-broadcast-templates)
+- [Broadcast in every locale](#broadcast-in-every-locale)
 - [Use FrankenPHP hot reload](#use-frankenphp-hot-reload)
 
 ## Generate the signing key
@@ -292,6 +293,76 @@ final class WaitingRoomsStream
 
 $broadcaster->broadcast('lobby', new WaitingRoomsStream($rooms), template: 'waitingRooms.stream.latte');
 ```
+
+## Broadcast in every locale
+
+A template is rendered once, on the server: without help, every subscriber would receive the publisher's language.
+On a `localized` hub, a templated publication is rendered once per locale, each rendering on the topics suffixed with
+its locale (`room/42/fr`), and every subscription made by the extension targets the page's own locale. The application
+keeps writing `room/42`, in templates, grants and access checks alike.
+
+Needs [contributte/translation](https://github.com/contributte/translation) (its `Translator` is picked up
+automatically), or a service of your own implementing `Raneomik\NetteMercure\Core\Localization\LocaleSwitcherInterface`.
+
+```neon
+extensions:
+	translation: Contributte\Translation\DI\TranslationExtension
+
+translation:
+	locales:
+		whitelist: [en, fr, cs] # the locales every publication is rendered in
+		default: en
+
+mercure:
+	url: %baseUrl%/.well-known/mercure
+	localized: true
+	jwt:
+		key: %env.MERCURE_JWT_SECRET%
+```
+
+```latte
+{* played.stream.latte: translated like any template, {_} included *}
+<turbo-stream action="append" target="toasts">
+	<template><b>{$player}</b> {_'toast.played'}</template>
+</turbo-stream>
+```
+
+```php
+// three renderings, on room/42/en, room/42/fr and room/42/cs
+$broadcaster->broadcast('room/42', ['player' => $name], template: 'played.stream.latte');
+
+// only the locales of the room's players
+$broadcaster->broadcast('room/42', ['player' => $name], ['locales' => ['fr', 'cs']], 'played.stream.latte');
+
+// a private update in its recipient's language
+$broadcaster->broadcast("player/$id", $data, ['locale' => 'cs', 'private' => true], 'result.stream.latte');
+```
+
+On the subscribing side, `{mercure()}`, `{mercureJWTToken()}`, `SubscriberInterface::subscribe()` and the authorization
+cookie suffix the topics with the current locale. A subscribe endpoint rarely knows the page locale (no locale in its
+URL): pass it, unknown values fall back to the current locale.
+
+```php
+// e.g. the page sends its <html lang>
+$subscription = $subscriber->subscribe($topics, locale: $this->getHttpRequest()->getPost('lang'));
+```
+
+```latte
+<div data-mercure-url="{mercure('room/' . $room, options: [locale: $locale])}">
+```
+
+Pass the data to the template, never translated strings: a text translated by the publisher is published in its
+language only. Keep HTML out of the messages, `{_}` escapes them.
+
+Notes:
+
+* an untemplated publication (JSON data) is not language-specific: published once, on the topics of every locale;
+* only `exact` and `urlpattern` topics are suffixed; the `*` wildcard, and other matcher types, are kept as they are;
+* topics that must not be localized belong to another hub (it can share the same `url`, see
+  [several hubs](#configure-several-hubs));
+* restricted `jwt.publish` grants must allow the localized topics (`room/{id}/{locale}`);
+* `broadcast()` returns the id of the publication in the current locale; the [Tracy panel](debugging.md) lists each
+  rendering with its locale.
 
 ## Use FrankenPHP hot reload
 

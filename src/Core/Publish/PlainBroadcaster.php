@@ -24,6 +24,7 @@ final class PlainBroadcaster implements BroadcasterInterface
      *     sse_id?: string,
      *     sse_type?: string,
      *     sse_retry?: int,
+     *     locale?: string,
      * } $resolvedOptions
      */
     private array $resolvedOptions = [];

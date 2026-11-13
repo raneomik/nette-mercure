@@ -13,6 +13,7 @@ use Raneomik\NetteMercure\BroadcasterInterface;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
 use Raneomik\NetteMercure\Core\Publish\Latte\TemplatePathResolver;
 use Raneomik\NetteMercure\Core\Publish\Latte\TemplatingBroadcaster;
+use Raneomik\NetteMercure\Core\Publish\LocalizedBroadcaster;
 use Raneomik\NetteMercure\Core\Publish\PlainBroadcaster;
 use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 
@@ -26,8 +27,12 @@ final readonly class BroadcastersDefiner
         $this->builder = $extension->getContainerBuilder();
     }
 
-    public function broadcasterDefinition(\stdClass $hubConfig, string $hubName, false|ServiceDefinition $latteDefinition): ServiceDefinition
-    {
+    public function broadcasterDefinition(
+        \stdClass $hubConfig,
+        string $hubName,
+        false|ServiceDefinition $latteDefinition,
+        ?string $localeSwitcher = null,
+    ): ServiceDefinition {
         $plainBroadcasterDef = $this->builder->addDefinition($this->extension->prefix(\sprintf('broadcaster.%s.plain', $hubName)))
             ->setType(PlainBroadcaster::class)
             ->setCreator(PlainBroadcaster::class, [
@@ -69,7 +74,23 @@ final readonly class BroadcastersDefiner
             ;
         }
 
-        return $broadcasterDefinition ?? $latteBroadcasterDef ?? $plainBroadcasterDef;
+        $broadcasterDefinition ??= $latteBroadcasterDef ?? $plainBroadcasterDef;
+
+        if ($hubConfig->localized && null !== $localeSwitcher) {
+            // outermost: each rendering is traced on its own, with its locale
+            $broadcasterDefinition = $this->builder->addDefinition(
+                $this->extension->prefix(\sprintf('broadcaster.%s.localized', $hubName))
+            )
+                ->setType(LocalizedBroadcaster::class)
+                ->setCreator(LocalizedBroadcaster::class, [
+                    $broadcasterDefinition,
+                    '@' . $localeSwitcher,
+                ])
+                ->setAutowired(false)
+            ;
+        }
+
+        return $broadcasterDefinition;
     }
 
     /**

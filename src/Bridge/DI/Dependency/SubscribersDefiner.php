@@ -27,7 +27,10 @@ final readonly class SubscribersDefiner
         $this->builder = $extension->getContainerBuilder();
     }
 
-    public function defineSubscriptionComponents(): void
+    /**
+     * @param null|string $topicLocalizer reference to the topic localizer, when a hub is localized
+     */
+    public function defineSubscriptionComponents(?string $topicLocalizer = null): void
     {
         /** @var false|ServiceDefinition $appDef */
         $appDef = $this->builder->hasDefinition('application.application')
@@ -59,6 +62,7 @@ final readonly class SubscribersDefiner
                 $requestDef,
                 $responseDef,
                 '@' . $this->extension->prefix('hubsConfiguration'),
+                'topicLocalizer' => $topicLocalizer,
             ])
             ->setAutowired()
         ;
@@ -81,6 +85,7 @@ final readonly class SubscribersDefiner
             ->setArguments([
                 $jwtProviderDef,
                 '@' . $this->extension->prefix('hubsConfiguration'),
+                $topicLocalizer,
             ])
             ->setAutowired()
         ;

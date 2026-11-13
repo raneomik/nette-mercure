@@ -23,6 +23,7 @@ One hub, or [several named hubs](guides.md#configure-several-hubs) with the same
 | `jwt.lifetime` | `0` | seconds; `0`: `session.cookie_lifetime`, or 3600; `null`: non expiring. Same value for the publisher token, the subscriber tokens and the cookie |
 | `autoDiscovery` | `false` | adds the `Link` header for [hub discovery](https://mercure.rocks/spec#discovery) |
 | `debugger` | `%debugMode%` | Tracy panel and `_debug/mercure` announcements |
+| `localized` | `false` | one rendering per locale, on topics suffixed with it, see [Broadcast in every locale](guides.md#broadcast-in-every-locale) |
 
 `debugger` follows `%debugMode%` when the extension is registered as `MercureExtension(%debugMode%)`.
 
@@ -47,6 +48,8 @@ public function broadcast(
 | `target` | passed to the template as `$target` |
 | `contentType` | |
 | `sse_id`, `sse_type`, `sse_retry` | SSE fields of the update |
+| `locales` | localized hub: the locales to render (default: every locale of the translator) |
+| `locale` | localized hub: a single locale to render, e.g. a private update in its recipient's language |
 
 ### `Raneomik\NetteMercure\Core\Publish\Latte\TurboStreamAction`
 
@@ -55,8 +58,10 @@ public function broadcast(
 ### `Raneomik\NetteMercure\SubscriberInterface`
 
 ```php
-public function subscribe(array|string $topics, ?string $hubName = null, array $extraClaims = []): SubscriptionData;
+public function subscribe(array|string $topics, ?string $hubName = null, array $extraClaims = [], ?string $locale = null): SubscriptionData;
 ```
+
+`$locale`: on a localized hub, the locale to subscribe in, when known (default: the current one).
 
 `SubscriptionData`: `jwt` (`token`, `ttl`, `extraClaims`), `hubUrl`, `subscribeUrl` (hub URL with the `match` (1.0) or
 `topic` (legacy) query, ready for `EventSource`).
@@ -72,8 +77,8 @@ public function clearCookie(?string $hub = null): void;
 
 | Function | Returns |
 |----------|---------|
-| `mercure(array\|string\|null $topics = null, ?string $hub = null, array $options = [])` | the subscription URL; the hub URL without topics. Option `lastEventId`: asks the hub for the events missed since this one |
-| `mercureJWTToken(array\|string $subscribe = ['*'], array $additionalClaims = [], ?string $hub = null)` | a subscriber token |
+| `mercure(array\|string\|null $topics = null, ?string $hub = null, array $options = [])` | the subscription URL; the hub URL without topics. Option `lastEventId`: asks the hub for the events missed since this one; `locale`: on a localized hub, the locale to subscribe in |
+| `mercureJWTToken(array\|string $subscribe = ['*'], array $additionalClaims = [], ?string $hub = null, ?string $locale = null)` | a subscriber token |
 
 ## JavaScript
 

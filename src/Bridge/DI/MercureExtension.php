@@ -11,6 +11,7 @@ use Nette\Schema\Expect;
 use Raneomik\NetteMercure\Bridge\DI\Config\Configuration;
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Bridge\DI\Dependency\BroadcastersDefiner;
+use Raneomik\NetteMercure\Bridge\DI\Dependency\LocalizationDefiner;
 use Raneomik\NetteMercure\Bridge\DI\Dependency\MercureHubsDefiner;
 use Raneomik\NetteMercure\Bridge\DI\Dependency\SubscribersDefiner;
 use Raneomik\NetteMercure\Bridge\Latte\MercureExtension as LatteMercureExtension;
@@ -20,7 +21,7 @@ use Symfony\Component\Mercure\ProtocolVersion;
 
 final class MercureExtension extends Nette\DI\CompilerExtension
 {
-    private const array HUB_OPTIONS = ['url', 'publicUrl', 'protocolVersion', 'jwt', 'autoDiscovery', 'debugger'];
+    private const array HUB_OPTIONS = ['url', 'publicUrl', 'protocolVersion', 'jwt', 'autoDiscovery', 'debugger', 'localized'];
 
     public function __construct(
         private readonly bool $debugMode = false,
@@ -61,6 +62,8 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                 ])->required(),
                 'autoDiscovery' => Expect::bool(false),
                 'debugger' => Expect::bool($this->debugMode),
+                // one rendering per locale, on topics suffixed with it: needs contributte/translation or a LocaleSwitcherInterface service
+                'localized' => Expect::bool(false),
             ]),
         )->before(static fn (mixed $val): mixed => \is_array($val) && [] !== array_intersect_key($val, array_flip(self::HUB_OPTIONS))
             // a single hub configuration, rather than a list of named hubs
@@ -82,6 +85,13 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                 ->getResultDefinition() // @phpstan-ignore method.notFound
             : false;
 
+        $localizedHubs = array_keys(array_filter(
+            (array) $this->getConfig(),
+            static fn (\stdClass $config): bool => $config->localized,
+        ));
+        $localeSwitcher = (new LocalizationDefiner($this))->define($localizedHubs);
+        $topicLocalizer = null === $localeSwitcher ? null : '@' . $this->prefix('topicLocalizer');
+
         $debug = false;
         $configDefinitions = [];
         $broadcasterDefinitions = [];
@@ -98,10 +108,11 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                     MercureHubsDefiner::claimsStatement($config),
                     $config->autoDiscovery,
                     $config->jwt->lifetime,
+                    $config->localized,
                 ]
             );
 
-            $broadcasterDefinitions[$hubName] = $broadcastersLoader->broadcasterDefinition($config, $hubName, $latteDefinition);
+            $broadcasterDefinitions[$hubName] = $broadcastersLoader->broadcasterDefinition($config, $hubName, $latteDefinition, $localeSwitcher);
 
             $debug = $debug || $config->debugger;
         }
@@ -115,7 +126,7 @@ final class MercureExtension extends Nette\DI\CompilerExtension
         ;
 
         $subscribersDefiner = new SubscribersDefiner($this);
-        $subscribersDefiner->defineSubscriptionComponents();
+        $subscribersDefiner->defineSubscriptionComponents($topicLocalizer);
 
         $broadcastersLoader->postLoad($broadcasterDefinitions);
 
@@ -127,6 +138,7 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                         $builder::literal('fn() => $this->getService(?)', [
                             $this->prefix('broadcasters'),
                         ]),
+                        $topicLocalizer,
                     ]),
                 ])
             ;

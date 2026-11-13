@@ -70,6 +70,7 @@ $hubCount = iterator_count($hubsConfig->getIterator());
 									$hubCount > 1 ? $hubDatum->hubName : null,
 									$info['action'] || $info['type'] ? implode(', ', $message->topics) : null,
 									$info['private'] ? 'private' : null,
+									$info['locale'],
 									$info['template'],
 									$bytes($message->size),
 								]);

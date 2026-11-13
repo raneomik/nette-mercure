@@ -42,6 +42,14 @@ final readonly class BroadcastData implements \JsonSerializable
         return $this->options['template'] ?? null;
     }
 
+    /**
+     * The locale this rendering was made in, on a localized hub.
+     */
+    public function locale(): ?string
+    {
+        return $this->options['locale'] ?? null;
+    }
+
     public function renderedData(): ?string
     {
         return $this->options['rendered_data'] ?? null;
@@ -69,6 +77,7 @@ final readonly class BroadcastData implements \JsonSerializable
             'status' => $this->status,
             'topics' => $this->topics,
             'private' => $private,
+            'locale' => $this->locale(),
             'type' => $this->options['sse_type'] ?? null,
             'action' => $action,
             'target' => $this->options['target'] ?? null,

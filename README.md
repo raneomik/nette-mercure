@@ -96,6 +96,7 @@ Subscribe:
     or [discovery](docs/guides.md#subscribe-using-discovery)
   - [Broadcast Turbo Streams](docs/guides.md#broadcast-turbo-streams)
   - [Use links and helpers in broadcast templates](docs/guides.md#use-links-and-helpers-in-broadcast-templates)
+  - [Broadcast in every locale](docs/guides.md#broadcast-in-every-locale)
   - [Use FrankenPHP hot reload](docs/guides.md#use-frankenphp-hot-reload)
 - [Reference](docs/reference.md): configuration, PHP services, Latte functions
 - [Debugging](docs/debugging.md): Tracy panel, debug bus

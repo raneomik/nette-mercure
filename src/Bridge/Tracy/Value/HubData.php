@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Raneomik\NetteMercure\Bridge\Tracy\Value;
 
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
+use Raneomik\NetteMercure\Core\Publish\LocalizedBroadcaster;
 use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 use Raneomik\NetteMercure\Core\Publish\Tracy\Value\BroadcastData;
 use Raneomik\NetteMercure\Core\Publish\Tracy\Value\BroadcastStatus;
@@ -29,6 +30,11 @@ final class HubData extends \ArrayIterator
     ) {
         $data = [];
         foreach ($broadcasters as $name => $broadcaster) {
+            // a localized hub traces each rendering inside its locale loop
+            while ($broadcaster instanceof LocalizedBroadcaster) {
+                $broadcaster = $broadcaster->decorated();
+            }
+
             if (false === $broadcaster instanceof TraceableBroadcaster) {
                 continue;
             }
