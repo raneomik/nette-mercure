@@ -156,6 +156,7 @@ final class LocalizedHubTest extends ContainerTestCase
         $broadcasters->broadcast('room/42', [
             'player' => 'Swift Fox',
         ], template: self::Template);
+        Assert::contains('<b>Swift Fox</b> has played', $this->updates[0]->getData(), 'the traced broadcaster still renders the template');
         $hubData = new HubData($broadcasters);
 
         Assert::same(3, $hubData->messageCount);
@@ -168,13 +169,18 @@ final class LocalizedHubTest extends ContainerTestCase
 
     public function testApplicationSwitcherWins(): void
     {
-        $container = $this->createContainer(self::Hubs . '
+        // even with contributte/translation registered
+        $container = $this->localizedContainer(extra: '
         services:
             - Tests\Fixtures\Dummies\Core\Localization\DummyLocaleSwitcher([en, de])
         ');
 
         Assert::type(DummyLocaleSwitcher::class, $container->getByType(LocaleSwitcherInterface::class));
-        Assert::type(LocalizedBroadcaster::class, $this->service($container, 'mercure.broadcasters', Broadcasters::class)['default']);
+        Assert::false($container->hasService('mercure.localeSwitcher'));
+
+        $this->service($container, 'mercure.broadcasters', Broadcasters::class)->broadcast('room/42', 'data');
+
+        Assert::same(['room/42/en', 'room/42/de'], $this->updates[0]->getTopics());
     }
 
     public function testNothingIsLocalizedWithoutATranslator(): void
@@ -198,10 +204,10 @@ final class LocalizedHubTest extends ContainerTestCase
         return $service instanceof $type ? $service : throw new \LogicException(\sprintf('%s is no %s', $name, $type));
     }
 
-    private function localizedContainer(bool $debug = false): Container
+    private function localizedContainer(bool $debug = false, string $extra = ''): Container
     {
         $fixtures = \dirname(__DIR__, 3) . '/fixtures';
-        $container = $this->createContainer(\sprintf(self::Translation, $fixtures . '/lang') . self::Hubs, $debug);
+        $container = $this->createContainer(\sprintf(self::Translation, $fixtures . '/lang') . self::Hubs . $extra, $debug);
 
         // both hubs publish into $this->updates
         foreach (['default', 'raw'] as $hub) {

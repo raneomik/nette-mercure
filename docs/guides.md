@@ -16,24 +16,19 @@
 
 ## Generate the signing key
 
-`jwt.key.secret` signs the tokens of the publisher and of the subscribers: the hub must verify them with the same key
-(`publisher_jwt` / `subscriber_jwt` of the `mercure` Caddy directive, or the `MERCURE_PUBLISHER_JWT_KEY` /
-`MERCURE_SUBSCRIBER_JWT_KEY` environment variables).
+The hub verifies the tokens with the same key as `jwt.key.secret`: `publisher_jwt` / `subscriber_jwt` of the `mercure`
+Caddy directive, or `MERCURE_PUBLISHER_JWT_KEY` / `MERCURE_SUBSCRIBER_JWT_KEY`.
 
 ```bash
-# HMAC (HS256, default): 32 random bytes at least, a shorter secret fails with "Invalid key length."
+# HMAC (HS256, default): 32 bytes at least, a shorter secret fails with "Invalid key length."
 openssl rand -hex 32
 
-# or asymmetric (algorithm: RS256): the app signs with the private key, the hub only gets the public one
+# asymmetric (algorithm: RS256): the app signs with the private key, the hub only gets the public one
 openssl genrsa -out mercure.key 4096
 openssl rsa -in mercure.key -pubout -out mercure.pub
 ```
 
-Keep it out of the repository: `secret`, `passphrase`, the URLs, `lifetime` and the claims accept
-[dynamic parameters](https://doc.nette.org/en/bootstrap#toc-dynamic-parameters).
 With an asymmetric key, `secret` is the content of the private key file (PEM), not its path.
-
-A token can be checked at [jwt.io](https://www.jwt.io).
 
 ## Configure several hubs
 
@@ -104,9 +99,7 @@ $this->broadcaster->broadcast("player/{$id}", 'Your turn!', options: ['private' 
 
 ## Subscribe with the authorization cookie
 
-As with [symfony/mercure](https://symfony.com/doc/current/mercure.html#authorization), the app sets the
-[cookie](https://mercure.rocks/spec#cookie) for the topics the current user may read.
-Nette streams the template while rendering it: set the cookie in the presenter, before rendering.
+Set the [cookie](https://mercure.rocks/spec#cookie) in the presenter, before rendering: Nette streams the template.
 
 ```php
 use Raneomik\NetteMercure\Core\Subscribe\AuthorizationInterface;
@@ -137,16 +130,12 @@ final class ChatPresenter extends Nette\Application\UI\Presenter
 </script>
 ```
 
-The hub public URL must be on the same site as the app, and served over HTTPS with protocol 1.0
-(`__Secure-mercure_access_token` cookie; `mercureAuthorization` with the legacy protocol).
-The cookie is `SameSite=Strict` by default.
+The hub public URL must be on the same site as the app, and served over HTTPS with protocol 1.0.
 
 ## Subscribe using discovery
 
-Set up a `/subscribe` endpoint ([discovery](https://symfony.com/doc/current/mercure.html#discovery)):
-
-> `$topics` comes from the visitor: the token grants every topic passed to `subscribe()`.
-> Keep only those the current user may read.
+Set up a `/subscribe` endpoint ([discovery](https://symfony.com/doc/current/mercure.html#discovery)). `$topics` comes
+from the visitor and the token grants every topic passed to `subscribe()`: keep only those the user may read.
 
 ```php
 use Nette;
@@ -195,8 +184,6 @@ final class SubscribePresenter extends Nette\Application\UI\Presenter
 }
 ```
 
-Then the client:
-
 ```js
 import { EventSourcePolyfill } from 'event-source-polyfill';
 
@@ -204,7 +191,6 @@ import { EventSourcePolyfill } from 'event-source-polyfill';
 const response = await fetch('/subscribe?topics[]=news&topics[]=user/42', {
 	headers: {'X-Requested-With': 'XMLHttpRequest'},
 });
-// {jwt: {token, ttl, extraClaims}, hubUrl, subscribeUrl}
 const {jwt, subscribeUrl} = await response.json();
 
 const es = new EventSourcePolyfill(subscribeUrl, {
@@ -258,27 +244,21 @@ eventSource.addEventListener('turbo-stream', event => {
 });
 
 eventSource.onerror = () => Turbo.disconnectStreamSource(eventSource);
-
-window.addEventListener('pagehide', () => {
-	Turbo.disconnectStreamSource(eventSource);
-	eventSource.close();
-});
 ```
 
 ## Use links and helpers in broadcast templates
 
-A broadcast template is rendered once, for every subscriber, outside of any presenter.
+A broadcast template is rendered outside of any presenter:
 
-- With `nette/application`, `n:href`, `{link}` and `{plink}` work, as they do in Nette e-mails. The destination must be
-  complete (`Module:Presenter:action`, not `action` or `this`). The URLs are absolute, with the scheme and host of the
-  request that broadcasts: behind a proxy, configure `http: proxy:`; from the CLI, provide your own `LinkGenerator`.
-- What needs a presenter or a control (`{control}`, `{form}`...) fails with a `BroadcastException`: render it in the
-  template or pass the result as a parameter.
-- `n:nonce` is not meant for a broadcast: a nonce belongs to one response.
-- Translations are not supported yet: publish once per locale, on a topic per locale (e.g. `/chats/1/fr`).
-- Pass an object as data to give a template its own helpers: its public methods marked
-  `#[Latte\Attributes\TemplateFunction]` or `#[Latte\Attributes\TemplateFilter]` become functions and filters
-  (they stay registered on the broadcaster's engine until the next object registers the same names).
+- `n:href`, `{link}` and `{plink}` work with `nette/application`, with a complete destination
+  (`Module:Presenter:action`). The URLs are absolute, built from the broadcasting request: behind a proxy, configure
+  `http: proxy:`; from the CLI, provide your own `LinkGenerator`.
+- `{control}`, `{form}` and anything else needing a presenter fail with a `BroadcastException`.
+- `n:nonce` belongs to one response: not for a broadcast.
+- `{_}` works with a translator: see [Broadcast in every locale](#broadcast-in-every-locale).
+
+For helpers, pass an object as data: its public methods marked `#[Latte\Attributes\TemplateFunction]` or
+`#[Latte\Attributes\TemplateFilter]` become functions and filters (registered until another object reuses the names).
 
 ```php
 use Latte\Attributes\TemplateFunction;
@@ -296,76 +276,43 @@ $broadcaster->broadcast('lobby', new WaitingRoomsStream($rooms), template: 'wait
 
 ## Broadcast in every locale
 
-A template is rendered once, on the server: without help, every subscriber would receive the publisher's language.
-With a translator, a templated publication is rendered once per locale, each rendering on the topics suffixed with
-its locale (`room/42/fr`), and every subscription made by the extension targets the page's own locale. The application
-keeps writing `room/42`, in templates, grants and access checks alike.
-
-It is on as soon as [contributte/translation](https://github.com/contributte/translation) is registered (its
-`Translator` is picked up automatically), or a service of your own implementing
-`Raneomik\NetteMercure\Core\Localization\LocaleSwitcherInterface`.
-Without either, nothing changes. Opt a hub out with `localized: false`.
-
-```neon
-extensions:
-	translation: Contributte\Translation\DI\TranslationExtension
-
-translation:
-	locales:
-		whitelist: [en, fr, cs] # the locales every publication is rendered in
-		default: en
-
-mercure:
-	url: %baseUrl%/.well-known/mercure
-	jwt:
-		key: %env.MERCURE_JWT_SECRET%
-```
-
-```latte
-{* played.stream.latte: translated like any template, {_} included *}
-<turbo-stream action="append" target="toasts">
-	<template><b>{$player}</b> {_'toast.played'}</template>
-</turbo-stream>
-```
+With [contributte/translation](https://github.com/contributte/translation) registered, a templated publication is
+rendered once per locale, on topics suffixed with it (`room/42/fr`), and subscriptions target the page's own locale.
+The application keeps writing `room/42`. Nothing to configure; `localized: false` opts a hub out.
 
 ```php
-// three renderings, on room/42/en, room/42/fr and room/42/cs
+// one rendering per locale: room/42/en, room/42/fr, room/42/cs
 $broadcaster->broadcast('room/42', ['player' => $name], template: 'played.stream.latte');
 
-// only the locales of the room's players
+// only some locales
 $broadcaster->broadcast('room/42', ['player' => $name], ['locales' => ['fr', 'cs']], 'played.stream.latte');
 
 // a private update in its recipient's language
 $broadcaster->broadcast("player/$id", $data, ['locale' => 'cs', 'private' => true], 'result.stream.latte');
 ```
 
-On the subscribing side, `{mercure()}`, `{mercureJWTToken()}`, `SubscriberInterface::subscribe()` and the authorization
-cookie suffix the topics with the current locale. A subscribe endpoint rarely knows the page locale (no locale in its
-URL): pass it, unknown values fall back to the current locale.
+```latte
+{* played.stream.latte *}
+<turbo-stream action="append" target="toasts">
+	<template><b>{$player}</b> {_'toast.played'}</template>
+</turbo-stream>
+```
+
+Pass data to the template, not translated strings: they would be in the publisher's language only.
+
+`{mercure()}`, `{mercureJWTToken()}`, `subscribe()` and the authorization cookie subscribe in the current locale. A
+subscribe endpoint rarely knows the page locale: pass it.
 
 ```php
-// e.g. the page sends its <html lang>
+// e.g. the page sends its <html lang>; an unknown value falls back to the current locale
 $subscription = $subscriber->subscribe($topics, locale: $this->getHttpRequest()->getPost('lang'));
 ```
 
-```latte
-<div data-mercure-url="{mercure('room/' . $room, options: [locale: $locale])}">
-```
-
-Pass the data to the template, never translated strings: a text translated by the publisher is published in its
-language only. Keep HTML out of the messages, `{_}` escapes them.
-
-Notes:
-
-* an untemplated publication (JSON data) is not language-specific: published once, on the topics of every locale;
-* only `exact` and `urlpattern` topics are suffixed; the `*` wildcard, and other matcher types, are kept as they are;
-* topics that must not be localized belong to another hub, with `localized: false` (it can share the same `url`, see
-  [several hubs](#configure-several-hubs));
-* restricted `jwt.publish` grants must allow the localized topics (`room/{id}/{locale}`);
-* `broadcast()` returns the id of the publication in the current locale; the [Tracy panel](debugging.md) lists each
-  rendering with its locale.
+Without contributte/translation, register a `LocaleSwitcherInterface` service. The rules are in the
+[reference](reference.md#localization).
 
 ## Use FrankenPHP hot reload
 
-[Hot reload](https://frankenphp.dev/docs/hot-reload/#enabling-frankenphp-hot-reload) requires the `anonymous` Mercure
-option, and so does the live part of the [Tracy panel](debugging.md): both subscribe without a token.
+When FrankenPHP exposes `FRANKENPHP_HOT_RELOAD`, the Tracy bar loads the
+[hot reload](https://frankenphp.dev/docs/hot-reload/#enabling-frankenphp-hot-reload) client: nothing to add to the
+layout. It requires the `anonymous` Mercure option, as does the live part of the [Tracy panel](debugging.md).

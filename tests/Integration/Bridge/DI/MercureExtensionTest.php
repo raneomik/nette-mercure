@@ -17,6 +17,7 @@ use Nette\DI\MissingServiceException;
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Bridge\DI\MercureExtension;
 use Raneomik\NetteMercure\Bridge\Latte\MercureExtension as LatteMercureExtension;
+use Raneomik\NetteMercure\Bridge\Tracy\CustomScriptsLoader;
 use Raneomik\NetteMercure\Bridge\Tracy\MercurePanel;
 use Raneomik\NetteMercure\BroadcasterInterface;
 use Raneomik\NetteMercure\Core\Discovery;
@@ -47,8 +48,7 @@ final class MercureExtensionTest extends ContainerTestCase
 {
     public function testPlainSimpleCompilation(): void
     {
-        $loader = new Loader();
-        $config = $loader->load(FileMock::create('
+        $config = (new Loader())->load(FileMock::create('
         mercure:
             url: /.well-known/mercure
             jwt:
@@ -218,6 +218,30 @@ final class MercureExtensionTest extends ContainerTestCase
         // the concrete hub class is only known at runtime, the declared type is HubInterface
         self::assertTypeNotFound($container, [Hub::class]);
         self::assertNotAutowired($container, array_values(array_diff(array_unique(array_values($toTest)), [Hub::class])));
+    }
+
+    public function testHotReloadUrlReachesThePanel(): void
+    {
+        $neon = '
+        mercure:
+            jwt:
+                key: jwt-secret
+        ';
+        $scripts = static function (Container $container): array {
+            $panel = $container->getService('mercure.tracy.panel');
+            $loader = (new \ReflectionProperty($panel, 'customScriptsLoader'))->getValue($panel);
+            \assert($loader instanceof CustomScriptsLoader);
+
+            return $loader->scripts([], 'icon');
+        };
+
+        unset($_SERVER['FRANKENPHP_HOT_RELOAD']);
+        Assert::same([], $scripts($this->createContainer($neon, debug: true)));
+
+        // read at runtime: a container compiled without it follows the environment
+        $_SERVER['FRANKENPHP_HOT_RELOAD'] = 'https://from-env.example.com';
+        Assert::contains('https://from-env.example.com', $scripts($this->createContainer($neon, debug: true))[0] ?? '');
+        unset($_SERVER['FRANKENPHP_HOT_RELOAD']);
     }
 
     public function testCompilationWithCustomJwtImplementation(): void

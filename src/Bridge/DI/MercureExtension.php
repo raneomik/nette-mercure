@@ -25,7 +25,6 @@ final class MercureExtension extends Nette\DI\CompilerExtension
 
     public function __construct(
         private readonly bool $debugMode = false,
-        private readonly ?string $hotReloadUrl = null,
     ) {
     }
 
@@ -147,7 +146,7 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                     ]),
                     '@' . $this->prefix('hubsConfiguration'),
                     new Statement(CustomScriptsLoader::class, [
-                        $this->hotReloadUrl ?? $builder::literal('$_SERVER[\'FRANKENPHP_HOT_RELOAD\'] ?? null'),
+                        $builder::literal('$_SERVER[\'FRANKENPHP_HOT_RELOAD\'] ?? null'),
                     ]),
                 ])
                 ->setAutowired(false)
