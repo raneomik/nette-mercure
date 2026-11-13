@@ -51,6 +51,10 @@ final readonly class SubscribersDefiner
         $requestDef = $this->builder->getDefinitionByType(Request::class);
         $responseDef = $this->builder->getDefinitionByType(Response::class);
 
+        $topicLocalizer = $this->builder->hasDefinition($name = $this->extension->prefix('topicLocalizer'))
+            ? '@' . $name
+            : null;
+
         $this->builder->addDefinition($this->extension->prefix('authorization'))
             ->setType(AuthorizationInterface::class)
             ->setCreator(Authorization::class)
@@ -59,6 +63,7 @@ final readonly class SubscribersDefiner
                 $requestDef,
                 $responseDef,
                 '@' . $this->extension->prefix('hubsConfiguration'),
+                'topicLocalizer' => $topicLocalizer,
             ])
             ->setAutowired()
         ;
@@ -81,6 +86,7 @@ final readonly class SubscribersDefiner
             ->setArguments([
                 $jwtProviderDef,
                 '@' . $this->extension->prefix('hubsConfiguration'),
+                $topicLocalizer,
             ])
             ->setAutowired()
         ;

@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Raneomik\NetteMercure\Bridge\Latte\Function;
 
 use Raneomik\NetteMercure\Bridge\Utils\SubscriptionQuery;
+use Raneomik\NetteMercure\Core\Localization\TopicLocalizer;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
 
 /**
  * @phpstan-type MercureOptions array{
  *       lastEventId?: string,
  *       hub?: string,
+ *       locale?: string,
  *   }
  */
 final readonly class Mercure
@@ -19,6 +21,7 @@ final readonly class Mercure
 
     private function __construct(
         private \Closure $broadcastersLoader,
+        private ?TopicLocalizer $topicLocalizer = null,
     ) {
     }
 
@@ -44,9 +47,9 @@ final readonly class Mercure
         );
     }
 
-    public static function build(\Closure $broadcastersLoader): self
+    public static function build(\Closure $broadcastersLoader, ?TopicLocalizer $topicLocalizer = null): self
     {
-        return new self($broadcastersLoader);
+        return new self($broadcastersLoader, $topicLocalizer);
     }
 
     private function broadcasters(): Broadcasters
@@ -60,6 +63,10 @@ final readonly class Mercure
      */
     private function buildQuery(array $topics, array $options, ?string $hub): string
     {
+        if ($this->topicLocalizer?->isLocalized($hub)) {
+            $topics = TopicLocalizer::suffix($topics, $this->topicLocalizer->resolve($options['locale'] ?? null));
+        }
+
         $params = SubscriptionQuery::params(
             $topics,
             $this->broadcasters()

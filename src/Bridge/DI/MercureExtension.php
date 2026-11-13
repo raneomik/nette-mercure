@@ -11,6 +11,7 @@ use Nette\Schema\Expect;
 use Raneomik\NetteMercure\Bridge\DI\Config\Configuration;
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Bridge\DI\Dependency\BroadcastersDefiner;
+use Raneomik\NetteMercure\Bridge\DI\Dependency\LocalizationDefiner;
 use Raneomik\NetteMercure\Bridge\DI\Dependency\MercureHubsDefiner;
 use Raneomik\NetteMercure\Bridge\DI\Dependency\SubscribersDefiner;
 use Raneomik\NetteMercure\Bridge\Latte\MercureExtension as LatteMercureExtension;
@@ -20,13 +21,11 @@ use Symfony\Component\Mercure\ProtocolVersion;
 
 final class MercureExtension extends Nette\DI\CompilerExtension
 {
-    private const array HUB_OPTIONS = ['url', 'publicUrl', 'protocolVersion', 'jwt', 'autoDiscovery', 'debugger'];
+    private const array HUB_OPTIONS = ['url', 'publicUrl', 'protocolVersion', 'jwt', 'autoDiscovery', 'debugger', 'localized'];
 
     public function __construct(
         private readonly bool $debugMode = false,
-        private ?string $hotReloadUrl = null,
     ) {
-        $this->hotReloadUrl ??= ($_SERVER['FRANKENPHP_HOT_RELOAD'] ?? null);
     }
 
     #[\Override]
@@ -61,6 +60,8 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                 ])->required(),
                 'autoDiscovery' => Expect::bool(false),
                 'debugger' => Expect::bool($this->debugMode),
+                // only with a translator (contributte/translation or a LocaleSwitcherInterface service): false opts the hub out
+                'localized' => Expect::bool(true),
             ]),
         )->before(static fn (mixed $val): mixed => \is_array($val) && [] !== array_intersect_key($val, array_flip(self::HUB_OPTIONS))
             // a single hub configuration, rather than a list of named hubs
@@ -82,6 +83,9 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                 ->getResultDefinition() // @phpstan-ignore method.notFound
             : false;
 
+        $localeSwitcher = (new LocalizationDefiner($this))->define();
+        $topicLocalizer = null === $localeSwitcher ? null : '@' . $this->prefix('topicLocalizer');
+
         $debug = false;
         $configDefinitions = [];
         $broadcasterDefinitions = [];
@@ -98,10 +102,11 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                     MercureHubsDefiner::claimsStatement($config),
                     $config->autoDiscovery,
                     $config->jwt->lifetime,
+                    $config->localized,
                 ]
             );
 
-            $broadcasterDefinitions[$hubName] = $broadcastersLoader->broadcasterDefinition($config, $hubName, $latteDefinition);
+            $broadcasterDefinitions[$hubName] = $broadcastersLoader->broadcasterDefinition($config, $hubName, $latteDefinition, $localeSwitcher);
 
             $debug = $debug || $config->debugger;
         }
@@ -127,6 +132,7 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                         $builder::literal('fn() => $this->getService(?)', [
                             $this->prefix('broadcasters'),
                         ]),
+                        $topicLocalizer,
                     ]),
                 ])
             ;
@@ -140,7 +146,7 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                     ]),
                     '@' . $this->prefix('hubsConfiguration'),
                     new Statement(CustomScriptsLoader::class, [
-                        $this->hotReloadUrl ?? $builder::literal('$_SERVER[\'FRANKENPHP_HOT_RELOAD\'] ?? null'),
+                        $builder::literal('$_SERVER[\'FRANKENPHP_HOT_RELOAD\'] ?? null'),
                     ]),
                 ])
                 ->setAutowired(false)

@@ -22,13 +22,13 @@ interface BroadcasterInterface
      *     topics?: string|string[],
      *     private?: bool,
      *     hub?: string,
-     *     contentType?: string,
      *     template?: string,
      *     rendered_data?: string,
      *     action?: string|TurboStreamAction,
      *     sse_id?: string,
      *     sse_type?: string,
      *     sse_retry?: int,
+     *     locale?: string,
      * }
      */
     public function broadcastOptions(
@@ -42,7 +42,6 @@ interface BroadcasterInterface
      *     topics?: string|string[],
      *     private?: bool,
      *     hub?: string,
-     *     contentType?: string,
      *     template?: string,
      *     rendered_data?: string,
      *     action?: string|TurboStreamAction,
@@ -50,7 +49,9 @@ interface BroadcasterInterface
      *     sse_id?: string,
      *     sse_type?: string,
      *     sse_retry?: int,
-     * } $options
+     *     locale?: string,
+     *     locales?: string[],
+     * } $options "locale" / "locales": on a localized hub, the locale(s) to render (default: every locale)
      */
     public function broadcast(
         array|string $topics,

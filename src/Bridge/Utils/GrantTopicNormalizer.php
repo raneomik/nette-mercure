@@ -85,10 +85,6 @@ final class GrantTopicNormalizer
      */
     public static function normalizeGrants(array|string $grants): array
     {
-        if ([] === $grants) {
-            return [];
-        }
-
         if (\is_string($grants)) {
             return [new Grant([Grant::ACTION_SUBSCRIBE], [$grants])];
         }

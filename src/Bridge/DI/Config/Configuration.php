@@ -22,6 +22,7 @@ final readonly class Configuration
         public Claims $claims = new Claims(),
         public bool $autoDiscovery = false,
         public ?int $lifetime = 0,
+        public bool $localized = false,
     ) {
     }
 }

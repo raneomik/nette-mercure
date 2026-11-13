@@ -10,6 +10,8 @@ use Nette\Http\IResponse;
 use Nette\Http\Response;
 use Nette\Http\SameSite;
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
+use Raneomik\NetteMercure\Bridge\Utils\GrantTopicNormalizer;
+use Raneomik\NetteMercure\Core\Localization\TopicLocalizer;
 use Symfony\Component\Mercure\ProtocolVersion;
 
 final readonly class Authorization implements AuthorizationInterface
@@ -20,12 +22,18 @@ final readonly class Authorization implements AuthorizationInterface
         private IResponse $response,
         private ConfigurationRegistry $config,
         private ?SameSite $cookieSameSite = SameSite::Strict,
+        private ?TopicLocalizer $topicLocalizer = null,
     ) {
     }
 
     #[\Override]
     public function setCookie(array|string $grants = [], array $additionalClaims = [], ?string $hub = null): void
     {
+        if ($this->topicLocalizer?->isLocalized($hub)) {
+            // the page subscribes in its own locale: the cookie grants the localized topics
+            $grants = TopicLocalizer::suffixGrants(GrantTopicNormalizer::normalizeGrants($grants), $this->topicLocalizer->resolve());
+        }
+
         $jwt = $this->jwtProvider->provide($hub, $grants, $additionalClaims);
         $expire = $jwt->ttl ?? 0; // 0: session cookie
         [$name, $path, $domain, $secure] = $this->cookieParameters($hub);

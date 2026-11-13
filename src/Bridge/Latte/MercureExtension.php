@@ -7,6 +7,7 @@ namespace Raneomik\NetteMercure\Bridge\Latte;
 use Latte\Extension;
 use Raneomik\NetteMercure\Bridge\Latte\Function\Mercure;
 use Raneomik\NetteMercure\Bridge\Latte\Function\MercureJWTToken;
+use Raneomik\NetteMercure\Core\Localization\TopicLocalizer;
 use Raneomik\NetteMercure\Core\Subscribe\JWTProviderInterface;
 
 final class MercureExtension extends Extension
@@ -18,9 +19,10 @@ final class MercureExtension extends Extension
     public function __construct(
         JWTProviderInterface $jwtProvider,
         \Closure $broadcastersLoader,
+        ?TopicLocalizer $topicLocalizer = null,
     ) {
-        $this->mercureFunction = Mercure::build($broadcastersLoader);
-        $this->JWTTokenFunction = MercureJWTToken::build($jwtProvider);
+        $this->mercureFunction = Mercure::build($broadcastersLoader, $topicLocalizer);
+        $this->JWTTokenFunction = MercureJWTToken::build($jwtProvider, $topicLocalizer);
     }
 
     #[\Override]

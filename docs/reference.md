@@ -22,9 +22,11 @@ One hub, or [several named hubs](guides.md#configure-several-hubs) with the same
 | `jwt.claims.additional` | `[]` | any other claim |
 | `jwt.lifetime` | `0` | seconds; `0`: `session.cookie_lifetime`, or 3600; `null`: non expiring. Same value for the publisher token, the subscriber tokens and the cookie |
 | `autoDiscovery` | `false` | adds the `Link` header for [hub discovery](https://mercure.rocks/spec#discovery) |
-| `debugger` | `%debugMode%` | Tracy panel and `_debug/mercure` announcements |
+| `debugger` | `%debugMode%` | Tracy panel and `_debug/mercure` announcements; follows `MercureExtension(%debugMode%)` |
+| `localized` | `true` | see [Localization](#localization); `false` opts the hub out |
 
-`debugger` follows `%debugMode%` when the extension is registered as `MercureExtension(%debugMode%)`.
+`secret`, `passphrase`, the URLs, `lifetime` and the claims accept
+[dynamic parameters](https://doc.nette.org/en/bootstrap#toc-dynamic-parameters).
 
 ## PHP
 
@@ -45,8 +47,9 @@ public function broadcast(
 | `private` | private update |
 | `action` | `TurboStreamAction`, block of the template to render |
 | `target` | passed to the template as `$target` |
-| `contentType` | |
 | `sse_id`, `sse_type`, `sse_retry` | SSE fields of the update |
+| `locales` | with a translator: the locales to render (default: all of them) |
+| `locale` | with a translator: a single locale to render |
 
 ### `Raneomik\NetteMercure\Core\Publish\Latte\TurboStreamAction`
 
@@ -55,8 +58,10 @@ public function broadcast(
 ### `Raneomik\NetteMercure\SubscriberInterface`
 
 ```php
-public function subscribe(array|string $topics, ?string $hubName = null, array $extraClaims = []): SubscriptionData;
+public function subscribe(array|string $topics, ?string $hubName = null, array $extraClaims = [], ?string $locale = null): SubscriptionData;
 ```
+
+`$locale`: with a translator, the locale to subscribe in (default: the current one).
 
 `SubscriptionData`: `jwt` (`token`, `ttl`, `extraClaims`), `hubUrl`, `subscribeUrl` (hub URL with the `match` (1.0) or
 `topic` (legacy) query, ready for `EventSource`).
@@ -68,12 +73,28 @@ public function setCookie(array|string $grants = [], array $additionalClaims = [
 public function clearCookie(?string $hub = null): void;
 ```
 
+The cookie is `SameSite=Strict`, named `__Secure-mercure_access_token` with protocol 1.0 and `mercureAuthorization`
+with the legacy one.
+
 ## Latte
 
 | Function | Returns |
 |----------|---------|
-| `mercure(array\|string\|null $topics = null, ?string $hub = null, array $options = [])` | the subscription URL; the hub URL without topics. Option `lastEventId`: asks the hub for the events missed since this one |
-| `mercureJWTToken(array\|string $subscribe = ['*'], array $additionalClaims = [], ?string $hub = null)` | a subscriber token |
+| `mercure(array\|string\|null $topics = null, ?string $hub = null, array $options = [])` | the subscription URL; the hub URL without topics. Options: `lastEventId` (asks the hub for the events missed since this one), `locale` |
+| `mercureJWTToken(array\|string $subscribe = ['*'], array $additionalClaims = [], ?string $hub = null, ?string $locale = null)` | a subscriber token |
+
+## Localization
+
+Active with [contributte/translation](https://github.com/contributte/translation), or a service implementing
+`Raneomik\NetteMercure\Core\Localization\LocaleSwitcherInterface`, on every hub but those with `localized: false`.
+See [Broadcast in every locale](guides.md#broadcast-in-every-locale).
+
+- A templated publication is rendered once per locale, on the topics suffixed with it.
+- An untemplated publication is published once, on the topics of every locale.
+- Only `exact` and `urlpattern` topics are suffixed: `*` and other matcher types are kept as they are.
+- Restricted `jwt.publish` grants must allow the localized topics (`room/{id}/{locale}`).
+- `broadcast()` returns the id of the publication in the current locale.
+- Topics that must not be localized belong to a hub with `localized: false`; it can share the `url` of another.
 
 ## JavaScript
 

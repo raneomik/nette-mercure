@@ -22,6 +22,7 @@
     "web-token/jwt-library": "^4.2"
   },
   "require-dev": {
+    "contributte/translation": "^2.0",
     "infection/infection": "^0.35.8",
     "latte/latte": "^3.1",
     "nette/application": "^3.3",
@@ -41,6 +42,7 @@
   "suggest": {
     "latte/latte": "To render templates in broadcasts and use the {mercure()} and {mercureJWTToken()} functions",
     "nette/application": "To use the subscriber, authorization and discovery services",
+    "contributte/translation": "Localized hubs: one rendering per locale, on topics suffixed with it",
     "tracy/tracy": "To debug publications and live events in the Tracy panel"
   },
   "autoload": {

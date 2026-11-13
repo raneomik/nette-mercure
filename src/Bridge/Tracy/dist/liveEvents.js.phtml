@@ -82,7 +82,7 @@ use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 		// a publication, announced on the debug bus, with what this page received of it
 		pub: (entry) => {
 			const {env, deliveries} = entry;
-			const meta = [env.topics.join(', '), env.private && 'private', format.bytes(env.size), format.ms(env.duration)];
+			const meta = [env.topics.join(', '), env.private && 'private', env.locale, format.bytes(env.size), format.ms(env.duration)];
 
 			return row(entry, html`
 				<span class="mercure-live-time">${format.time(env.sentAt)}</span>

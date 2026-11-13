@@ -17,13 +17,13 @@ final class PlainBroadcaster implements BroadcasterInterface
      *     topics?: string|string[],
      *     private?: bool,
      *     hub?: string,
-     *     contentType?: string,
      *     template?: string,
      *     rendered_data?: string,
      *     action?: string|TurboStreamAction,
      *     sse_id?: string,
      *     sse_type?: string,
      *     sse_retry?: int,
+     *     locale?: string,
      * } $resolvedOptions
      */
     private array $resolvedOptions = [];

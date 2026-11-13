@@ -27,8 +27,8 @@ final readonly class Discovery
 
     public function addLinkFromCurrentRequest(): void
     {
-        $noDiscovery = ((bool) $this->request->getQuery(self::NO_LINK_DISCOVER))
-            || ((bool) $this->request->getHeader(self::NO_LINK_DISCOVER));
+        $noDiscovery = $this->request->getQuery(self::NO_LINK_DISCOVER)
+            || $this->request->getHeader(self::NO_LINK_DISCOVER);
 
         if ($noDiscovery) {
             return;
