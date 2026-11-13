@@ -8,7 +8,7 @@ use Contributte\Translation\Translator;
 use Raneomik\NetteMercure\Core\Localization\LocaleSwitcherInterface;
 
 /**
- * Locale switcher over contributte/translation: registered automatically when a hub is "localized"
+ * Locale switcher over contributte/translation: registered automatically when the application has a Translator
  * and the application has no LocaleSwitcherInterface service of its own.
  */
 final readonly class ContributteLocaleSwitcher implements LocaleSwitcherInterface
@@ -23,7 +23,7 @@ final readonly class ContributteLocaleSwitcher implements LocaleSwitcherInterfac
     {
         $locales = $this->translator->getLocalesWhitelist() ?? $this->translator->getAvailableLocales();
 
-        return [] === $locales ? [$this->current()] : array_values(array_unique($locales));
+        return [] === $locales ? [$this->current()] : array_values($locales);
     }
 
     #[\Override]

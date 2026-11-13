@@ -23,7 +23,7 @@ One hub, or [several named hubs](guides.md#configure-several-hubs) with the same
 | `jwt.lifetime` | `0` | seconds; `0`: `session.cookie_lifetime`, or 3600; `null`: non expiring. Same value for the publisher token, the subscriber tokens and the cookie |
 | `autoDiscovery` | `false` | adds the `Link` header for [hub discovery](https://mercure.rocks/spec#discovery) |
 | `debugger` | `%debugMode%` | Tracy panel and `_debug/mercure` announcements |
-| `localized` | `false` | one rendering per locale, on topics suffixed with it, see [Broadcast in every locale](guides.md#broadcast-in-every-locale) |
+| `localized` | `true` | with a translator only: one rendering per locale, on topics suffixed with it, see [Broadcast in every locale](guides.md#broadcast-in-every-locale); `false` opts the hub out |
 
 `debugger` follows `%debugMode%` when the extension is registered as `MercureExtension(%debugMode%)`.
 

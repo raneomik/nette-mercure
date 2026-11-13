@@ -10,7 +10,6 @@ use Contributte\Translation\Translator;
 use Latte\Loaders\StringLoader;
 use Nette\Bridges\ApplicationLatte\LatteFactory;
 use Nette\DI\Container;
-use Nette\DI\InvalidConfigurationException;
 use Raneomik\NetteMercure\Bridge\DI\Config\ConfigurationRegistry;
 use Raneomik\NetteMercure\Bridge\Tracy\Value\HubData;
 use Raneomik\NetteMercure\Bridge\Tracy\Value\HubDatum;
@@ -18,7 +17,6 @@ use Raneomik\NetteMercure\Bridge\Translation\ContributteLocaleSwitcher;
 use Raneomik\NetteMercure\Core\Localization\LocaleSwitcherInterface;
 use Raneomik\NetteMercure\Core\Localization\TopicLocalizer;
 use Raneomik\NetteMercure\Core\Publish\Broadcasters;
-use Raneomik\NetteMercure\Core\Publish\Latte\TemplatingBroadcaster;
 use Raneomik\NetteMercure\Core\Publish\LocalizedBroadcaster;
 use Raneomik\NetteMercure\Core\Publish\Tracy\TraceableBroadcaster;
 use Raneomik\NetteMercure\Core\Publish\Tracy\Value\BroadcastData;
@@ -54,11 +52,11 @@ final class LocalizedHubTest extends ContainerTestCase
         mercure:
             default:
                 url: https://hub.example.com/.well-known/mercure
-                localized: true
                 jwt:
                     key: jwt-secret
             raw:
                 url: https://hub.example.com/.well-known/mercure
+                localized: false
                 jwt:
                     key: jwt-secret
     ';
@@ -75,7 +73,7 @@ final class LocalizedHubTest extends ContainerTestCase
         $broadcasters = $this->service($container, 'mercure.broadcasters', Broadcasters::class);
 
         Assert::type(LocalizedBroadcaster::class, $broadcasters['default']);
-        Assert::type(TemplatingBroadcaster::class, $broadcasters['raw'], 'only the localized hub is decorated');
+        Assert::notSame(LocalizedBroadcaster::class, $broadcasters['raw']::class, 'an opted-out hub is not decorated');
         Assert::type(ContributteLocaleSwitcher::class, $container->getService('mercure.localeSwitcher'));
 
         $translator = $container->getByType(Translator::class);
@@ -109,7 +107,7 @@ final class LocalizedHubTest extends ContainerTestCase
 
         Assert::contains('match=room%2F42%2Fcs', $subscriber->subscribe('room/42', locale: 'cs')->subscribeUrl);
         Assert::contains('match=room%2F42%2Ffr', $subscriber->subscribe('room/42', locale: 'de')->subscribeUrl, 'unknown: current locale');
-        Assert::contains('match=room%2F42&', $subscriber->subscribe('room/42', 'raw')->subscribeUrl . '&', 'a plain hub is left alone');
+        Assert::contains('match=room%2F42&', $subscriber->subscribe('room/42', 'raw')->subscribeUrl . '&', 'an opted-out hub is left alone');
     }
 
     public function testLatteFunctionsUseTheLocalizedTopics(): void
@@ -179,13 +177,13 @@ final class LocalizedHubTest extends ContainerTestCase
         Assert::type(LocalizedBroadcaster::class, $this->service($container, 'mercure.broadcasters', Broadcasters::class)['default']);
     }
 
-    public function testLocalizedHubNeedsATranslator(): void
+    public function testNothingIsLocalizedWithoutATranslator(): void
     {
-        Assert::exception(
-            fn (): Container => $this->createContainer(self::Hubs),
-            InvalidConfigurationException::class,
-            '%a%"default" hub(s) are "localized": install and register contributte/translation%a%',
-        );
+        $container = $this->createContainer(self::Hubs);
+
+        Assert::false($container->hasService('mercure.topicLocalizer'));
+        Assert::false($container->hasService('mercure.localeSwitcher'));
+        Assert::notSame(LocalizedBroadcaster::class, $this->service($container, 'mercure.broadcasters', Broadcasters::class)['default']::class);
     }
 
     /**

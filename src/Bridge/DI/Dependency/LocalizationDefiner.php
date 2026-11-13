@@ -6,14 +6,13 @@ namespace Raneomik\NetteMercure\Bridge\DI\Dependency;
 
 use Contributte\Translation\Translator;
 use Nette\DI\ContainerBuilder;
-use Nette\DI\InvalidConfigurationException;
 use Raneomik\NetteMercure\Bridge\DI\MercureExtension;
 use Raneomik\NetteMercure\Bridge\Translation\ContributteLocaleSwitcher;
 use Raneomik\NetteMercure\Core\Localization\LocaleSwitcherInterface;
 use Raneomik\NetteMercure\Core\Localization\TopicLocalizer;
 
 /**
- * Locale switcher and topic localizer, only when a hub is "localized". contributte/translation is optional:
+ * Locale switcher and topic localizer, only when the application has a translator. contributte/translation is optional:
  * an application LocaleSwitcherInterface service wins, contributte's Translator is the fallback.
  */
 final readonly class LocalizationDefiner
@@ -27,18 +26,16 @@ final readonly class LocalizationDefiner
     }
 
     /**
-     * @param string[] $localizedHubs
-     *
-     * @return null|string the locale switcher service name, null when no hub is localized
+     * @return null|string the locale switcher service name, null when the application has no translator
      */
-    public function define(array $localizedHubs): ?string
+    public function define(): ?string
     {
-        if ([] === $localizedHubs) {
+        $switcherName = $this->builder->getByType(LocaleSwitcherInterface::class)
+            ?? $this->contributteSwitcher();
+
+        if (null === $switcherName) {
             return null;
         }
-
-        $switcherName = $this->builder->getByType(LocaleSwitcherInterface::class)
-            ?? $this->contributteSwitcher($localizedHubs);
 
         $this->builder->addDefinition($this->extension->prefix('topicLocalizer'))
             ->setType(TopicLocalizer::class)
@@ -52,27 +49,18 @@ final readonly class LocalizationDefiner
         return $switcherName;
     }
 
-    /**
-     * @param string[] $localizedHubs
-     */
-    private function contributteSwitcher(array $localizedHubs): string
+    private function contributteSwitcher(): ?string
     {
         // no class_exists() needed: the name is only a string, and an unknown type has no service
         $translatorName = $this->builder->getByType(Translator::class);
 
         if (null === $translatorName) {
-            throw new InvalidConfigurationException(\sprintf(
-                'The "%s" hub(s) are "localized": install and register contributte/translation, or register a %s service.',
-                implode('", "', $localizedHubs),
-                LocaleSwitcherInterface::class,
-            ));
+            return null;
         }
 
         $this->builder->addDefinition($switcherName = $this->extension->prefix('localeSwitcher'))
             ->setType(LocaleSwitcherInterface::class)
-            ->setCreator(ContributteLocaleSwitcher::class, [
-                '@' . $translatorName,
-            ])
+            ->setCreator(ContributteLocaleSwitcher::class)
             ->setAutowired(false)
         ;
 

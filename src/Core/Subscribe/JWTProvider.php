@@ -72,7 +72,7 @@ final readonly class JWTProvider implements JWTProviderInterface
         }
 
         // same resolution as the token factories, so the cookie and the token expire together
-        $seconds = 0 === $seconds ? ((int) \ini_get('session.cookie_lifetime') ?: 3600) : $seconds;
+        $seconds = 0 === $seconds ? (\ini_get('session.cookie_lifetime') ?: 3600) : $seconds;
 
         return $additionalClaims[RegisteredClaims::EXPIRATION_TIME] = new \DateTimeImmutable(
             \sprintf('+%d seconds', $seconds),

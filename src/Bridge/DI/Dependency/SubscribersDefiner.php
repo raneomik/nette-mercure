@@ -27,10 +27,7 @@ final readonly class SubscribersDefiner
         $this->builder = $extension->getContainerBuilder();
     }
 
-    /**
-     * @param null|string $topicLocalizer reference to the topic localizer, when a hub is localized
-     */
-    public function defineSubscriptionComponents(?string $topicLocalizer = null): void
+    public function defineSubscriptionComponents(): void
     {
         /** @var false|ServiceDefinition $appDef */
         $appDef = $this->builder->hasDefinition('application.application')
@@ -53,6 +50,10 @@ final readonly class SubscribersDefiner
 
         $requestDef = $this->builder->getDefinitionByType(Request::class);
         $responseDef = $this->builder->getDefinitionByType(Response::class);
+
+        $topicLocalizer = $this->builder->hasDefinition($name = $this->extension->prefix('topicLocalizer'))
+            ? '@' . $name
+            : null;
 
         $this->builder->addDefinition($this->extension->prefix('authorization'))
             ->setType(AuthorizationInterface::class)

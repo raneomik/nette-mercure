@@ -25,9 +25,8 @@ final class MercureExtension extends Nette\DI\CompilerExtension
 
     public function __construct(
         private readonly bool $debugMode = false,
-        private ?string $hotReloadUrl = null,
+        private readonly ?string $hotReloadUrl = null,
     ) {
-        $this->hotReloadUrl ??= ($_SERVER['FRANKENPHP_HOT_RELOAD'] ?? null);
     }
 
     #[\Override]
@@ -62,8 +61,8 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                 ])->required(),
                 'autoDiscovery' => Expect::bool(false),
                 'debugger' => Expect::bool($this->debugMode),
-                // one rendering per locale, on topics suffixed with it: needs contributte/translation or a LocaleSwitcherInterface service
-                'localized' => Expect::bool(false),
+                // only with a translator (contributte/translation or a LocaleSwitcherInterface service): false opts the hub out
+                'localized' => Expect::bool(true),
             ]),
         )->before(static fn (mixed $val): mixed => \is_array($val) && [] !== array_intersect_key($val, array_flip(self::HUB_OPTIONS))
             // a single hub configuration, rather than a list of named hubs
@@ -85,11 +84,7 @@ final class MercureExtension extends Nette\DI\CompilerExtension
                 ->getResultDefinition() // @phpstan-ignore method.notFound
             : false;
 
-        $localizedHubs = array_keys(array_filter(
-            (array) $this->getConfig(),
-            static fn (\stdClass $config): bool => $config->localized,
-        ));
-        $localeSwitcher = (new LocalizationDefiner($this))->define($localizedHubs);
+        $localeSwitcher = (new LocalizationDefiner($this))->define();
         $topicLocalizer = null === $localeSwitcher ? null : '@' . $this->prefix('topicLocalizer');
 
         $debug = false;
@@ -126,7 +121,7 @@ final class MercureExtension extends Nette\DI\CompilerExtension
         ;
 
         $subscribersDefiner = new SubscribersDefiner($this);
-        $subscribersDefiner->defineSubscriptionComponents($topicLocalizer);
+        $subscribersDefiner->defineSubscriptionComponents();
 
         $broadcastersLoader->postLoad($broadcasterDefinitions);
 

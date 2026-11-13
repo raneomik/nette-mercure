@@ -297,12 +297,14 @@ $broadcaster->broadcast('lobby', new WaitingRoomsStream($rooms), template: 'wait
 ## Broadcast in every locale
 
 A template is rendered once, on the server: without help, every subscriber would receive the publisher's language.
-On a `localized` hub, a templated publication is rendered once per locale, each rendering on the topics suffixed with
+With a translator, a templated publication is rendered once per locale, each rendering on the topics suffixed with
 its locale (`room/42/fr`), and every subscription made by the extension targets the page's own locale. The application
 keeps writing `room/42`, in templates, grants and access checks alike.
 
-Needs [contributte/translation](https://github.com/contributte/translation) (its `Translator` is picked up
-automatically), or a service of your own implementing `Raneomik\NetteMercure\Core\Localization\LocaleSwitcherInterface`.
+It is on as soon as [contributte/translation](https://github.com/contributte/translation) is registered (its
+`Translator` is picked up automatically), or a service of your own implementing
+`Raneomik\NetteMercure\Core\Localization\LocaleSwitcherInterface`.
+Without either, nothing changes. Opt a hub out with `localized: false`.
 
 ```neon
 extensions:
@@ -315,7 +317,6 @@ translation:
 
 mercure:
 	url: %baseUrl%/.well-known/mercure
-	localized: true
 	jwt:
 		key: %env.MERCURE_JWT_SECRET%
 ```
@@ -358,7 +359,7 @@ Notes:
 
 * an untemplated publication (JSON data) is not language-specific: published once, on the topics of every locale;
 * only `exact` and `urlpattern` topics are suffixed; the `*` wildcard, and other matcher types, are kept as they are;
-* topics that must not be localized belong to another hub (it can share the same `url`, see
+* topics that must not be localized belong to another hub, with `localized: false` (it can share the same `url`, see
   [several hubs](#configure-several-hubs));
 * restricted `jwt.publish` grants must allow the localized topics (`room/{id}/{locale}`);
 * `broadcast()` returns the id of the publication in the current locale; the [Tracy panel](debugging.md) lists each
