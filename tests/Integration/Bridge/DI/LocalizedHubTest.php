@@ -201,7 +201,9 @@ final class LocalizedHubTest extends ContainerTestCase
     {
         $service = $container->getService($name);
 
-        return $service instanceof $type ? $service : throw new \LogicException(\sprintf('%s is no %s', $name, $type));
+        return $service instanceof $type
+            ? $service
+            : throw new \LogicException(\sprintf('%s is no %s', $name, $type));
     }
 
     private function localizedContainer(bool $debug = false, string $extra = ''): Container

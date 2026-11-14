@@ -301,12 +301,16 @@ $broadcaster->broadcast("player/$id", $data, ['locale' => 'cs', 'private' => tru
 Pass data to the template, not translated strings: they would be in the publisher's language only.
 
 `{mercure()}`, `{mercureJWTToken()}`, `subscribe()` and the authorization cookie subscribe in the current locale. A
-subscribe endpoint rarely knows the page locale: pass it.
+subscribe endpoint rarely knows the page locale: pass it. Otherwise every page subscribes in the endpoint's locale
+(often the default one) and receives the updates in that language, whatever its own.
 
 ```php
 // e.g. the page sends its <html lang>; an unknown value falls back to the current locale
 $subscription = $subscriber->subscribe($topics, locale: $this->getHttpRequest()->getPost('lang'));
 ```
+
+Or call the endpoint on a localized URL (`/fr/subscribe`): when the router sets the translator locale, there is
+nothing to pass.
 
 Without contributte/translation, register a `LocaleSwitcherInterface` service. The rules are in the
 [reference](reference.md#localization).

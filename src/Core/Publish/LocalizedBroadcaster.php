@@ -66,8 +66,9 @@ final readonly class LocalizedBroadcaster implements BroadcasterInterface
         unset($options['locales']);
 
         $topics = array_values((array) $topics);
+        $template ??= $options['template'] ?? null;
 
-        if (null === ($template ?? $options['template'] ?? null)) {
+        if (null === $template) {
             $localized = [];
             foreach ($locales as $locale) {
                 array_push($localized, ...TopicLocalizer::suffixList($topics, $locale));

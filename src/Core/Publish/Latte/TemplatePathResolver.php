@@ -31,8 +31,8 @@ final class TemplatePathResolver
         }
 
         $templateCandidates = [];
-        foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 5) as $trace) {
-            $file = $trace['file'] ?? '';
+
+        foreach ($this->findPotentialCallers() as $file) {
 
             foreach ([1, 2, 3] as $position) {
                 $this->resolvedDir = \dirname($file, $position) . '/';
@@ -51,6 +51,19 @@ final class TemplatePathResolver
                 implode(', ', $templateCandidates),
             )
         );
+    }
+
+    /**
+     * @return string[]
+     */
+    private function findPotentialCallers(): array
+    {
+        $package = \dirname(__DIR__, 3) . '/';
+
+        return \array_slice(array_unique(array_filter(
+            array_column(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS), 'file'),
+            static fn (string $file): bool => ! str_starts_with($file, $package),
+        )), 0, 3);
     }
 
     public function resolvedDir(): string

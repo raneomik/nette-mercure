@@ -12,7 +12,7 @@ TODO
 - [x] ~~Enhance Tracy panel~~
   -  [x] ~~Add "received messages" using event source & subscriber for each hub~~
   -  [x] ~~Add config (discovery) & auth data type (cookie, jwt)~~
-- [ ] Translations in broadcast templates (one rendering and topic per locale ?) - to see while translating the rock-paper-scissors game
+- [x] ~~Translations in broadcast templates (one rendering and topic per locale)~~
 - [ ] Integration examples & demos
     - [ ] Shared TODO list/"document" editor, with simple eventsource
     - [ ] Chat, with [turbostreams](https://turbo.hotwired.dev) (eg. [Symfony ux](https://ux.symfony.com/turbo/test/the/🐑#turbo-streams))

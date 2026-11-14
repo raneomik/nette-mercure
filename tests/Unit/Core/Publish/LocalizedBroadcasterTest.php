@@ -89,6 +89,28 @@ final class LocalizedBroadcasterTest extends TestCase
         Assert::same('cs', $this->broadcaster->broadcastOptions()['locale'] ?? null);
     }
 
+    public function testTemplateRelativeToTheCallerBehindTheDecorators(): void
+    {
+        $broadcaster = new LocalizedBroadcaster(
+            new TemplatingBroadcaster(
+                new PlainBroadcaster(MockHubFactory::create(publisher: function (Update $update): string {
+                    $this->updates[] = $update;
+
+                    return 'id';
+                })),
+                new TemplatePathResolver(),
+                new Engine(),
+            ),
+            $this->switcher,
+        );
+
+        $broadcaster->broadcast('room/42', 'hello', [
+            'locale' => 'en',
+        ], '/edge-fixture/example.latte');
+
+        Assert::same('hello', trim($this->updates[0]->getData()));
+    }
+
     public function testLocalesNarrowTheRenderings(): void
     {
         $this->broadcaster->broadcast('room/42', [
