@@ -10,6 +10,7 @@ final readonly class JWTToken
      * @param array<string, mixed> $extraClaims
      */
     public function __construct(
+        #[\SensitiveParameter]
         public string $token,
         public ?\DateTimeInterface $ttl,
         public array $extraClaims = [],
